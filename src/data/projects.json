@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Linkedin Agent",
+    "description": "Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!",
+    "youtubeId": "ZThxNcXJNPg",
+    "github": "https://github.com/nikhilkulkarni1755/linkedin-agent",
+    "techStack": ["LangGraph", "LangChain", "Linkedin API", "LMStudio"]
+  },
+  {
+    "id": 2,
+    "title": "Real-time Chat Application",
+    "description": "Full-stack chat app with WebSocket support, user authentication, and message persistence using React and Node.js",
+    "youtubeId": "dQw4w9WgXcQ",
+    "github": "https://github.com/MacAndPC/chat-app",
+    "techStack": ["React", "Node.js", "Socket.io", "MongoDB", "Express"]
+  },
+  {
+    "id": 3,
+    "title": "The Progress App",
+    "description": "iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!",
+    "youtubeId": "dQw4w9WgXcQ",
+    "github": "https://github.com/nikhilkulkarni1755/the-progress-app",
+    "techStack": ["React Native", "Firebase", "Websockets"]
+  }
+]

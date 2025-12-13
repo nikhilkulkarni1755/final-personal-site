@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "Building Scalable RAG Systems with AWS",
+    "slug": "building-scalable-rag-systems-aws",
+    "excerpt": "Learn how to build production-ready Retrieval-Augmented Generation systems using AWS Lambda, Pinecone, and Bedrock for enterprise-scale applications.",
+    "content": "# Building Scalable RAG Systems with AWS\n\nRetrieval-Augmented Generation (RAG) has become a cornerstone of modern AI applications. In this post, I'll walk through building a production-ready RAG system using AWS services.\n\n## Architecture Overview\n\nOur system uses AWS Lambda for serverless compute, Pinecone for vector storage, and AWS Bedrock for LLM inference...",
+    "publishDate": "2024-03-15",
+    "readTime": 8,
+    "tags": ["AWS", "AI", "RAG", "Serverless"]
+  },
+  {
+    "id": 2,
+    "title": "Optimizing React Performance: A Deep Dive",
+    "slug": "optimizing-react-performance",
+    "excerpt": "Explore advanced techniques for optimizing React applications including code splitting, lazy loading, and effective use of React.memo and useMemo.",
+    "content": "# Optimizing React Performance\n\nPerformance optimization in React applications is crucial for delivering great user experiences. Let's dive into proven techniques...",
+    "publishDate": "2024-02-28",
+    "readTime": 6,
+    "tags": ["React", "Performance", "JavaScript"]
+  },
+  {
+    "id": 3,
+    "title": "My Journey from Google to Building AI Products",
+    "slug": "journey-google-to-ai-products",
+    "excerpt": "Reflections on transitioning from big tech to building AI-powered products, lessons learned, and advice for aspiring engineers.",
+    "content": "# My Journey from Google to Building AI Products\n\nTransitioning from working at Google to building my own AI products has been an incredible journey...",
+    "publishDate": "2024-01-20",
+    "readTime": 5,
+    "tags": ["Career", "AI", "Startup"]
+  }
+]
