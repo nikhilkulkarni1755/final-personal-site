@@ -69,7 +69,7 @@ const Home = () => {
         {blog.excerpt}
       </p>
       <div className="flex flex-wrap gap-2 justify-center">
-        {blog.tags.map((tag) => (
+        {blog.tags?.map((tag) => (
           <span
             key={tag}
             className="px-3 py-1 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded-full text-sm"
