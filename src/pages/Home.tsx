@@ -15,20 +15,20 @@ const Home = () => {
 
   const certifications = [
     {
-      id: "9cbb98e9-0ea9-4b52-979e-b4a966e1dae8",
-      name: "AWS",
+      id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
+      name: "MongoDB",
     },
     {
-      id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
-      name: "AWS",
+      id: "9cbb98e9-0ea9-4b52-979e-b4a966e1dae8",
+      name: "DevOps Professional",
     },
     {
       id: "8c54612a-4171-496a-ad63-abed4867325b",
-      name: "AWS",
+      name: "Developer Associate",
     },
     {
       id: "415d68cd-8a32-4a59-8bc2-b0e6418b37f4",
-      name: "MongoDB",
+      name: "Cloud Practitioner",
     },
   ];
 
@@ -221,7 +221,7 @@ const Home = () => {
       `}</style>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+      {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,21 +229,21 @@ const Home = () => {
           className="text-center space-y-8"
         >
           {/* Main Heading */}
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[#001F3F] dark:text-white">
+          {/* <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[#001F3F] dark:text-white">
             Building AI-Powered
             <br />
             <span className="bg-gradient-to-r from-[#001F3F] to-[#001F3F]/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
               Solutions
             </span>
-          </h1>
+          </h1> */}
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
+          {/* <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
             Software Engineer specializing in AI/ML, cloud infrastructure, and
             full-stack development. Previously at Google and TCS.
-          </p>
-        </motion.div>
-      </section>
+          </p> */}
+        {/* </motion.div>
+      </section> */}
 
       {/* Auto-Rotating Content Sections */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-12">
@@ -262,12 +262,27 @@ const Home = () => {
           />
         </motion.div>
 
-        {/* Blog Articles Row */}
+        {/* Certifications Row */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <AutoRotatingCarousel
+            items={certifications}
+            renderItem={renderCertification}
+            title="Certifications"
+            interval={5000}
+          />
+        </motion.div>
+
+        {/* Blog Articles Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
         >
           <AutoRotatingCarousel
             items={blogs}
@@ -282,27 +297,12 @@ const Home = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
         >
           <AutoRotatingCarousel
             items={apps}
             renderItem={renderApp}
             title="My Apps"
-            interval={5000}
-          />
-        </motion.div>
-
-        {/* Certifications Row */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <AutoRotatingCarousel
-            items={certifications}
-            renderItem={renderCertification}
-            title="Certifications"
             interval={5000}
           />
         </motion.div>
