@@ -31,7 +31,7 @@ const Header = () => {
               to="/"
               className="text-xl sm:text-2xl font-bold text-[#001F3F] dark:text-white hover:opacity-80 transition-opacity"
             >
-              MacAndPC
+              Nikhil Kulkarni
             </Link>
 
             {/* Right: Menu Button */}

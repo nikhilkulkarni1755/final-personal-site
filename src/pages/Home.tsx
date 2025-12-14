@@ -221,7 +221,7 @@ const Home = () => {
       `}</style>
 
       {/* Hero Section */}
-      {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,21 +229,21 @@ const Home = () => {
           className="text-center space-y-8"
         >
           {/* Main Heading */}
-          {/* <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[#001F3F] dark:text-white">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[#001F3F] dark:text-white">
             Building AI-Powered
             <br />
             <span className="bg-gradient-to-r from-[#001F3F] to-[#001F3F]/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
               Solutions
             </span>
-          </h1> */}
+          </h1>
 
           {/* Subtitle */}
-          {/* <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
             Software Engineer specializing in AI/ML, cloud infrastructure, and
             full-stack development. Previously at Google and TCS.
-          </p> */}
-        {/* </motion.div>
-      </section> */}
+          </p>
+        </motion.div>
+      </section>
 
       {/* Auto-Rotating Content Sections */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-12">
