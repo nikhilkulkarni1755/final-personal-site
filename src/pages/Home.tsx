@@ -1,22 +1,41 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, ExternalLink } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useEffect } from 'react';
-import AutoRotatingCarousel from '../components/AutoRotatingCarousel';
-import projectsData from '../data/projects.json';
-import blogsData from '../data/blogs.json';
-import appsData from '../data/apps.json';
-import type { Project, BlogPost, App } from '../types';
+import { Link } from "react-router-dom";
+import { ArrowRight, ExternalLink } from "lucide-react";
+import { motion } from "framer-motion";
+import { useEffect } from "react";
+import AutoRotatingCarousel from "../components/AutoRotatingCarousel";
+import projectsData from "../data/projects.json";
+import blogsData from "../data/blogs.json";
+import appsData from "../data/apps.json";
+import type { Project, BlogPost, App } from "../types";
 
 const Home = () => {
   const projects = projectsData as Project[];
   const blogs = blogsData as BlogPost[];
   const apps = appsData as App[];
 
+  const certifications = [
+    {
+      id: "9cbb98e9-0ea9-4b52-979e-b4a966e1dae8",
+      name: "AWS",
+    },
+    {
+      id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
+      name: "AWS",
+    },
+    {
+      id: "8c54612a-4171-496a-ad63-abed4867325b",
+      name: "AWS",
+    },
+    {
+      id: "415d68cd-8a32-4a59-8bc2-b0e6418b37f4",
+      name: "MongoDB",
+    },
+  ];
+
   useEffect(() => {
     // Load Credly embed script
-    const script = document.createElement('script');
-    script.src = '//cdn.credly.com/assets/utilities/embed.js';
+    const script = document.createElement("script");
+    script.src = "//cdn.credly.com/assets/utilities/embed.js";
     script.async = true;
     document.body.appendChild(script);
 
@@ -29,106 +48,118 @@ const Home = () => {
   }, []);
 
   const renderProject = (project: Project) => (
-    <div className="flex flex-col items-center text-center space-y-4">
-      <h3 className="text-2xl font-bold text-[#001F3F] dark:text-white">
+    <div className="h-full bg-white dark:bg-[#001F3F]/50 border border-[#001F3F]/10 dark:border-white/10 rounded-lg p-4 hover:shadow-xl transition-shadow duration-300 flex flex-col">
+      <h3 className="text-lg font-bold text-[#001F3F] dark:text-white mb-2 line-clamp-2">
         {project.title}
       </h3>
-      <p className="text-[#001F3F]/70 dark:text-white/70 max-w-2xl">
+      <p className="text-sm text-[#001F3F]/70 dark:text-white/70 mb-3 line-clamp-3 flex-grow">
         {project.description}
       </p>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {project.techStack.map((tech) => (
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {project.techStack.slice(0, 3).map((tech) => (
           <span
             key={tech}
-            className="px-3 py-1 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded-full text-sm"
+            className="px-2 py-0.5 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded text-xs"
           >
             {tech}
           </span>
         ))}
+        {project.techStack.length > 3 && (
+          <span className="px-2 py-0.5 text-[#001F3F]/50 dark:text-white/50 text-xs">
+            +{project.techStack.length - 3}
+          </span>
+        )}
       </div>
-      <div className="flex gap-4">
-        <a
-          href={project.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center space-x-2 px-6 py-3 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300"
-        >
-          <span>View on GitHub</span>
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
+      <a
+        href={project.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-sm"
+      >
+        <span>GitHub</span>
+        <ExternalLink className="w-3.5 h-3.5" />
+      </a>
     </div>
   );
 
   const renderBlog = (blog: BlogPost) => (
-    <div className="flex flex-col items-center text-center space-y-4">
-      <h3 className="text-2xl font-bold text-[#001F3F] dark:text-white">
+    <div className="h-full bg-white dark:bg-[#001F3F]/50 border border-[#001F3F]/10 dark:border-white/10 rounded-lg p-4 hover:shadow-xl transition-shadow duration-300 flex flex-col">
+      <h3 className="text-lg font-bold text-[#001F3F] dark:text-white mb-2 line-clamp-2">
         {blog.title}
       </h3>
-      <p className="text-[#001F3F]/70 dark:text-white/70 max-w-2xl">
+      <p className="text-sm text-[#001F3F]/70 dark:text-white/70 mb-3 line-clamp-3 flex-grow">
         {blog.excerpt}
       </p>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {blog.tags?.map((tag) => (
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {blog.tags?.slice(0, 3).map((tag) => (
           <span
             key={tag}
-            className="px-3 py-1 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded-full text-sm"
+            className="px-2 py-0.5 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded text-xs"
           >
             {tag}
           </span>
         ))}
+        {blog.tags && blog.tags.length > 3 && (
+          <span className="px-2 py-0.5 text-[#001F3F]/50 dark:text-white/50 text-xs">
+            +{blog.tags.length - 3}
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-4 text-sm text-[#001F3F]/60 dark:text-white/60">
+      <div className="flex items-center gap-2 text-xs text-[#001F3F]/60 dark:text-white/60 mb-3">
         <span>{blog.publishDate}</span>
         <span>•</span>
-        <span>{blog.readTime} min read</span>
+        <span>{blog.readTime} min</span>
       </div>
       <Link
         to={`/blog/${blog.slug}`}
-        className="inline-flex items-center space-x-2 px-6 py-3 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300"
+        className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-sm"
       >
         <span>Read Article</span>
-        <ArrowRight className="w-4 h-4" />
+        <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
 
   const renderApp = (app: App) => (
-    <div className="flex flex-col items-center text-center space-y-4">
-      <h3 className="text-2xl font-bold text-[#001F3F] dark:text-white">
+    <div className="h-full bg-white dark:bg-[#001F3F]/50 border border-[#001F3F]/10 dark:border-white/10 rounded-lg p-4 hover:shadow-xl transition-shadow duration-300 flex flex-col">
+      <h3 className="text-lg font-bold text-[#001F3F] dark:text-white mb-2 line-clamp-2">
         {app.title}
       </h3>
-      <p className="text-[#001F3F]/70 dark:text-white/70 max-w-2xl">
+      <p className="text-sm text-[#001F3F]/70 dark:text-white/70 mb-3 line-clamp-2">
         {app.description}
       </p>
-      <ul className="text-left text-[#001F3F]/70 dark:text-white/70 space-y-2">
-        {app.features.slice(0, 3).map((feature, idx) => (
+      <ul className="text-xs text-[#001F3F]/70 dark:text-white/70 space-y-1 mb-3 flex-grow">
+        {app.features.slice(0, 2).map((feature, idx) => (
           <li key={idx} className="flex items-start">
-            <span className="mr-2">•</span>
-            <span>{feature}</span>
+            <span className="mr-1">•</span>
+            <span className="line-clamp-1">{feature}</span>
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {app.techStack.map((tech) => (
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {app.techStack.slice(0, 3).map((tech) => (
           <span
             key={tech}
-            className="px-3 py-1 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded-full text-sm"
+            className="px-2 py-0.5 bg-[#001F3F]/10 dark:bg-white/10 text-[#001F3F] dark:text-white rounded text-xs"
           >
             {tech}
           </span>
         ))}
+        {app.techStack.length > 3 && (
+          <span className="px-2 py-0.5 text-[#001F3F]/50 dark:text-white/50 text-xs">
+            +{app.techStack.length - 3}
+          </span>
+        )}
       </div>
-      <div className="flex gap-4">
+      <div className="flex gap-2">
         {app.appStoreLink && (
           <a
             href={app.appStoreLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-6 py-3 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300"
+            className="inline-flex items-center justify-center flex-1 space-x-1 px-3 py-1.5 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-xs"
           >
             <span>App Store</span>
-            <ExternalLink className="w-4 h-4" />
           </a>
         )}
         {app.playStoreLink && (
@@ -136,10 +167,9 @@ const Home = () => {
             href={app.playStoreLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-6 py-3 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300"
+            className="inline-flex items-center justify-center flex-1 space-x-1 px-3 py-1.5 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-xs"
           >
             <span>Play Store</span>
-            <ExternalLink className="w-4 h-4" />
           </a>
         )}
         {app.demoLink && (
@@ -147,18 +177,49 @@ const Home = () => {
             href={app.demoLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-6 py-3 border-2 border-[#001F3F] dark:border-white text-[#001F3F] dark:text-white rounded-lg hover:bg-[#001F3F]/5 dark:hover:bg-white/5 transition-all duration-300"
+            className="inline-flex items-center justify-center flex-1 space-x-1 px-3 py-1.5 border border-[#001F3F] dark:border-white text-[#001F3F] dark:text-white rounded-lg hover:bg-[#001F3F]/5 dark:hover:bg-white/5 transition-all duration-300 text-xs"
           >
-            <span>View Demo</span>
-            <ExternalLink className="w-4 h-4" />
+            <span>Demo</span>
           </a>
         )}
       </div>
     </div>
   );
 
+  const renderCertification = (cert: { id: string; name: string }) => (
+    <div className="relative h-full bg-white dark:bg-[#001F3F]/50 border border-[#001F3F]/10 dark:border-white/10 rounded-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-start pt-8 overflow-hidden credly-badge-container">
+      {/* <h3 className="absolute top-3 left-0 right-0 text-center text-sm font-bold text-[#001F3F] dark:text-white z-10">
+        {cert.name}
+      </h3> */}
+      <div
+        data-iframe-width="150"
+        data-iframe-height="180"
+        data-share-badge-id={cert.id}
+        data-share-badge-host="https://www.credly.com"
+        className="flex items-center justify-center"
+      />
+    </div>
+  );
+
   return (
     <div className="min-h-[calc(100vh-4rem)]">
+      {/* CSS to zoom and center Credly badges */}
+      <style>{`
+        .credly-badge-container iframe {
+          zoom: 1.6;
+          -moz-transform: scale(1.6);
+          transform-origin: center center;
+          -moz-transform-origin: center center;
+        }
+        .credly-badge-container > div {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+        }
+      `}</style>
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
         <motion.div
@@ -178,8 +239,8 @@ const Home = () => {
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
-            Software Engineer specializing in AI/ML, cloud infrastructure, and full-stack development.
-            Previously at Google and TCS.
+            Software Engineer specializing in AI/ML, cloud infrastructure, and
+            full-stack development. Previously at Google and TCS.
           </p>
         </motion.div>
       </section>
@@ -238,39 +299,12 @@ const Home = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#001F3F] dark:text-white mb-6">
-            Certifications
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div
-              data-iframe-width="150"
-              data-iframe-height="270"
-              data-share-badge-id="9cbb98e9-0ea9-4b52-979e-b4a966e1dae8"
-              data-share-badge-host="https://www.credly.com"
-              className="flex justify-center"
-            />
-            <div
-              data-iframe-width="150"
-              data-iframe-height="270"
-              data-share-badge-id="e60bdb2b-dcc0-4dca-999d-854361ddc0df"
-              data-share-badge-host="https://www.credly.com"
-              className="flex justify-center"
-            />
-            <div
-              data-iframe-width="150"
-              data-iframe-height="270"
-              data-share-badge-id="8c54612a-4171-496a-ad63-abed4867325b"
-              data-share-badge-host="https://www.credly.com"
-              className="flex justify-center"
-            />
-            <div
-              data-iframe-width="150"
-              data-iframe-height="270"
-              data-share-badge-id="415d68cd-8a32-4a59-8bc2-b0e6418b37f4"
-              data-share-badge-host="https://www.credly.com"
-              className="flex justify-center"
-            />
-          </div>
+          <AutoRotatingCarousel
+            items={certifications}
+            renderItem={renderCertification}
+            title="Certifications"
+            interval={5000}
+          />
         </motion.div>
       </section>
 
@@ -285,19 +319,22 @@ const Home = () => {
         >
           {[
             {
-              title: 'AI/ML Engineering',
-              description: 'Building intelligent systems with AWS Bedrock, LangChain, and custom ML models',
-              icon: '🤖',
+              title: "AI/ML Engineering",
+              description:
+                "Building intelligent systems with AWS Bedrock, LangChain, and custom ML models",
+              icon: "🤖",
             },
             {
-              title: 'Cloud Architecture',
-              description: 'Designing scalable solutions on AWS with serverless and containerized deployments',
-              icon: '☁️',
+              title: "Cloud Architecture",
+              description:
+                "Designing scalable solutions on AWS with serverless and containerized deployments",
+              icon: "☁️",
             },
             {
-              title: 'Full-Stack Development',
-              description: 'Creating modern web applications with React, TypeScript, and Node.js',
-              icon: '💻',
+              title: "Full-Stack Development",
+              description:
+                "Creating modern web applications with React, TypeScript, and Node.js",
+              icon: "💻",
             },
           ].map((item, index) => (
             <motion.div
@@ -312,7 +349,9 @@ const Home = () => {
               <h3 className="text-xl font-bold text-[#001F3F] dark:text-white mb-2">
                 {item.title}
               </h3>
-              <p className="text-[#001F3F]/70 dark:text-white/70">{item.description}</p>
+              <p className="text-[#001F3F]/70 dark:text-white/70">
+                {item.description}
+              </p>
             </motion.div>
           ))}
         </motion.div>
