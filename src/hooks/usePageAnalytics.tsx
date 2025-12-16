@@ -20,7 +20,7 @@ export function usePageAnalytics(pageTitle: string) {
 
   const startTime = useRef<number>(Date.now());
   const maxScroll = useRef<number>(0);
-  const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatInterval = useRef<number | null>(null);
 
   useEffect(() => {
     // Track page view on mount
