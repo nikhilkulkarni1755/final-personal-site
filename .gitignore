@@ -70,3 +70,8 @@ wrangler.toml
 # Misc
 *.pem
 .local/
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+.supabase/

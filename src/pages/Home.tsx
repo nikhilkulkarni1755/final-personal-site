@@ -7,11 +7,18 @@ import projectsData from "../data/projects.json";
 import blogsData from "../data/blogs.json";
 import appsData from "../data/apps.json";
 import type { Project, BlogPost, App } from "../types";
+import { usePageAnalytics } from "../hooks/usePageAnalytics";
+import ActiveViewers from "../components/ActiveViewers";
+import PageStats from "../components/PageStats";
+import LikeButton from "../components/LikeButton";
 
 const Home = () => {
   const projects = projectsData as Project[];
   const blogs = blogsData as BlogPost[];
   const apps = appsData as App[];
+
+  // Track page analytics
+  const { pageId, activeUsers, analytics } = usePageAnalytics('Home');
 
   const certifications = [
     {
@@ -355,6 +362,20 @@ const Home = () => {
             </motion.div>
           ))}
         </motion.div>
+      </section>
+
+      {/* Analytics Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-white/50 dark:bg-[#001F3F]/30 border border-[#001F3F]/10 dark:border-white/10 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-center gap-4 flex-1">
+            <ActiveViewers count={activeUsers} />
+            <PageStats
+              viewCount={analytics?.view_count}
+              likeCount={analytics?.like_count}
+            />
+          </div>
+          <LikeButton pageId={pageId} likeCount={analytics?.like_count} />
+        </div>
       </section>
     </div>
   );
