@@ -18,7 +18,7 @@ const Home = () => {
   const apps = appsData as App[];
 
   // Track page analytics
-  const { pageId, activeUsers, analytics } = usePageAnalytics('Home');
+  const { pageId, activeUsers, analytics } = usePageAnalytics("Home");
 
   const certifications = [
     {
@@ -247,7 +247,8 @@ const Home = () => {
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
             Software Engineer specializing in AI/ML, cloud infrastructure, and
-            full-stack development. Previously at Google and TCS.
+            full-stack development. Impacted millions at Google (via Tata
+            Consultancy Services).
           </p>
         </motion.div>
       </section>

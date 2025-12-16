@@ -2,32 +2,13 @@
   {
     "id": 1,
     "title": "The Progress App",
-    "description": "Track your daily habits, goals, and progress with beautiful visualizations and insights powered by AI",
+    "description": "Build Difficult Habits with Like Minded People",
     "features": [
-      "Daily habit tracking with streak management",
-      "AI-powered insights and recommendations",
-      "Beautiful data visualizations",
-      "Cross-platform synchronization",
-      "Customizable goals and reminders"
+      "In App Purchases, Websockets for amazing service",
+      "End to End system designed to help build sustainable habits"
     ],
-    "techStack": ["React Native", "Firebase", "TensorFlow", "Node.js"],
-    "appStoreLink": "https://apps.apple.com/app/progress",
-    "playStoreLink": "https://play.google.com/store/apps/details?id=com.progress",
-    "images": []
-  },
-  {
-    "id": 2,
-    "title": "CodeSnap - Developer Tools",
-    "description": "Essential developer toolkit with code snippet management, API testing, and productivity features",
-    "features": [
-      "Code snippet library with syntax highlighting",
-      "RESTful API testing interface",
-      "Git integration and version control",
-      "Team collaboration features",
-      "Dark mode support"
-    ],
-    "techStack": ["Electron", "React", "Monaco Editor", "SQLite"],
-    "demoLink": "https://codesnap.dev",
+    "techStack": ["React Native", "Firebase", "In App Purchases", "Websockets", "Node.js"],
+    "appStoreLink": "https://apps.apple.com/us/app/the-progress-app/id6503723392",
     "images": []
   }
 ]
