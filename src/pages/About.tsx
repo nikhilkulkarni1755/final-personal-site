@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
 import { Briefcase, GraduationCap, Award, Heart } from 'lucide-react';
+import { usePageAnalytics } from '../hooks/usePageAnalytics';
 
 const About = () => {
+  // Track page analytics
+  usePageAnalytics('About');
+
   const experiences = [
     {
       title: 'Software Engineer',

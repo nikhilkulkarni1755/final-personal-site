@@ -2,9 +2,13 @@ import { motion } from 'framer-motion';
 import ProjectCard from '../components/ProjectCard';
 import projectsData from '../data/projects.json';
 import type { Project } from '../types';
+import { usePageAnalytics } from '../hooks/usePageAnalytics';
 
 const Projects = () => {
   const projects = projectsData as Project[];
+
+  // Track page analytics
+  usePageAnalytics('Projects');
 
   return (
     <div className="min-h-screen">
