@@ -240,7 +240,7 @@ const Home = () => {
             Building AI-Powered
             <br />
             <span className="bg-gradient-to-r from-[#001F3F] to-[#001F3F]/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
-              Solutions
+              Fullstack Solutions
             </span>
           </h1>
 
