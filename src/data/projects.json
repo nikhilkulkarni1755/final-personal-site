@@ -8,18 +8,34 @@
     "techStack": ["LangGraph", "LangChain", "Linkedin API", "LMStudio"]
   },
   {
-    "id": 2,
-    "title": "Real-time Chat Application",
-    "description": "Full-stack chat app with WebSocket support, user authentication, and message persistence using React and Node.js",
-    "youtubeId": "dQw4w9WgXcQ",
+    "id": 3,
+    "title": "Skim Research Papers Agent",
+    "description": "RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.",
+    "youtubeId": "XQVapr7IbKc",
     "github": "https://github.com/MacAndPC/chat-app",
-    "techStack": ["React", "Node.js", "Socket.io", "MongoDB", "Express"]
+    "techStack": ["Pinecone", "AWS Lambda", "AWS S3", "Qwen LLM"]
   },
   {
-    "id": 3,
+    "id": 4,
+    "title": "Multi Tenant Kubernetes",
+    "description": "Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.",
+    "youtubeId": "y8u-0du76cc",
+    "github": "https://github.com/nikhilkulkarni1755/multi-tenant-k8",
+    "techStack": ["Kubernetes", "Docker", "Prometheus", "Grafana", "Terraform", "AWS"]
+  },
+  {
+    "id": 2,
+    "title": "Terminal Tweet",
+    "description": "Tweet from the Terminal, create a server or just tweet with the CLI",
+    "youtubeId": "",
+    "github": "https://github.com/nikhilkulkarni1755/twitter-oauth2",
+    "techStack": ["Uvicorn", "OAuth 2.0 (PKCE)", "X API"]
+  },
+  {
+    "id": 5,
     "title": "The Progress App",
     "description": "iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!",
-    "youtubeId": "dQw4w9WgXcQ",
+    "youtubeId": "",
     "github": "https://github.com/nikhilkulkarni1755/the-progress-app",
     "techStack": ["React Native", "Firebase", "Websockets"]
   }

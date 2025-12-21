@@ -12,7 +12,7 @@ export type BlogPost = {
   id: number;
   title: string;
   slug: string;
-  excerpt: string;
+  subtitle: string;
   content: string;
   publishDate: string;
   readTime: number;

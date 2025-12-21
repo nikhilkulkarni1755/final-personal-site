@@ -31,8 +31,7 @@ export default function LikeButton({ pageId, likeCount }: LikeButtonProps) {
         aria-hidden="true"
       />
       <span className="font-medium">
-        {likeCount !== undefined ? likeCount : ''}
-        {isLiked ? ' Liked' : ' Like'}
+        {likeCount !== undefined ? `${likeCount} likes` : 'Like'}
       </span>
     </button>
   );

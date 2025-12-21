@@ -36,7 +36,7 @@ const Footer = () => {
 
           {/* Copyright */}
           <p className="text-sm text-[#001F3F]/60 dark:text-white/60">
-            {currentYear} MacAndPC. All rights reserved.
+            {currentYear} Nikhil Kulkarni. All rights reserved.
           </p>
         </div>
       </div>

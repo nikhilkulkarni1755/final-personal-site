@@ -45,7 +45,7 @@ const BlogCard = ({ post, index }: BlogCardProps) => {
           </h3>
 
           <p className="text-[#001F3F]/70 dark:text-white/70 line-clamp-2">
-            {post.excerpt}
+            {post.subtitle}
           </p>
 
           {/* Meta Info */}

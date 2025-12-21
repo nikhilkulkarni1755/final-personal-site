@@ -1,19 +1,19 @@
 [
   {
     "id": 1,
-    "title": "Building Scalable RAG Systems with AWS",
-    "slug": "building-scalable-rag-systems-aws",
-    "excerpt": "Learn how to build production-ready Retrieval-Augmented Generation systems using AWS Lambda, Pinecone, and Bedrock for enterprise-scale applications.",
-    "content": "# Building Scalable RAG Systems with AWS\n\nRetrieval-Augmented Generation (RAG) has become a cornerstone of modern AI applications. In this post, I'll walk through building a production-ready RAG system using AWS services.\n\n## Architecture Overview\n\nOur system uses AWS Lambda for serverless compute, Pinecone for vector storage, and AWS Bedrock for LLM inference...",
-    "publishDate": "2024-03-15",
-    "readTime": 8,
-    "tags": ["AWS", "AI", "RAG", "Serverless"]
+    "title": "LinkedIn Agent",
+    "slug": "linkedin-agent",
+    "subtitle": "Building an Agent that Turned Networking from 2-Hour Daily Grinds into Strategic Outreach",
+    "content": "If you are building your network on Linkedin, I'm guessing you have to find potential connections, manually write or copy paste a cold connection request and hope the void responds back to you.\n\nI was miserable doing this, so I decided to change the workflow by building a Linkedin Agent to help me send connection requests, analyze patterns and turn a joyless process into a quick process which gets me exposure and opportunities to connect with people at scale.\n\n[GitHub Repo](https://github.com/nikhilkulkarni1755/linkedin-agent/)\n\n## The Agent\n\n Connect with multiple people in the same job title. You may want to find out what being a hardware engineer at Boston Dynamics is like, or you may want to ask a specific question to forward deployed engineers at a frontier lab.\n\n If you want to get in front of Recruiters from a specific company, this method will list out lots of possible connections.\n\nYou can personalize the message, so that your message and personality comes through.\n\n## Tools Built for the Agent\n\n### 1. Find and Connect to Professionals\n- Given parameters like Company, Title, City, State and exclude University Recruiter? to help you connect to as many people who fit the archetype.\n- Use {first_name} to make sure your message is customized! ex - 'Hey {first_name}, heard about the difficult interview process at Substack Engineering, any tips?'\n\n### 2. Analytics\n- All tool calls are logged locally. Easy to see results (5% connection rate vs 10% connection rate) and experiment to find winning patterns.\n\n### 3. Confirmation\n- All LLM tool calls ask for confirmation before executing. Man in the middle is always good to add for users.\n\n## The Mindset\n\nUsing this tool is not meant for building personal (very warm connections). This is meant to find possible connections between strangers...",
+    "publishDate": "2025-12-22",
+    "readTime": 2,
+    "tags": ["LangChain", "Linkedin API", "Human in the Loop", "Uvicorn"]
   },
   {
     "id": 2,
     "title": "Optimizing React Performance: A Deep Dive",
     "slug": "optimizing-react-performance",
-    "excerpt": "Explore advanced techniques for optimizing React applications including code splitting, lazy loading, and effective use of React.memo and useMemo.",
+    "subtitle": "Explore advanced techniques for optimizing React applications including code splitting, lazy loading, and effective use of React.memo and useMemo.",
     "content": "# Optimizing React Performance\n\nPerformance optimization in React applications is crucial for delivering great user experiences. Let's dive into proven techniques...",
     "publishDate": "2024-02-28",
     "readTime": 6,
@@ -23,7 +23,7 @@
     "id": 3,
     "title": "My Journey from Google to Building AI Products",
     "slug": "journey-google-to-ai-products",
-    "excerpt": "Reflections on transitioning from big tech to building AI-powered products, lessons learned, and advice for aspiring engineers.",
+    "subtitle": "Reflections on transitioning from big tech to building AI-powered products, lessons learned, and advice for aspiring engineers.",
     "content": "# My Journey from Google to Building AI Products\n\nTransitioning from working at Google to building my own AI products has been an incredible journey...",
     "publishDate": "2024-01-20",
     "readTime": 5,

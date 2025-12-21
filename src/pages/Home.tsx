@@ -13,14 +13,25 @@ import PageStats from "../components/PageStats";
 import LikeButton from "../components/LikeButton";
 
 const Home = () => {
-  const projects = projectsData as Project[];
-  const blogs = blogsData as BlogPost[];
-  const apps = appsData as App[];
+  const projectsData_ = projectsData as Project[];
+  const blogsData_ = blogsData as BlogPost[];
+  const appsData_ = appsData as App[];
+
+  // Reorder arrays: last element first, then rest in order
+  const projects = projectsData_.length > 0
+    ? [projectsData_[projectsData_.length - 1], ...projectsData_.slice(0, -1)]
+    : projectsData_;
+  const blogs = blogsData_.length > 0
+    ? [blogsData_[blogsData_.length - 1], ...blogsData_.slice(0, -1)]
+    : blogsData_;
+  const apps = appsData_.length > 0
+    ? [appsData_[appsData_.length - 1], ...appsData_.slice(0, -1)]
+    : appsData_;
 
   // Track page analytics
   const { pageId, activeUsers, analytics } = usePageAnalytics("Home");
 
-  const certifications = [
+  const certificationsData = [
     {
       id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
       name: "MongoDB",
@@ -38,6 +49,11 @@ const Home = () => {
       name: "Cloud Practitioner",
     },
   ];
+
+  // Reorder certifications: last element first, then rest in order
+  const certifications = certificationsData.length > 0
+    ? [certificationsData[certificationsData.length - 1], ...certificationsData.slice(0, -1)]
+    : certificationsData;
 
   useEffect(() => {
     // Load Credly embed script
@@ -95,7 +111,7 @@ const Home = () => {
         {blog.title}
       </h3>
       <p className="text-sm text-[#001F3F]/70 dark:text-white/70 mb-3 line-clamp-3 flex-grow">
-        {blog.excerpt}
+        {blog.subtitle}
       </p>
       <div className="flex flex-wrap gap-1.5 mb-3">
         {blog.tags?.slice(0, 3).map((tag) => (
@@ -246,10 +262,17 @@ const Home = () => {
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
-            Software Engineer specializing in AI/ML, cloud infrastructure, and
-            full-stack development. Impacted millions at Google (via Tata
-            Consultancy Services).
+            Software Engineer specializing in Agentic MLOps, cloud infrastructure, and
+            full-stack development. 
           </p>
+
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
+            Impacted millions at Google Search (via Tata Consultancy Services), published iOS app, 
+            completed AWS DevOps Professional Certification, built Impactful Agents
+          </p>
+
+          
         </motion.div>
       </section>
 
@@ -310,7 +333,7 @@ const Home = () => {
           <AutoRotatingCarousel
             items={apps}
             renderItem={renderApp}
-            title="My Apps"
+            title="Apps for You"
             interval={5000}
           />
         </motion.div>

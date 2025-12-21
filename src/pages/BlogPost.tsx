@@ -1,8 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import blogsData from '../data/blogs.json';
 import type { BlogPost as BlogPostType } from '../types';
+import { usePageAnalytics } from '../hooks/usePageAnalytics';
+import ActiveViewers from '../components/ActiveViewers';
+import PageStats from '../components/PageStats';
+import LikeButton from '../components/LikeButton';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -25,6 +30,9 @@ const BlogPost = () => {
       </div>
     );
   }
+
+  // Track page analytics
+  const { pageId, activeUsers, analytics } = usePageAnalytics(post.title);
 
   const formattedDate = new Date(post.publishDate).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -60,6 +68,11 @@ const BlogPost = () => {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#001F3F] dark:text-white">
             {post.title}
           </h1>
+
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl text-[#001F3F]/70 dark:text-white/70">
+            {post.subtitle}
+          </p>
 
           {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-4 text-[#001F3F]/60 dark:text-white/60">
@@ -111,8 +124,56 @@ const BlogPost = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="prose prose-lg prose-navy dark:prose-invert max-w-none"
         >
-          <div className="text-[#001F3F] dark:text-white whitespace-pre-wrap">
+          <ReactMarkdown
+            components={{
+              a: ({ node, ...props }) => (
+                <a
+                  {...props}
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              ),
+              h2: ({ node, ...props }) => (
+                <h2 {...props} className="text-2xl font-bold mt-8 mb-4 text-[#001F3F] dark:text-white" />
+              ),
+              h3: ({ node, ...props }) => (
+                <h3 {...props} className="text-xl font-bold mt-6 mb-3 text-[#001F3F] dark:text-white" />
+              ),
+              p: ({ node, ...props }) => (
+                <p {...props} className="mb-4 text-[#001F3F] dark:text-white leading-relaxed" />
+              ),
+              ul: ({ node, ...props }) => (
+                <ul {...props} className="list-disc list-inside mb-4 text-[#001F3F] dark:text-white" />
+              ),
+              ol: ({ node, ...props }) => (
+                <ol {...props} className="list-decimal list-inside mb-4 text-[#001F3F] dark:text-white" />
+              ),
+              li: ({ node, ...props }) => (
+                <li {...props} className="" />
+              ),
+            }}
+          >
             {post.content}
+          </ReactMarkdown>
+        </motion.div>
+
+        {/* Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-12"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-white/50 dark:bg-[#001F3F]/30 border border-[#001F3F]/10 dark:border-white/10 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center gap-4 flex-1">
+              <ActiveViewers count={activeUsers} />
+              <PageStats
+                viewCount={analytics?.view_count}
+                likeCount={analytics?.like_count}
+              />
+            </div>
+            <LikeButton pageId={pageId} likeCount={analytics?.like_count} />
           </div>
         </motion.div>
 
@@ -120,8 +181,8 @@ const BlogPost = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-12 pt-8 border-t border-[#001F3F]/10 dark:border-white/10"
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-8 pt-8 border-t border-[#001F3F]/10 dark:border-white/10"
         >
           <Link
             to="/blog"
