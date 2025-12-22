@@ -9,15 +9,14 @@ const About = () => {
   const experiences = [
     {
       title: 'Software Engineer',
-      company: 'Google',
-      period: '2022 - 2023',
-      description: 'Worked on cloud infrastructure and distributed systems',
-    },
-    {
-      title: 'Software Engineer',
-      company: 'Tata Consultancy Services (TCS)',
-      period: '2020 - 2022',
-      description: 'Full-stack development and enterprise solutions',
+      company: 'Google (via Tata Consultancy Services)',
+      location: 'San Jose, CA',
+      period: 'June 2021 – December 2023',
+      responsibilities: [
+        'To solve stakeholder analytics, built TensorFlow and MySQL chatbot with NLP and 500+ training dataset connecting to near real-time secure backend data, delivering precise insights and real-time data access to stakeholders.',
+        'To facilitate data annotators, built Google Voice Command Classifier with React, Redux, and Cloud SQL. Implemented pagination and state management functionality, enabling 10,000+ voice commands to be classified.',
+        'To modernize Google Search, completed 10+ Google Search Frontend Migration Projects with Typescript, HTML/CSS and Visual Regression Testing. Worked as technical liaison between client stakeholders and mgmt, delivering consistent UI/UX migrations, 200+ production code changes and 700+ code reviews.',
+      ],
     },
   ];
 
@@ -29,9 +28,11 @@ const About = () => {
   };
 
   const certifications = [
-    'AWS Certified Solutions Architect',
-    'AWS Certified Developer',
-    'Machine Learning Specialization',
+    'AWS DevOps Professional',
+    'AWS Developer Associate',
+    'AWS Cloud Practitioner',
+    'Deeplearning.AI Finetuning Large Language Models',
+    'MongoDB Building RAG Apps',
   ];
 
   return (
@@ -48,7 +49,7 @@ const About = () => {
             About Me
           </h1>
           <p className="text-lg sm:text-xl text-[#001F3F]/70 dark:text-white/70 max-w-2xl mx-auto">
-            Software engineer passionate about building AI-powered solutions
+            Software engineer building scalable Agentic AI Systems and Platforms
           </p>
         </motion.div>
 
@@ -60,17 +61,20 @@ const About = () => {
           transition={{ duration: 0.6 }}
           className="mb-16"
         >
-          <div className="prose prose-lg prose-navy dark:prose-invert max-w-none">
+          {/* <div className="prose prose-lg prose-navy dark:prose-invert max-w-none">
             <p className="text-[#001F3F]/80 dark:text-white/80 text-lg leading-relaxed">
-              I'm a software engineer with experience at Google and TCS, currently pursuing my passion
-              for building AI-powered applications and cloud infrastructure solutions. I hold a Computer
-              Science degree from Rutgers University and have AWS certifications in cloud architecture
-              and development.
+              I'm a software engineer with 2 YOE at Google via Tata Consultancy Services, currently building scalable production level Agentic AI / AI Platforms. I have a Computer Science B.S. from Rutgers University. 
             </p>
             <p className="text-[#001F3F]/80 dark:text-white/80 text-lg leading-relaxed mt-4">
-              My work focuses on combining cutting-edge AI/ML technologies with scalable cloud
-              infrastructure to create practical solutions. I specialize in building RAG systems,
-              serverless applications, and full-stack web platforms.
+              I combine Agentic AI designs + DevOps monitoring skills
+            </p>
+          </div> */}
+          <div className="prose prose-lg prose-navy dark:prose-invert max-w-none">
+            <p className="text-[#001F3F]/80 dark:text-white/80 text-lg leading-relaxed">
+              I'm an AI Engineer building reproducible, scalable AI systems with 2+ years of experience at Google Search via Tata Consultancy Services, where I delivered 200+ production code changes. I hold a Computer Science B.S. from Rutgers University and am AWS DevOps Professional certified.
+            </p>
+            <p className="text-[#001F3F]/80 dark:text-white/80 text-lg leading-relaxed mt-4">
+              I specialize in bridging Cloud infrastructure (Lambda, EKS, Bedrock) with Agentic AI systems (LangChain, RAG, Vector DBs, finetuning) to deliver production-ready AI platforms. I've also published an iOS app to the App Store, demonstrating full-stack development capabilities.
             </p>
           </div>
         </motion.section>
@@ -100,7 +104,15 @@ const About = () => {
                 <h3 className="text-xl font-bold text-[#001F3F] dark:text-white">{exp.title}</h3>
                 <p className="text-[#001F3F]/70 dark:text-white/70 font-medium">{exp.company}</p>
                 <p className="text-[#001F3F]/60 dark:text-white/60 text-sm">{exp.period}</p>
-                <p className="text-[#001F3F]/70 dark:text-white/70 mt-2">{exp.description}</p>
+                <p className="text-[#001F3F]/60 dark:text-white/60 text-sm">{exp.location}</p>
+                <ul className="mt-3 space-y-2">
+                  {exp.responsibilities.map((responsibility, idx) => (
+                    <li key={idx} className="text-[#001F3F]/70 dark:text-white/70 text-sm flex">
+                      <span className="mr-2">•</span>
+                      <span>{responsibility}</span>
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             ))}
           </div>
@@ -123,7 +135,7 @@ const About = () => {
               Bachelor of Science in Computer Science
             </h3>
             <p className="text-[#001F3F]/70 dark:text-white/70 font-medium">Rutgers University</p>
-            <p className="text-[#001F3F]/60 dark:text-white/60 text-sm">Class of 2020</p>
+            <p className="text-[#001F3F]/60 dark:text-white/60 text-sm">Class of 2021</p>
           </div>
         </motion.section>
 
@@ -206,9 +218,7 @@ const About = () => {
             <h2 className="text-3xl font-bold text-[#001F3F] dark:text-white">Personal Interests</h2>
           </div>
           <p className="text-[#001F3F]/80 dark:text-white/80 text-lg">
-            Outside of coding, I maintain a daily running streak and enjoy exploring new technologies
-            and frameworks. I'm passionate about continuous learning and staying current with the
-            latest developments in AI and cloud computing.
+            Outside of AI dev, I enjoy running (multiple 10Ks), playing Quadball with Silicon Valley Vipers, and reading Classic Fiction / Tech Documentation.
           </p>
         </motion.section>
       </div>

@@ -8,25 +8,6 @@
     "publishDate": "2025-12-22",
     "readTime": 2,
     "tags": ["LangChain", "Linkedin API", "Human in the Loop", "Uvicorn"]
-  },
-  {
-    "id": 2,
-    "title": "Optimizing React Performance: A Deep Dive",
-    "slug": "optimizing-react-performance",
-    "subtitle": "Explore advanced techniques for optimizing React applications including code splitting, lazy loading, and effective use of React.memo and useMemo.",
-    "content": "# Optimizing React Performance\n\nPerformance optimization in React applications is crucial for delivering great user experiences. Let's dive into proven techniques...",
-    "publishDate": "2024-02-28",
-    "readTime": 6,
-    "tags": ["React", "Performance", "JavaScript"]
-  },
-  {
-    "id": 3,
-    "title": "My Journey from Google to Building AI Products",
-    "slug": "journey-google-to-ai-products",
-    "subtitle": "Reflections on transitioning from big tech to building AI-powered products, lessons learned, and advice for aspiring engineers.",
-    "content": "# My Journey from Google to Building AI Products\n\nTransitioning from working at Google to building my own AI products has been an incredible journey...",
-    "publishDate": "2024-01-20",
-    "readTime": 5,
-    "tags": ["Career", "AI", "Startup"]
   }
+  
 ]

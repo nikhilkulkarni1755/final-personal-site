@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import AutoRotatingCarousel from "../components/AutoRotatingCarousel";
@@ -33,10 +33,6 @@ const Home = () => {
 
   const certificationsData = [
     {
-      id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
-      name: "MongoDB",
-    },
-    {
       id: "9cbb98e9-0ea9-4b52-979e-b4a966e1dae8",
       name: "DevOps Professional",
     },
@@ -47,6 +43,10 @@ const Home = () => {
     {
       id: "415d68cd-8a32-4a59-8bc2-b0e6418b37f4",
       name: "Cloud Practitioner",
+    },
+    {
+      id: "e60bdb2b-dcc0-4dca-999d-854361ddc0df",
+      name: "MongoDB",
     },
   ];
 
@@ -268,11 +268,23 @@ const Home = () => {
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
-            Impacted millions at Google Search (via Tata Consultancy Services), published iOS app, 
+            Impacted millions at Google Search (via Tata Consultancy Services), published iOS app,
             completed AWS DevOps Professional Certification, built Impactful Agents
           </p>
 
-          
+          {/* Resume Button */}
+          <div className="flex justify-center">
+            <a
+              href="https://drive.google.com/file/d/1lEbvJPA_pyGYIsArTv9l0f1p0aD72H49/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 px-8 py-4 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-lg font-semibold shadow-lg hover:shadow-xl"
+            >
+              <FileText className="w-5 h-5" />
+              <span>View Resume</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
         </motion.div>
       </section>
 

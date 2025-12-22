@@ -6,6 +6,7 @@ import {
   getPageType,
   getAnonymousFingerprint,
 } from './analytics-utils';
+import { fetchLocationData } from './ipinfo';
 
 /**
  * Ensures a page exists in the database, creates it if it doesn't
@@ -50,12 +51,19 @@ export async function trackPageView(pageTitle: string) {
     // Ensure page exists
     const pageId = await ensurePageExists(slug, pageTitle);
 
-    // Insert page view
+    // Fetch location data from IPInfo
+    const locationData = await fetchLocationData();
+
+    // Insert page view with location data
     const { data, error } = await supabase
       .from('page_views')
       .insert({
         page_id: pageId,
         visitor_id: visitorId,
+        ip_hash: locationData?.ip_hash || null,
+        city: locationData?.city || null,
+        state: locationData?.state || null,
+        country: locationData?.country || null,
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
       })

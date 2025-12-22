@@ -69,6 +69,15 @@ const SocialLinksModal = ({ isOpen, onClose }: SocialLinksModalProps) => {
                 {link.label}
               </Link>
             ))}
+            <a
+              href="https://drive.google.com/file/d/1lEbvJPA_pyGYIsArTv9l0f1p0aD72H49/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-[#001F3F] dark:text-white hover:bg-[#001F3F]/5 dark:hover:bg-white/5 transition-colors text-left"
+            >
+              Resume
+            </a>
           </nav>
         </div>
 

@@ -1,4 +1,5 @@
 import { Github, Linkedin, Mail, Twitter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import socialLinks from '../data/social.json';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -38,6 +39,14 @@ const Footer = () => {
           <p className="text-sm text-[#001F3F]/60 dark:text-white/60">
             {currentYear} Nikhil Kulkarni. All rights reserved.
           </p>
+
+          {/* Privacy Policy Link */}
+          <Link
+            to="/privacy-policy"
+            className="text-sm text-[#001F3F]/60 dark:text-white/60 hover:text-[#001F3F] dark:hover:text-white transition-colors underline"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </div>
     </footer>

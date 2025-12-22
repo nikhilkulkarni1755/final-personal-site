@@ -8,6 +8,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Apps from './pages/Apps';
 import About from './pages/About';
+import Privacy from './pages/Privacy';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/apps" element={<Apps />} />
               <Route path="/about" element={<About />} />
+              <Route path="/privacy-policy" element={<Privacy />} />
             </Routes>
           </main>
           <Footer />
