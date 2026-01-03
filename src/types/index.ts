@@ -37,3 +37,44 @@ export type SocialLink = {
   url: string;
   icon: string;
 }
+
+// ============================================================================
+// Drug Marketplace Types
+// ============================================================================
+
+export type Drug = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  diseases_treated: string[];
+  side_effects: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type MarketplaceUser = {
+  id: string;
+  user_id: string;
+  token_balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Purchase = {
+  id: string;
+  user_id: string;
+  drug_id: string;
+  quantity: number;
+  total_cost: number;
+  purchase_date: string;
+}
+
+export type PurchaseWithDrug = Purchase & {
+  drugs: {
+    name: string;
+    description: string;
+    price: number;
+  } | null;
+}
