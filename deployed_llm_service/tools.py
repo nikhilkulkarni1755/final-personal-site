@@ -1,6 +1,6 @@
-from langchain.tools import Tool
+from langchain.tools import StructuredTool
 from langchain.pydantic_v1 import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from supabase_client import MarketplaceAPI
 import json
 
@@ -49,12 +49,11 @@ class GetPurchaseHistoryInput(BaseModel):
 # TOOL FUNCTIONS
 # ============================================================================
 
-def check_balance(input_data: dict) -> str:
+def check_balance(user_id: str) -> str:
     """
     Check the current token balance for a user.
     Returns the balance or an error message.
     """
-    user_id = input_data.get('user_id') if isinstance(input_data, dict) else input_data
     marketplace.ensure_user_exists(user_id)
     balance = marketplace.get_user_balance(user_id)
 
@@ -64,12 +63,11 @@ def check_balance(input_data: dict) -> str:
         return "Error: Could not retrieve user balance"
 
 
-def get_drug_price(input_data: dict) -> str:
+def get_drug_price(drug_name: str) -> str:
     """
     Get the price of a specific drug.
     Returns the price or an error message.
     """
-    drug_name = input_data.get('drug_name') if isinstance(input_data, dict) else input_data
     price = marketplace.get_drug_price(drug_name)
 
     if price is not None:
@@ -78,12 +76,11 @@ def get_drug_price(input_data: dict) -> str:
         return f"Error: Drug '{drug_name}' not found"
 
 
-def get_drug_stock(input_data: dict) -> str:
+def get_drug_stock(drug_name: str) -> str:
     """
     Check the available stock for a specific drug.
     Returns the stock level or an error message.
     """
-    drug_name = input_data.get('drug_name') if isinstance(input_data, dict) else input_data
     stock = marketplace.get_drug_stock(drug_name)
 
     if stock is not None:
@@ -92,7 +89,7 @@ def get_drug_stock(input_data: dict) -> str:
         return f"Error: Drug '{drug_name}' not found"
 
 
-def purchase_drug(input_data: dict) -> str:
+def purchase_drug(user_id: str, drug_name: str, quantity: int) -> str:
     """
     Purchase a drug. This will:
     1. Check user balance
@@ -100,10 +97,6 @@ def purchase_drug(input_data: dict) -> str:
     3. Execute purchase if possible
     4. Return success or failure message
     """
-    user_id = input_data['user_id']
-    drug_name = input_data['drug_name']
-    quantity = input_data['quantity']
-
     result = marketplace.purchase_drug(user_id, drug_name, quantity)
 
     if result['success']:
@@ -131,11 +124,10 @@ def list_drugs() -> str:
     return "Available drugs:\n" + "\n".join(drug_list)
 
 
-def get_purchase_history(input_data: dict) -> str:
+def get_purchase_history(user_id: str) -> str:
     """
     Get the purchase history for a user.
     """
-    user_id = input_data.get('user_id') if isinstance(input_data, dict) else input_data
     history = marketplace.get_purchase_history(user_id)
 
     if not history:
@@ -158,72 +150,66 @@ def get_purchase_history(input_data: dict) -> str:
 # LANGCHAIN TOOLS
 # ============================================================================
 
-def create_marketplace_tools() -> List[Tool]:
+def create_marketplace_tools() -> List[StructuredTool]:
     """
     Create LangChain tools for the marketplace agent.
     These tools will be available to the ChatGPT agent.
     """
 
     tools = [
-        Tool(
-            name="check_balance",
+        StructuredTool.from_function(
             func=check_balance,
+            name="check_balance",
             description=(
                 "Check the current token balance for a user. "
-                "Use this when the user asks about their balance, tokens, or money. "
-                "Input: user_id (string)"
+                "Use this when the user asks about their balance, tokens, or money."
             ),
             args_schema=CheckBalanceInput
         ),
-        Tool(
-            name="get_drug_price",
+        StructuredTool.from_function(
             func=get_drug_price,
+            name="get_drug_price",
             description=(
                 "Get the price of a specific drug. "
-                "Use this when the user asks how much a drug costs. "
-                "Input: drug_name (string)"
+                "Use this when the user asks how much a drug costs."
             ),
             args_schema=GetDrugPriceInput
         ),
-        Tool(
-            name="get_drug_stock",
+        StructuredTool.from_function(
             func=get_drug_stock,
+            name="get_drug_stock",
             description=(
                 "Check the available stock for a specific drug. "
-                "Use this when the user asks if a drug is available or how many units are in stock. "
-                "Input: drug_name (string)"
+                "Use this when the user asks if a drug is available or how many units are in stock."
             ),
             args_schema=GetDrugStockInput
         ),
-        Tool(
-            name="list_drugs",
+        StructuredTool.from_function(
             func=list_drugs,
+            name="list_drugs",
             description=(
                 "List all available drugs with their prices and stock levels. "
                 "Use this when the user asks what drugs are available, wants to see options, "
                 "or asks for a list of products."
-            ),
-            args_schema=ListDrugsInput
+            )
         ),
-        Tool(
-            name="purchase_drug",
+        StructuredTool.from_function(
             func=purchase_drug,
+            name="purchase_drug",
             description=(
                 "Purchase a drug for a user. This automatically checks balance, price, and stock, "
                 "then executes the purchase if possible. "
                 "Use this when the user wants to buy a drug. "
-                "IMPORTANT: You should check balance, price, and stock BEFORE calling this to inform the user. "
-                "Input: user_id (string), drug_name (string), quantity (integer)"
+                "IMPORTANT: Call this tool to actually execute the purchase!"
             ),
             args_schema=PurchaseDrugInput
         ),
-        Tool(
-            name="get_purchase_history",
+        StructuredTool.from_function(
             func=get_purchase_history,
+            name="get_purchase_history",
             description=(
                 "Get the purchase history for a user. "
-                "Use this when the user asks about their past purchases or order history. "
-                "Input: user_id (string)"
+                "Use this when the user asks about their past purchases or order history."
             ),
             args_schema=GetPurchaseHistoryInput
         ),
