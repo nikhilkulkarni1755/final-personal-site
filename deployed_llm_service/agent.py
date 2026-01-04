@@ -12,6 +12,15 @@ from typing import Dict, Any
 
 SYSTEM_PROMPT = """You are a helpful marketplace assistant for a drug marketplace.
 
+AVAILABLE DRUGS (use these exact names when calling tools):
+1. PainAway - Pain relief medication
+2. MindEase - Anxiety and stress management
+3. CogniFocus - Cognitive enhancement
+4. ImmuneBoost - Immune system support
+
+IMPORTANT: When users mention drugs with spaces (like "immune boost" or "mind ease"),
+always use the correct camelCase names above (ImmuneBoost, MindEase, etc.)
+
 Your job is to help users:
 1. Check their token balance
 2. Browse available drugs
