@@ -49,11 +49,12 @@ class GetPurchaseHistoryInput(BaseModel):
 # TOOL FUNCTIONS
 # ============================================================================
 
-def check_balance(user_id: str) -> str:
+def check_balance(input_data: dict) -> str:
     """
     Check the current token balance for a user.
     Returns the balance or an error message.
     """
+    user_id = input_data.get('user_id') if isinstance(input_data, dict) else input_data
     marketplace.ensure_user_exists(user_id)
     balance = marketplace.get_user_balance(user_id)
 
@@ -63,11 +64,12 @@ def check_balance(user_id: str) -> str:
         return "Error: Could not retrieve user balance"
 
 
-def get_drug_price(drug_name: str) -> str:
+def get_drug_price(input_data: dict) -> str:
     """
     Get the price of a specific drug.
     Returns the price or an error message.
     """
+    drug_name = input_data.get('drug_name') if isinstance(input_data, dict) else input_data
     price = marketplace.get_drug_price(drug_name)
 
     if price is not None:
@@ -76,11 +78,12 @@ def get_drug_price(drug_name: str) -> str:
         return f"Error: Drug '{drug_name}' not found"
 
 
-def get_drug_stock(drug_name: str) -> str:
+def get_drug_stock(input_data: dict) -> str:
     """
     Check the available stock for a specific drug.
     Returns the stock level or an error message.
     """
+    drug_name = input_data.get('drug_name') if isinstance(input_data, dict) else input_data
     stock = marketplace.get_drug_stock(drug_name)
 
     if stock is not None:
@@ -89,7 +92,7 @@ def get_drug_stock(drug_name: str) -> str:
         return f"Error: Drug '{drug_name}' not found"
 
 
-def purchase_drug(user_id: str, drug_name: str, quantity: int) -> str:
+def purchase_drug(input_data: dict) -> str:
     """
     Purchase a drug. This will:
     1. Check user balance
@@ -97,6 +100,10 @@ def purchase_drug(user_id: str, drug_name: str, quantity: int) -> str:
     3. Execute purchase if possible
     4. Return success or failure message
     """
+    user_id = input_data['user_id']
+    drug_name = input_data['drug_name']
+    quantity = input_data['quantity']
+
     result = marketplace.purchase_drug(user_id, drug_name, quantity)
 
     if result['success']:
@@ -124,10 +131,11 @@ def list_drugs() -> str:
     return "Available drugs:\n" + "\n".join(drug_list)
 
 
-def get_purchase_history(user_id: str) -> str:
+def get_purchase_history(input_data: dict) -> str:
     """
     Get the purchase history for a user.
     """
+    user_id = input_data.get('user_id') if isinstance(input_data, dict) else input_data
     history = marketplace.get_purchase_history(user_id)
 
     if not history:
