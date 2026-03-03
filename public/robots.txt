@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nikhilkulkarni1755.com/sitemap.xml

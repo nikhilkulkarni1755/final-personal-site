@@ -1,0 +1,9 @@
+/* TEAM */
+Name: Nikhil Kulkarni
+Site: https://nikhilkulkarni1755.com
+Contact: nikhilkulkarni1755 [at] gmail.com
+
+/* SITE */
+Built with: React, TypeScript, Vite, TailwindCSS
+Hosted on: Cloudflare Pages
+Backend: Supabase, Render
