@@ -10,6 +10,7 @@ import Apps from './pages/Apps';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
 import DrugMarketplace from './pages/DrugMarketplace';
+import MatmulTutorial from './pages/MatmulTutorial';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/matmul-to-ai" element={<MatmulTutorial />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/apps" element={<Apps />} />
               <Route path="/about" element={<About />} />

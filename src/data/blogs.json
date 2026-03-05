@@ -1,5 +1,15 @@
 [
   {
+    "id": 2,
+    "title": "From Matrices to Minds",
+    "slug": "matmul-to-ai",
+    "subtitle": "How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.",
+    "content": "",
+    "publishDate": "2026-03-05",
+    "readTime": 25,
+    "tags": ["Linear Algebra", "Neural Networks", "Transformers", "GPUs"]
+  },
+  {
     "id": 1,
     "title": "LinkedIn Agent",
     "slug": "linkedin-agent",
