@@ -570,6 +570,12 @@
   }
 
   loadData();
+
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'switchBucket' && data) {
+      renderBucket(e.data.bucket);
+    }
+  });
 </script>
 </body>
 </html>

@@ -219,15 +219,16 @@ const ThoughtProcessModal = ({ doc, onClose }: { doc: ThoughtDocKey; onClose: ()
 // ─── Main Component ───
 
 const WeaveTakeHome = () => {
-  const iframeRef    = useRef<HTMLIFrameElement>(null);
-  const dropdownRef  = useRef<HTMLDivElement>(null);
+  const iframeRef   = useRef<HTMLIFrameElement>(null);
+  const btnRef      = useRef<HTMLButtonElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeModal, setActiveModal]   = useState<ThoughtDocKey | null>(null);
   const [activeBucket, setActiveBucket] = useState<BucketKey>('feature_owner');
+  const [panelPos, setPanelPos]         = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (btnRef.current && !btnRef.current.closest('[data-dropdown]')?.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     };
@@ -235,21 +236,18 @@ const WeaveTakeHome = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const toggleDropdown = () => {
+    if (!dropdownOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPanelPos({ top: rect.bottom + 6, left: rect.left });
+    }
+    setDropdownOpen(o => !o);
+  };
+
   const switchBucket = (key: BucketKey) => {
     setActiveBucket(key);
     setDropdownOpen(false);
-    const iframe = iframeRef.current;
-    if (iframe && iframe.contentWindow) {
-      try {
-        const select = iframe.contentWindow.document.getElementById('bucket-select') as HTMLSelectElement;
-        if (select) {
-          select.value = key;
-          select.dispatchEvent(new Event('change'));
-        }
-      } catch {
-        // cross-origin safety — ignore
-      }
-    }
+    iframeRef.current?.contentWindow?.postMessage({ type: 'switchBucket', bucket: key }, '*');
   };
 
   const openModal = (doc: ThoughtDocKey) => {
@@ -271,6 +269,21 @@ const WeaveTakeHome = () => {
           <ArrowLeft className="w-4 h-4" />
           <span className="font-['DM_Mono',monospace] text-xs">back</span>
         </Link>
+
+        <div className="w-px h-5 bg-[#2a2a3a]" />
+
+        {/* Dropdown trigger — lives in header, panel renders via fixed portal */}
+        <div data-dropdown="true">
+          <button
+            ref={btnRef}
+            onClick={toggleDropdown}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#2a2a3a] bg-[#1a1d27] text-[#e8e8f0] text-xs font-['DM_Mono',monospace] hover:border-[#7c6aff]/50 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeMeta.color }} />
+            <span>{activeMeta.label}</span>
+            <ChevronDown className={`w-3 h-3 text-[#5a5a7a] transition-transform duration-150 ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
 
         <div className="w-px h-5 bg-[#2a2a3a]" />
 
@@ -301,64 +314,7 @@ const WeaveTakeHome = () => {
       </header>
 
       {/* ── Body ── */}
-      <div className="flex-1 relative overflow-hidden">
-
-        {/* Dropdown */}
-        <div ref={dropdownRef} className="absolute top-3 left-3 z-[60]">
-          <button
-            onClick={() => setDropdownOpen(o => !o)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#2a2a3a] bg-[#1a1d27] text-[#e8e8f0] text-xs font-['DM_Mono',monospace] hover:border-[#7c6aff]/50 transition-colors shadow-lg"
-          >
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeMeta.color }} />
-            <span>{activeMeta.label}</span>
-            <ChevronDown className={`w-3 h-3 text-[#5a5a7a] transition-transform duration-150 ${dropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-64 bg-[#1a1d27] border border-[#2a2a3a] rounded-xl shadow-2xl overflow-hidden">
-
-              {/* Dashboard section */}
-              <div className="px-3 pt-3 pb-1.5">
-                <div className="font-['DM_Mono',monospace] text-[9px] tracking-[0.25em] uppercase text-[#5a5a7a] mb-1.5 px-1">
-                  Dashboard
-                </div>
-                {BUCKETS.map(b => (
-                  <button
-                    key={b.key}
-                    onClick={() => switchBucket(b.key)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors ${activeBucket === b.key ? 'bg-[#2a2a3a]' : 'hover:bg-[#22263a]'}`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: b.color }} />
-                    <span className="text-xs text-[#e8e8f0]">{b.label}</span>
-                    {activeBucket === b.key && (
-                      <span className="ml-auto font-['DM_Mono',monospace] text-[9px] text-[#5a5a7a]">active</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mx-3 my-1.5 border-t border-[#2a2a3a]" />
-
-              {/* Thought process section */}
-              <div className="px-3 pb-3">
-                <div className="font-['DM_Mono',monospace] text-[9px] tracking-[0.25em] uppercase text-[#5a5a7a] mb-1.5 px-1">
-                  Thought Process
-                </div>
-                {THOUGHT_DOCS.map(doc => (
-                  <button
-                    key={doc.key}
-                    onClick={() => openModal(doc.key)}
-                    className="w-full flex flex-col px-2 py-2 rounded-lg text-left hover:bg-[#22263a] transition-colors"
-                  >
-                    <span className="text-xs text-[#e8e8f0]">{doc.label}</span>
-                    <span className="font-['DM_Mono',monospace] text-[10px] text-[#5a5a7a] mt-0.5">{doc.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
+      <div className="flex-1">
         {/* Dashboard iframe */}
         <iframe
           ref={iframeRef}
@@ -367,6 +323,55 @@ const WeaveTakeHome = () => {
           title="Weave Engineering Impact Dashboard"
         />
       </div>
+
+      {/* ── Dropdown panel — fixed so iframe stacking can't cover it ── */}
+      {dropdownOpen && (
+        <div
+          data-dropdown="true"
+          style={{ position: 'fixed', top: panelPos.top, left: panelPos.left, zIndex: 9999 }}
+          className="w-64 bg-[#1a1d27] border border-[#2a2a3a] rounded-xl shadow-2xl overflow-hidden"
+        >
+          {/* Dashboard section */}
+          <div className="px-3 pt-3 pb-1.5">
+            <div className="font-['DM_Mono',monospace] text-[9px] tracking-[0.25em] uppercase text-[#5a5a7a] mb-1.5 px-1">
+              Dashboard
+            </div>
+            {BUCKETS.map(b => (
+              <button
+                key={b.key}
+                onClick={() => switchBucket(b.key)}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors hover:bg-[#22263a]"
+                style={{ backgroundColor: activeBucket === b.key ? '#2a2a3a' : undefined }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: b.color }} />
+                <span className="text-xs text-[#e8e8f0]">{b.label}</span>
+                {activeBucket === b.key && (
+                  <span className="ml-auto font-['DM_Mono',monospace] text-[9px] text-[#5a5a7a]">active</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="mx-3 my-1.5 border-t border-[#2a2a3a]" />
+
+          {/* Thought process section */}
+          <div className="px-3 pb-3">
+            <div className="font-['DM_Mono',monospace] text-[9px] tracking-[0.25em] uppercase text-[#5a5a7a] mb-1.5 px-1">
+              Thought Process
+            </div>
+            {THOUGHT_DOCS.map(doc => (
+              <button
+                key={doc.key}
+                onClick={() => openModal(doc.key)}
+                className="w-full flex flex-col px-2 py-2 rounded-lg text-left hover:bg-[#22263a] transition-colors"
+              >
+                <span className="text-xs text-[#e8e8f0]">{doc.label}</span>
+                <span className="font-['DM_Mono',monospace] text-[10px] text-[#5a5a7a] mt-0.5">{doc.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {activeModal && (
