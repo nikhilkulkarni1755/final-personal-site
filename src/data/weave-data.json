@@ -1,0 +1,3634 @@
+{
+  "generated_at": "2026-03-15T18:34:18.542739+00:00",
+  "window_days": 90,
+  "repo": "PostHog/posthog",
+  "top_overall": [
+    "webjunkie",
+    "MattPua",
+    "haacked",
+    "Piccirello",
+    "rafaeelaudibert"
+  ],
+  "top_by_bucket": {
+    "feature_owner": [
+      "MattPua",
+      "haacked",
+      "webjunkie",
+      "Piccirello",
+      "mariusandra"
+    ],
+    "reviewer": [
+      "rafaeelaudibert",
+      "lricoy",
+      "webjunkie",
+      "tomasfarias",
+      "sampennington"
+    ],
+    "infra": [
+      "webjunkie",
+      "VojtechBartos",
+      "benjackwhite",
+      "kappa90",
+      "rnegron"
+    ]
+  },
+  "engineers": {
+    "ablaszkiewicz": {
+      "username": "ablaszkiewicz",
+      "name": "Aleksander B\u0142aszkiewicz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/54682207?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": 24.0,
+        "reviewer": 28.1,
+        "infra": 22.7
+      },
+      "primary_reason": "Gave 5 reviews across 3 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.8,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 5,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 5,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.2,
+        "avg_review_speed_hours": 5.6,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 2,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.333,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "bin"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51061,
+          "title": "fix: typeless exceptions",
+          "url": "https://github.com/PostHog/posthog/pull/51061"
+        },
+        {
+          "number": 50818,
+          "title": "fix: always run cyclotron migrations",
+          "url": "https://github.com/PostHog/posthog/pull/50818"
+        },
+        {
+          "number": 50817,
+          "title": "Ab/feat/powerful insights",
+          "url": "https://github.com/PostHog/posthog/pull/50817"
+        }
+      ],
+      "top_files": [
+        "products/error_tracking/frontend/queries.ts",
+        "bin/mprocs.yaml",
+        "devenv/intent-map.yaml",
+        "products/error_tracking/frontend/scenes/ErrorTrackingScene/tabs/insights/ErrorTrackingInsights.tsx",
+        "products/error_tracking/frontend/scenes/ErrorTrackingScene/tabs/insights/ErrorsByFeatureFlag.tsx"
+      ]
+    },
+    "Piccirello": {
+      "username": "Piccirello",
+      "name": "Tom Piccirello",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8296030?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 70.0,
+        "reviewer": 30.4,
+        "infra": 13.9
+      },
+      "primary_reason": "Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 12,
+        "prs_merged": 11,
+        "merge_rate": 0.917,
+        "directory_concentration": 0.725,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "mypy-baseline.txt"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 6,
+        "prs_reviewed": 5,
+        "changes_requested_count": 0,
+        "approved_count": 5,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 4,
+        "avg_comment_substance_ratio": 0.167,
+        "avg_review_speed_hours": 0.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.083,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "other-infra"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51071,
+          "title": "chore: disable egress proxy in prometheus client",
+          "url": "https://github.com/PostHog/posthog/pull/51071"
+        },
+        {
+          "number": 51043,
+          "title": "fix: bypass egress proxy when connecting to Clickhouse",
+          "url": "https://github.com/PostHog/posthog/pull/51043"
+        },
+        {
+          "number": 51004,
+          "title": "fix: bypass egress proxy when connecting to Clickhouse",
+          "url": "https://github.com/PostHog/posthog/pull/51004"
+        }
+      ],
+      "top_files": [
+        "mypy-baseline.txt",
+        "posthog/conftest.py",
+        "posthog/management/commands/migrate_clickhouse.py",
+        "posthog/management/commands/setup_test_environment.py",
+        "ee/api/billing.py"
+      ]
+    },
+    "mariusandra": {
+      "username": "mariusandra",
+      "name": "Marius Andra",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53387?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 69.9,
+        "reviewer": 10.4,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 3,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.769,
+        "repeat_files_count": 2,
+        "repeat_files": [
+          "posthog/hogql/database/database.py",
+          "posthog/hogql/database/test/test_database.py"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 1.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50969,
+          "title": "fix(hogql): support nested join key expressions",
+          "url": "https://github.com/PostHog/posthog/pull/50969"
+        },
+        {
+          "number": 50923,
+          "title": "fix(warehouse): duplicate events table issue",
+          "url": "https://github.com/PostHog/posthog/pull/50923"
+        },
+        {
+          "number": 50902,
+          "title": "feat(ducklake): sql editor connection settings",
+          "url": "https://github.com/PostHog/posthog/pull/50902"
+        }
+      ],
+      "top_files": [
+        "posthog/hogql/database/database.py",
+        "posthog/hogql/database/test/test_database.py",
+        "posthog/hogql/database/utils.py",
+        "products/data_warehouse/backend/api/test/test_view_link.py",
+        "products/data_warehouse/backend/api/view_link.py"
+      ]
+    },
+    "adboio": {
+      "username": "adboio",
+      "name": "Adam Bowker",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23323033?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 50.3,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 4 PRs (4 merged) with 60% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 4,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.6,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.2,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 1,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50968,
+          "title": "fix(surveys): fix django admin form validation",
+          "url": "https://github.com/PostHog/posthog/pull/50968"
+        },
+        {
+          "number": 50729,
+          "title": "chore(surveys): update sdk docs for event property filters",
+          "url": "https://github.com/PostHog/posthog/pull/50729"
+        },
+        {
+          "number": 50696,
+          "title": "feat(surveys): add copy response key button to question viz",
+          "url": "https://github.com/PostHog/posthog/pull/50696"
+        }
+      ],
+      "top_files": [
+        "posthog/migrations/1048_alter_survey_response_sampling_daily_limits_and_more.py",
+        "posthog/migrations/max_migration.txt",
+        "posthog/models/surveys/survey.py",
+        "docs/published/docs/surveys/sdk-feature-support.mdx",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--light.png"
+      ]
+    },
+    "tatoalo": {
+      "username": "tatoalo",
+      "name": "Alessandro Pogliaghi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2117114?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 56.5,
+        "reviewer": 26.7,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (3 merged) with 90% focus in 'ee'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 3,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.9,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "ee",
+        "reviews_given": 4,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.25,
+        "avg_review_speed_hours": 1.0,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50855,
+          "title": "fix(ph-ai): track httpx transport errors on separate counter from LLM provider errors",
+          "url": "https://github.com/PostHog/posthog/pull/50855"
+        },
+        {
+          "number": 50795,
+          "title": "chore(ph-ai): handle httpx transport errors as transient LLM exceptions",
+          "url": "https://github.com/PostHog/posthog/pull/50795"
+        },
+        {
+          "number": 50694,
+          "title": "fix(ph-ai): stop button now cancels queued convs workflows",
+          "url": "https://github.com/PostHog/posthog/pull/50694"
+        }
+      ],
+      "top_files": [
+        "ee/hogai/core/test/test_runner.py",
+        "ee/hogai/utils/exceptions.py",
+        "ee/hogai/core/runner.py",
+        "ee/api/conversation.py",
+        "ee/api/test/test_conversation.py"
+      ]
+    },
+    "adamleithp": {
+      "username": "adamleithp",
+      "name": "Adam Leith",
+      "avatar_url": "https://avatars.githubusercontent.com/u/814190?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 32.3,
+        "infra": null
+      },
+      "primary_reason": "Gave 3 reviews across 3 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 2,
+        "prs_merged": 2,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.333,
+        "avg_review_speed_hours": 19.1,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50960,
+          "title": "fix: crashing search",
+          "url": "https://github.com/PostHog/posthog/pull/50960"
+        },
+        {
+          "number": 50954,
+          "title": "fix(ux): ai first nav fixes",
+          "url": "https://github.com/PostHog/posthog/pull/50954"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-two-variants--light.png",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--light.png",
+        "frontend/src/lib/components/Search/Search.tsx",
+        "frontend/src/lib/components/Search/searchLogic.tsx",
+        "frontend/__snapshots__/layout-project-tree-custom-products--all-products--dark.png"
+      ]
+    },
+    "andehen": {
+      "username": "andehen",
+      "name": "Anders",
+      "avatar_url": "https://avatars.githubusercontent.com/u/754494?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 55.9,
+        "reviewer": 10.4,
+        "infra": null
+      },
+      "primary_reason": "Authored 6 PRs (3 merged) with 32% focus in 'products'; owns 3 repeat files.",
+      "metrics": {
+        "prs_authored": 6,
+        "prs_merged": 3,
+        "merge_rate": 0.5,
+        "directory_concentration": 0.316,
+        "repeat_files_count": 3,
+        "repeat_files": [
+          "ee/clickhouse/views/experiments.py",
+          "products/experiments/backend/experiment_service.py",
+          "products/experiments/backend/test/test_experiment_service.py"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 3,
+        "prs_reviewed": 2,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.1,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50963,
+          "title": "fix(experiments): move experiments list query to service",
+          "url": "https://github.com/PostHog/posthog/pull/50963"
+        },
+        {
+          "number": 50949,
+          "title": "fix: include email via $set in report_user_action events",
+          "url": "https://github.com/PostHog/posthog/pull/50949"
+        },
+        {
+          "number": 50947,
+          "title": "fix(experiments): move experiments view logic to service",
+          "url": "https://github.com/PostHog/posthog/pull/50947"
+        }
+      ],
+      "top_files": [
+        "ee/clickhouse/views/experiments.py",
+        "products/experiments/backend/experiment_service.py",
+        "products/experiments/backend/test/test_experiment_service.py",
+        "posthog/models/resource_transfer/test/__snapshots__/test_visitor_field_snapshots.ambr",
+        "posthog/event_usage.py"
+      ]
+    },
+    "jurajmajerik": {
+      "username": "jurajmajerik",
+      "name": "Juraj Majerik",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22996112?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 10.4,
+        "infra": null
+      },
+      "primary_reason": "Gave 3 reviews across 2 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 2,
+        "prs_merged": 2,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.444,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.3,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50972,
+          "title": "feat(experiments): Enrich significance notification template",
+          "url": "https://github.com/PostHog/posthog/pull/50972"
+        },
+        {
+          "number": 50891,
+          "title": "fix(experiments): Fix experiment significance notifications",
+          "url": "https://github.com/PostHog/posthog/pull/50891"
+        }
+      ],
+      "top_files": [
+        "posthog/temporal/experiments/activities.py",
+        "posthog/temporal/experiments/test_significance_transition.py",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--dark.png"
+      ]
+    },
+    "a-lider": {
+      "username": "a-lider",
+      "name": "Alex Lider",
+      "avatar_url": "https://avatars.githubusercontent.com/u/221966567?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 28.0,
+        "infra": null
+      },
+      "primary_reason": "Gave 6 reviews across 1 unique authors; requested changes 1 times (17% of reviews).",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 1,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 6,
+        "prs_reviewed": 4,
+        "changes_requested_count": 1,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.167,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.167,
+        "avg_review_speed_hours": 7.3,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50909,
+          "title": "fix(rbac): apply intersection of selected filters in the new access control UI",
+          "url": "https://github.com/PostHog/posthog/pull/50909"
+        }
+      ],
+      "top_files": [
+        "frontend/src/layout/navigation-3000/sidepanel/panels/access_control/ResourceAccessControlsV2/accessControlsLogic.test.ts",
+        "frontend/src/layout/navigation-3000/sidepanel/panels/access_control/ResourceAccessControlsV2/accessControlsLogic.ts"
+      ]
+    },
+    "Radu-Raicea": {
+      "username": "Radu-Raicea",
+      "name": "Radu Raicea",
+      "avatar_url": "https://avatars.githubusercontent.com/u/15457029?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 7.9,
+        "infra": null
+      },
+      "primary_reason": "Gave 3 reviews across 1 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 2,
+        "prs_merged": 1,
+        "merge_rate": 0.5,
+        "directory_concentration": 0.776,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 2.0,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50722,
+          "title": "feat(llma): add scorer-based human reviews",
+          "url": "https://github.com/PostHog/posthog/pull/50722"
+        },
+        {
+          "number": 50708,
+          "title": "feat(llma): add scorer definitions management",
+          "url": "https://github.com/PostHog/posthog/pull/50708"
+        }
+      ],
+      "top_files": [
+        ".semgrep/rules/idor-team-scoped-models.yaml",
+        "posthog/api/__init__.py",
+        "posthog/api/test/__snapshots__/test_api_docs.ambr",
+        "products/llm_analytics/backend/api/__init__.py",
+        "products/llm_analytics/backend/api/test/test_llm_analytics_access_control.py"
+      ]
+    },
+    "andyzzhao": {
+      "username": "andyzzhao",
+      "name": "Andy Zhao",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34008309?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 15.7,
+        "infra": 28.5
+      },
+      "primary_reason": "Drove 1 infra PRs (50% of total); touched 1 infra subsystems: bin.",
+      "metrics": {
+        "prs_authored": 2,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.467,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 6,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 7.7,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.5,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "bin"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51053,
+          "title": "chore: enable prometheus multiprocess mode for local dev",
+          "url": "https://github.com/PostHog/posthog/pull/51053"
+        },
+        {
+          "number": 51049,
+          "title": "feat: view-level query coalescing",
+          "url": "https://github.com/PostHog/posthog/pull/51049"
+        }
+      ],
+      "top_files": [
+        "bin/start-backend",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--dark.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--light.png",
+        "posthog/api/query.py",
+        "posthog/api/query_coalescer.py"
+      ]
+    },
+    "thmsobrmlr": {
+      "username": "thmsobrmlr",
+      "name": "Thomas Oberm\u00fcller",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1851359?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 52.6,
+        "reviewer": 33.1,
+        "infra": null
+      },
+      "primary_reason": "Authored 6 PRs (5 merged) with 78% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 6,
+        "prs_merged": 5,
+        "merge_rate": 0.833,
+        "directory_concentration": 0.783,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 5,
+        "prs_reviewed": 5,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 5,
+        "avg_comment_substance_ratio": 0.2,
+        "avg_review_speed_hours": 12.9,
+        "reviewed_merge_rate": 0.6,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50956,
+          "title": "feat(insights): add filter to show only insights not on any dashboard",
+          "url": "https://github.com/PostHog/posthog/pull/50956"
+        },
+        {
+          "number": 50925,
+          "title": "fix(frontend): fix use attached logic",
+          "url": "https://github.com/PostHog/posthog/pull/50925"
+        },
+        {
+          "number": 50887,
+          "title": "feat(insights): prevent display settings leaking across insight tabs",
+          "url": "https://github.com/PostHog/posthog/pull/50887"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/scenes-app-saved-insights--empty-state--dark.png",
+        "frontend/__snapshots__/scenes-app-saved-insights--empty-state--light.png",
+        "frontend/__snapshots__/scenes-app-saved-insights--list-view--dark.png",
+        "frontend/__snapshots__/scenes-app-saved-insights--list-view--light.png",
+        "frontend/src/scenes/saved-insights/SavedInsightsFilters.test.tsx"
+      ]
+    },
+    "estefaniarabadan": {
+      "username": "estefaniarabadan",
+      "name": "estefania",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10627591?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 58.0,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 7 PRs (6 merged) with 92% focus in 'posthog'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 7,
+        "prs_merged": 6,
+        "merge_rate": 0.857,
+        "directory_concentration": 0.917,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50966,
+          "title": "fix(ds): reduce memory usage in postgres data warehouse source to prevent OOM",
+          "url": "https://github.com/PostHog/posthog/pull/50966"
+        },
+        {
+          "number": 50836,
+          "title": "fix(ds): pass schema name filter to validate_credentials",
+          "url": "https://github.com/PostHog/posthog/pull/50836"
+        },
+        {
+          "number": 50806,
+          "title": "chore(ds): increase retry attempts for resumable warehouse sources",
+          "url": "https://github.com/PostHog/posthog/pull/50806"
+        }
+      ],
+      "top_files": [
+        "posthog/temporal/data_imports/sources/klaviyo/klaviyo.py",
+        "posthog/models/resource_transfer/test/__snapshots__/test_visitor_field_snapshots.ambr",
+        "posthog/temporal/data_imports/pipelines/pipeline/utils.py",
+        "posthog/temporal/data_imports/sources/postgres/postgres.py",
+        "posthog/temporal/data_imports/sources/postgres/source.py"
+      ]
+    },
+    "webjunkie": {
+      "username": "webjunkie",
+      "name": "Julian Bez",
+      "avatar_url": "https://avatars.githubusercontent.com/u/59713?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": 74.2,
+        "reviewer": 50.3,
+        "infra": 88.3
+      },
+      "primary_reason": "Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.",
+      "metrics": {
+        "prs_authored": 15,
+        "prs_merged": 10,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.367,
+        "repeat_files_count": 3,
+        "repeat_files": [
+          "tools/pr-approval-agent/reviewer.py",
+          ".github/workflows/pr-approval-agent.yml",
+          ".github/workflows/ci-backend.yml"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "tools",
+        "reviews_given": 10,
+        "prs_reviewed": 8,
+        "changes_requested_count": 0,
+        "approved_count": 6,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 6,
+        "avg_comment_substance_ratio": 0.3,
+        "avg_review_speed_hours": 8.2,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 4,
+        "infra_prs_count": 10,
+        "infra_pr_ratio": 0.667,
+        "infra_merge_rate": 0.7,
+        "dep_update_prs_count": 2,
+        "cicd_file_changes": 15,
+        "infra_subsystems": [
+          "bin",
+          ".github",
+          "docker",
+          "other-infra"
+        ],
+        "infra_subsystem_count": 4
+      },
+      "top_prs": [
+        {
+          "number": 51040,
+          "title": "fix(devex): relax zero-reviews rule for low-risk PRs",
+          "url": "https://github.com/PostHog/posthog/pull/51040"
+        },
+        {
+          "number": 50999,
+          "title": "fix(devex): pr-approval-agent tuning and label retention",
+          "url": "https://github.com/PostHog/posthog/pull/50999"
+        },
+        {
+          "number": 50994,
+          "title": "fix(ci): remove redundant OpenAPI type generation in check-migrations",
+          "url": "https://github.com/PostHog/posthog/pull/50994"
+        }
+      ],
+      "top_files": [
+        ".github/workflows/pr-approval-agent.yml",
+        "tools/pr-approval-agent/reviewer.py",
+        ".github/workflows/ci-backend.yml",
+        ".github/CODEOWNERS-soft",
+        "tools/pr-approval-agent/README.md"
+      ]
+    },
+    "sortafreel": {
+      "username": "sortafreel",
+      "name": "Alex Lebedev",
+      "avatar_url": "https://avatars.githubusercontent.com/u/354488?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 49.0,
+        "reviewer": 20.0,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (2 merged) with 100% focus in 'products'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 7,
+        "prs_reviewed": 6,
+        "changes_requested_count": 0,
+        "approved_count": 7,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 4.0,
+        "reviewed_merge_rate": 0.833,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50860,
+          "title": "feat: Extract run-sandbox-with-a-custom-prompt",
+          "url": "https://github.com/PostHog/posthog/pull/50860"
+        },
+        {
+          "number": 50826,
+          "title": "Signals/reporting agent",
+          "url": "https://github.com/PostHog/posthog/pull/50826"
+        },
+        {
+          "number": 50781,
+          "title": "feat(signals): Delete/reingest signals in batches + Add retry with exponential backoff/jitter to HogQL calls ",
+          "url": "https://github.com/PostHog/posthog/pull/50781"
+        }
+      ],
+      "top_files": [
+        "products/tasks/backend/management/__init__.py",
+        "products/tasks/backend/management/commands/__init__.py",
+        "products/tasks/backend/management/commands/sandbox_ask.py",
+        "products/tasks/backend/models.py",
+        "products/tasks/backend/services/custom_prompt_executor.py"
+      ]
+    },
+    "ReeceJones": {
+      "username": "ReeceJones",
+      "name": "Reece Jones",
+      "avatar_url": "https://avatars.githubusercontent.com/u/21371637?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 50.2,
+        "reviewer": 14.6,
+        "infra": null
+      },
+      "primary_reason": "Authored 6 PRs (5 merged) with 69% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 6,
+        "prs_merged": 5,
+        "merge_rate": 0.833,
+        "directory_concentration": 0.69,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 25.1,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50979,
+          "title": "feat: add option to copy more resources between projects",
+          "url": "https://github.com/PostHog/posthog/pull/50979"
+        },
+        {
+          "number": 50888,
+          "title": "fix: only enforce survey settings in settings",
+          "url": "https://github.com/PostHog/posthog/pull/50888"
+        },
+        {
+          "number": 50875,
+          "title": "fix: delete org membership before performing deletion",
+          "url": "https://github.com/PostHog/posthog/pull/50875"
+        }
+      ],
+      "top_files": [
+        "frontend/src/scenes/cohorts/CohortEdit.tsx",
+        "frontend/src/scenes/insights/SidePanel/InsightPanelActions.tsx",
+        "products/actions/frontend/pages/ActionEdit.tsx",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png"
+      ]
+    },
+    "fercgomes": {
+      "username": "fercgomes",
+      "name": "Fernando Gomes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/28491014?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 39.4,
+        "reviewer": 28.9,
+        "infra": null
+      },
+      "primary_reason": "Authored 5 PRs (2 merged) with 83% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 2,
+        "merge_rate": 0.4,
+        "directory_concentration": 0.828,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 10,
+        "prs_reviewed": 3,
+        "changes_requested_count": 2,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.2,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 6.5,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 9,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51065,
+          "title": "feat(toolbar): add custom error tracking",
+          "url": "https://github.com/PostHog/posthog/pull/51065"
+        },
+        {
+          "number": 50996,
+          "title": "fix(error-tracking): fix rule index initialization in addRule listener",
+          "url": "https://github.com/PostHog/posthog/pull/50996"
+        },
+        {
+          "number": 50903,
+          "title": "fix(cohorts): custom hogql for cohort",
+          "url": "https://github.com/PostHog/posthog/pull/50903"
+        }
+      ],
+      "top_files": [
+        "frontend/src/toolbar/toolbarConfigLogic.ts",
+        "frontend/src/toolbar/utils.ts",
+        "frontend/src/toolbar/flags/flagsToolbarLogic.ts",
+        "frontend/src/toolbar/index.tsx",
+        "frontend/src/toolbar/product-tours/elementInference.ts"
+      ]
+    },
+    "gantoine": {
+      "username": "gantoine",
+      "name": "Georges-Antoine Assi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3247106?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": 31.7,
+        "reviewer": 41.2,
+        "infra": 45.3
+      },
+      "primary_reason": "Drove 2 infra PRs (67% of total); touched 2 infra subsystems: root-config, bin.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.308,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 10,
+        "prs_reviewed": 9,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 7,
+        "avg_comment_substance_ratio": 0.1,
+        "avg_review_speed_hours": 7.6,
+        "reviewed_merge_rate": 0.333,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.667,
+        "infra_merge_rate": 0.5,
+        "dep_update_prs_count": 1,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "root-config",
+          "bin"
+        ],
+        "infra_subsystem_count": 2
+      },
+      "top_prs": [
+        {
+          "number": 50897,
+          "title": "chore(devex): Update `react-toastify` to 10.0.0",
+          "url": "https://github.com/PostHog/posthog/pull/50897"
+        },
+        {
+          "number": 50707,
+          "title": "feat(devex): Phrocs MCP server",
+          "url": "https://github.com/PostHog/posthog/pull/50707"
+        },
+        {
+          "number": 50671,
+          "title": "fix(devex): Only run cyclotron migrations when CDP selected",
+          "url": "https://github.com/PostHog/posthog/pull/50671"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/lemon-ui-lemon-toast--billing-error--dark.png",
+        "frontend/__snapshots__/lemon-ui-lemon-toast--billing-error--light.png",
+        "frontend/__snapshots__/lemon-ui-lemon-toast--with-progress--dark.png",
+        "frontend/__snapshots__/lemon-ui-lemon-toast--with-progress--light.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--light.png"
+      ]
+    },
+    "TueHaulund": {
+      "username": "TueHaulund",
+      "name": "Tue Haulund",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2675352?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": 34.0,
+        "reviewer": null,
+        "infra": 37.7
+      },
+      "primary_reason": "Drove 1 infra PRs (33% of total); touched 3 infra subsystems: bin, root-config, docker.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.4,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "nodejs",
+        "reviews_given": 2,
+        "prs_reviewed": 2,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 2.3,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.333,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "bin",
+          "root-config",
+          "docker"
+        ],
+        "infra_subsystem_count": 3
+      },
+      "top_prs": [
+        {
+          "number": 51072,
+          "title": "Chore/replay rasterizer standalone",
+          "url": "https://github.com/PostHog/posthog/pull/51072"
+        },
+        {
+          "number": 51048,
+          "title": "fix(replay): mobile recordings show black screen",
+          "url": "https://github.com/PostHog/posthog/pull/51048"
+        },
+        {
+          "number": 50878,
+          "title": "fix(replay): use asyncio.run() for recording deletion to fix 502 errors",
+          "url": "https://github.com/PostHog/posthog/pull/50878"
+        }
+      ],
+      "top_files": [
+        "posthog/session_recordings/session_recording_api.py",
+        ".dockerignore",
+        ".gitignore",
+        "Dockerfile.recording-rasterizer",
+        "bin/mprocs.yaml"
+      ]
+    },
+    "MarconLP": {
+      "username": "MarconLP",
+      "name": "Marcus Hof",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13001502?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 9.6,
+        "infra": null
+      },
+      "primary_reason": "Gave 4 reviews across 1 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 0,
+        "prs_merged": 0,
+        "merge_rate": 0,
+        "directory_concentration": 0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0,
+        "primary_subsystem": "",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.0,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [],
+      "top_files": []
+    },
+    "christiaan-ph": {
+      "username": "christiaan-ph",
+      "name": "Christiaan Hendriksen",
+      "avatar_url": "https://avatars.githubusercontent.com/u/252863363?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 55.7,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 5 PRs (4 merged) with 100% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 4,
+        "merge_rate": 0.8,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50953,
+          "title": "fix(persons): skip properties timeline when no person exists",
+          "url": "https://github.com/PostHog/posthog/pull/50953"
+        },
+        {
+          "number": 50863,
+          "title": "fix(variables): allow clearing list variable selection",
+          "url": "https://github.com/PostHog/posthog/pull/50863"
+        },
+        {
+          "number": 50853,
+          "title": "fix(variables): allow clearing list variable selection",
+          "url": "https://github.com/PostHog/posthog/pull/50853"
+        }
+      ],
+      "top_files": [
+        "frontend/src/queries/nodes/DataVisualization/Components/Variables/Variables.tsx",
+        "frontend/src/scenes/trends/persons-modal/PersonsModal.tsx",
+        "frontend/src/types.ts",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png",
+        "frontend/src/scenes/insights/views/BoldNumber/BoldNumber.tsx"
+      ]
+    },
+    "rossgray": {
+      "username": "rossgray",
+      "name": "Ross",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5103732?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 45.5,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (2 merged) with 86% focus in 'products'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.859,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50852,
+          "title": "chore(batch-exports): move service.py from posthog/ to products/",
+          "url": "https://github.com/PostHog/posthog/pull/50852"
+        },
+        {
+          "number": 50822,
+          "title": "refactor(batch-exports): replace view in monitoring workflow",
+          "url": "https://github.com/PostHog/posthog/pull/50822"
+        },
+        {
+          "number": 50700,
+          "title": "chore(batch_exports): add query observability to backfill estimation",
+          "url": "https://github.com/PostHog/posthog/pull/50700"
+        }
+      ],
+      "top_files": [
+        "products/batch_exports/backend/temporal/backfill_batch_export.py",
+        "products/batch_exports/backend/temporal/monitoring.py",
+        "products/batch_exports/backend/temporal/pipeline/internal_stage.py",
+        "products/batch_exports/backend/temporal/record_batch_model.py",
+        "products/batch_exports/backend/tests/temporal/pipeline/test_internal_stage.py"
+      ]
+    },
+    "patricio-posthog": {
+      "username": "patricio-posthog",
+      "name": "Patricio",
+      "avatar_url": "https://avatars.githubusercontent.com/u/181578370?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 7.9,
+        "infra": null
+      },
+      "primary_reason": "Gave 3 reviews across 1 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 1,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "rust",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 15.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50988,
+          "title": "chore(flags): read new holdout field in Rust",
+          "url": "https://github.com/PostHog/posthog/pull/50988"
+        }
+      ],
+      "top_files": [
+        "rust/feature-flags/src/flags/flag_matching.rs",
+        "rust/feature-flags/src/flags/flag_matching_utils.rs",
+        "rust/feature-flags/src/flags/flag_models.rs",
+        "rust/feature-flags/src/flags/flag_operations.rs",
+        "rust/feature-flags/src/flags/flag_service.rs"
+      ]
+    },
+    "jonmcwest": {
+      "username": "jonmcwest",
+      "name": "Jon McCallum",
+      "avatar_url": "https://avatars.githubusercontent.com/u/66999846?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 52.9,
+        "reviewer": null,
+        "infra": 28.5
+      },
+      "primary_reason": "Authored 5 PRs (4 merged) with 56% focus in 'products'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 4,
+        "merge_rate": 0.8,
+        "directory_concentration": 0.556,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "tach.toml"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.4,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "root-config"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 50938,
+          "title": "feat(metrics): bootstrap metrics product",
+          "url": "https://github.com/PostHog/posthog/pull/50938"
+        },
+        {
+          "number": 50843,
+          "title": "feat(LogsViewer): enhance ServiceFilter with selectable tags for active services",
+          "url": "https://github.com/PostHog/posthog/pull/50843"
+        },
+        {
+          "number": 50809,
+          "title": "feat(tracing): mock up tracing product scene and data",
+          "url": "https://github.com/PostHog/posthog/pull/50809"
+        }
+      ],
+      "top_files": [
+        "tach.toml",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--light.png",
+        "frontend/package.json",
+        "frontend/src/layout/panel-layout/ProjectTree/defaultTree.tsx"
+      ]
+    },
+    "tomasfarias": {
+      "username": "tomasfarias",
+      "name": "Tom\u00e1s Far\u00edas Santana",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18740659?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 44.3,
+        "infra": null
+      },
+      "primary_reason": "Gave 7 reviews across 1 unique authors; requested changes 1 times (14% of reviews).",
+      "metrics": {
+        "prs_authored": 2,
+        "prs_merged": 1,
+        "merge_rate": 0.5,
+        "directory_concentration": 0.567,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 7,
+        "prs_reviewed": 3,
+        "changes_requested_count": 1,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.143,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.429,
+        "avg_review_speed_hours": 26.2,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50942,
+          "title": "fix: Filter out debug logs by default (again)",
+          "url": "https://github.com/PostHog/posthog/pull/50942"
+        },
+        {
+          "number": 50850,
+          "title": "feat: Bigquery integration with impersonation support",
+          "url": "https://github.com/PostHog/posthog/pull/50850"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-two-variants--light.png",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--light.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--dark.png",
+        "frontend/__snapshots__/scenes-app-insights-side-panel-actions--unsaved-insight--light.png"
+      ]
+    },
+    "jabahamondes": {
+      "username": "jabahamondes",
+      "name": "Javier Bahamondes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/205275836?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 36.0,
+        "reviewer": 29.8,
+        "infra": null
+      },
+      "primary_reason": "Authored 5 PRs (3 merged) with 45% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 3,
+        "merge_rate": 0.6,
+        "directory_concentration": 0.452,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.333,
+        "avg_review_speed_hours": 15.8,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50874,
+          "title": "feat(sessions): add entry_referrer fields to sessions",
+          "url": "https://github.com/PostHog/posthog/pull/50874"
+        },
+        {
+          "number": 50849,
+          "title": "fix: hoping snapshot get fixed by CI",
+          "url": "https://github.com/PostHog/posthog/pull/50849"
+        },
+        {
+          "number": 50828,
+          "title": "feat(web-analytics): gate referrer URL drilldown behind feature flag",
+          "url": "https://github.com/PostHog/posthog/pull/50828"
+        }
+      ],
+      "top_files": [
+        "posthog/api/test/test_session.py",
+        "posthog/clickhouse/migrations/0219_sessions_add_entry_referrer.py",
+        "posthog/clickhouse/migrations/max_migration.txt",
+        "posthog/clickhouse/test/__snapshots__/test_schema.ambr",
+        "posthog/hogql/database/schema/sessions_v2.py"
+      ]
+    },
+    "rafaeelaudibert": {
+      "username": "rafaeelaudibert",
+      "name": "Rafael Audibert",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32079912?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": 51.2,
+        "reviewer": 57.1,
+        "infra": null
+      },
+      "primary_reason": "Gave 14 reviews across 7 unique authors; requested changes 1 times (7% of reviews).",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 4,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.636,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 14,
+        "prs_reviewed": 12,
+        "changes_requested_count": 1,
+        "approved_count": 11,
+        "changes_requested_ratio": 0.071,
+        "unique_authors_reviewed": 7,
+        "avg_comment_substance_ratio": 0.214,
+        "avg_review_speed_hours": 2.9,
+        "reviewed_merge_rate": 0.833,
+        "times_requested_as_reviewer": 11,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51037,
+          "title": "feat: Add host message logging and tool call testing to MCP debug app",
+          "url": "https://github.com/PostHog/posthog/pull/51037"
+        },
+        {
+          "number": 50912,
+          "title": "fix: Add mimeType to MCP server resource registration",
+          "url": "https://github.com/PostHog/posthog/pull/50912"
+        },
+        {
+          "number": 50743,
+          "title": "fix: Load proxy records on navigation mount and fix null state handling",
+          "url": "https://github.com/PostHog/posthog/pull/50743"
+        }
+      ],
+      "top_files": [
+        "services/mcp/src/ui-apps/apps/debug/main.tsx",
+        "services/mcp/src/ui-apps/components/AppWrapper.tsx",
+        "services/mcp/src/resources/ui-apps.ts",
+        "frontend/src/layout/navigation/navigationLogic.ts",
+        "posthog/email.py"
+      ]
+    },
+    "eli-r-ph": {
+      "username": "eli-r-ph",
+      "name": "Eli Reisman",
+      "avatar_url": "https://avatars.githubusercontent.com/u/197809444?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 68.7,
+        "reviewer": 12.1,
+        "infra": null
+      },
+      "primary_reason": "Authored 4 PRs (4 merged) with 100% focus in 'rust'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 4,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "rust/kafka-deduplicator/src/store/deduplication_store.rs"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "rust",
+        "reviews_given": 4,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 7.2,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50914,
+          "title": "feat(deduplicator): expose rocksdb SST compression internal configs",
+          "url": "https://github.com/PostHog/posthog/pull/50914"
+        },
+        {
+          "number": 50906,
+          "title": "fix(deduplicator): remove redunant manual RocksDB flush prior to checkpoint creation",
+          "url": "https://github.com/PostHog/posthog/pull/50906"
+        },
+        {
+          "number": 50886,
+          "title": "feat(deduplicator): more granular checkpoint export cancellation",
+          "url": "https://github.com/PostHog/posthog/pull/50886"
+        }
+      ],
+      "top_files": [
+        "rust/kafka-deduplicator/src/store/deduplication_store.rs",
+        "rust/kafka-deduplicator/src/config.rs",
+        "rust/kafka-deduplicator/src/rocksdb/store.rs",
+        "rust/kafka-deduplicator/src/checkpoint_manager.rs",
+        "rust/kafka-deduplicator/tests/checkpoint_integration_tests.rs"
+      ]
+    },
+    "darkopia": {
+      "username": "darkopia",
+      "name": "Ben Lea",
+      "avatar_url": "https://avatars.githubusercontent.com/u/80100530?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 34.0,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (1 merged) with 80% focus in 'posthog'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 1,
+        "merge_rate": 0.333,
+        "directory_concentration": 0.8,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50867,
+          "title": "fix: use initial_current_url for initial channel type URL rules",
+          "url": "https://github.com/PostHog/posthog/pull/50867"
+        },
+        {
+          "number": 50837,
+          "title": "fix: include insights that use feature flag in query format",
+          "url": "https://github.com/PostHog/posthog/pull/50837"
+        },
+        {
+          "number": 50803,
+          "title": "feat: first last seen info icons",
+          "url": "https://github.com/PostHog/posthog/pull/50803"
+        }
+      ],
+      "top_files": [
+        "posthog/hogql/database/schema/channel_type.py",
+        "posthog/hogql/database/schema/test/test_channel_type.py",
+        "posthog/api/insight.py",
+        "posthog/api/test/test_insight.py",
+        "frontend/src/scenes/data-management/definition/DefinitionView.tsx"
+      ]
+    },
+    "kappa90": {
+      "username": "kappa90",
+      "name": "Emanuele Capparelli",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7335343?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 29.2,
+        "infra": 46.0
+      },
+      "primary_reason": "Drove 1 infra PRs (100% of total); touched 1 infra subsystems: docker.",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.25,
+        "avg_review_speed_hours": 7.8,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 1.0,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "docker"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 50932,
+          "title": "feat(ph-ai): sandbox agents with optional repo and output schema",
+          "url": "https://github.com/PostHog/posthog/pull/50932"
+        }
+      ],
+      "top_files": [
+        "products/tasks/backend/models.py",
+        "products/tasks/backend/services/docker_sandbox.py",
+        "products/tasks/backend/services/modal_sandbox.py",
+        "products/tasks/backend/services/sandbox.py",
+        "products/tasks/backend/temporal/process_task/activities/get_sandbox_for_repository.py"
+      ]
+    },
+    "nickbest-ph": {
+      "username": "nickbest-ph",
+      "name": "Nick Best",
+      "avatar_url": "https://avatars.githubusercontent.com/u/206742387?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 35.7,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (2 merged) with 47% focus in 'posthog'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.469,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 1.9,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50881,
+          "title": "revert(django): more personhog callsite replacements",
+          "url": "https://github.com/PostHog/posthog/pull/50881"
+        },
+        {
+          "number": 50756,
+          "title": "chore(prop-defs): rm persons db connection",
+          "url": "https://github.com/PostHog/posthog/pull/50756"
+        },
+        {
+          "number": 50720,
+          "title": "chore(prop-defs): migrate to personhog",
+          "url": "https://github.com/PostHog/posthog/pull/50720"
+        }
+      ],
+      "top_files": [
+        "rust/property-defs-rs/src/app_context.rs",
+        "rust/property-defs-rs/src/config.rs",
+        "rust/property-defs-rs/src/group_type_resolver.rs",
+        "rust/property-defs-rs/src/metrics_consts.rs",
+        "rust/property-defs-rs/tests/group_type_resolver.rs"
+      ]
+    },
+    "skoob13": {
+      "username": "skoob13",
+      "name": "Georgiy Tarasov",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13541795?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": 28.9,
+        "reviewer": 43.2,
+        "infra": 39.5
+      },
+      "primary_reason": "Gave 5 reviews across 2 unique authors; requested changes 1 times (20% of reviews).",
+      "metrics": {
+        "prs_authored": 7,
+        "prs_merged": 2,
+        "merge_rate": 0.286,
+        "directory_concentration": 0.438,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "services",
+        "reviews_given": 5,
+        "prs_reviewed": 3,
+        "changes_requested_count": 1,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.2,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.4,
+        "avg_review_speed_hours": 8.8,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.286,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 1,
+        "infra_subsystems": [
+          ".github",
+          "docker",
+          "other-infra"
+        ],
+        "infra_subsystem_count": 3
+      },
+      "top_prs": [
+        {
+          "number": 50975,
+          "title": "feat(sandbox): Add dynamic skill installation to sandbox containers",
+          "url": "https://github.com/PostHog/posthog/pull/50975"
+        },
+        {
+          "number": 50974,
+          "title": "fix(mcp): move UI app HTML to static assets to fix CPU startup limit",
+          "url": "https://github.com/PostHog/posthog/pull/50974"
+        },
+        {
+          "number": 50861,
+          "title": "feat(evals): output metrics and traces to agents",
+          "url": "https://github.com/PostHog/posthog/pull/50861"
+        }
+      ],
+      "top_files": [
+        ".github/workflows/cd-sandbox-base-image.yml",
+        "products/tasks/backend/sandbox/images/Dockerfile.sandbox-base",
+        "products/tasks/backend/sandbox/images/pull-skills.sh",
+        "services/mcp/src/resources/ui-apps.ts",
+        "ee/hogai/eval/base.py"
+      ]
+    },
+    "matheus-vb": {
+      "username": "matheus-vb",
+      "name": "Matheus Batista",
+      "avatar_url": "https://avatars.githubusercontent.com/u/88170905?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 37.2,
+        "infra": null
+      },
+      "primary_reason": "Gave 5 reviews across 2 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.667,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 5,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.4,
+        "avg_review_speed_hours": 0.6,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50737,
+          "title": "feat(flags): hypercache flag provider",
+          "url": "https://github.com/PostHog/posthog/pull/50737"
+        }
+      ],
+      "top_files": [
+        "posthog/apps.py",
+        "posthog/feature_flags/__init__.py",
+        "posthog/feature_flags/sdk_cache_provider.py",
+        "posthog/feature_flags/test_sdk_cache_provider.py",
+        "pyproject.toml"
+      ]
+    },
+    "MattBro": {
+      "username": "MattBro",
+      "name": "Matt Brooker",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9833550?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 51.6,
+        "reviewer": 37.2,
+        "infra": 14.9
+      },
+      "primary_reason": "Authored 9 PRs (3 merged) with 52% focus in 'ee'; owns 2 repeat files.",
+      "metrics": {
+        "prs_authored": 9,
+        "prs_merged": 3,
+        "merge_rate": 0.333,
+        "directory_concentration": 0.517,
+        "repeat_files_count": 2,
+        "repeat_files": [
+          "ee/api/agentic_provisioning/test/test_deep_links.py",
+          "ee/api/agentic_provisioning/test/test_e2e_flow.py"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "ee",
+        "reviews_given": 5,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.4,
+        "avg_review_speed_hours": 0.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 6,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.111,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "other-infra"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51064,
+          "title": "fix: move agentic provisioning state from cache to database",
+          "url": "https://github.com/PostHog/posthog/pull/51064"
+        },
+        {
+          "number": 50989,
+          "title": "fix: center product cards in onboarding product selection grid",
+          "url": "https://github.com/PostHog/posthog/pull/50989"
+        },
+        {
+          "number": 50987,
+          "title": "chore: remove failed onboarding-ai-product-recommendations experiment",
+          "url": "https://github.com/PostHog/posthog/pull/50987"
+        }
+      ],
+      "top_files": [
+        "ee/api/agentic_provisioning/test/test_deep_links.py",
+        "ee/api/agentic_provisioning/test/test_e2e_flow.py",
+        "ee/api/agentic_provisioning/signature.py",
+        "ee/api/agentic_provisioning/test/base.py",
+        "ee/api/agentic_provisioning/test/test_account_requests.py"
+      ]
+    },
+    "MattPua": {
+      "username": "MattPua",
+      "name": "Matt Pua",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3376526?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 85.0,
+        "reviewer": 32.3,
+        "infra": 27.0
+      },
+      "primary_reason": "Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.",
+      "metrics": {
+        "prs_authored": 14,
+        "prs_merged": 8,
+        "merge_rate": 0.571,
+        "directory_concentration": 0.968,
+        "repeat_files_count": 3,
+        "repeat_files": [
+          "frontend/src/scenes/dashboard/DashboardItems.tsx",
+          "frontend/src/lib/components/Cards/InsightCard/InsightCard.tsx",
+          "frontend/src/scenes/dashboard/dashboardLogic.tsx"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 3,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.333,
+        "avg_review_speed_hours": 0.4,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.143,
+        "infra_merge_rate": 0.5,
+        "dep_update_prs_count": 2,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "root-config",
+          ".github"
+        ],
+        "infra_subsystem_count": 2
+      },
+      "top_prs": [
+        {
+          "number": 51009,
+          "title": "feat(dashboard): disable editing title/description on dashboards when entering edit layout mode",
+          "url": "https://github.com/PostHog/posthog/pull/51009"
+        },
+        {
+          "number": 51008,
+          "title": "chore: update codeowners for dashboards",
+          "url": "https://github.com/PostHog/posthog/pull/51008"
+        },
+        {
+          "number": 51007,
+          "title": "feat: add bounded for drag config in dashboard",
+          "url": "https://github.com/PostHog/posthog/pull/51007"
+        }
+      ],
+      "top_files": [
+        "frontend/src/scenes/dashboard/DashboardItems.tsx",
+        "frontend/src/lib/components/Cards/InsightCard/InsightCard.tsx",
+        "frontend/src/scenes/dashboard/dashboardLogic.tsx",
+        "frontend/src/scenes/dashboard/DashboardHeaderActions.tsx",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png"
+      ]
+    },
+    "veryayskiy": {
+      "username": "veryayskiy",
+      "name": "Alex V",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13624984?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 57.2,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 7 PRs (6 merged) with 55% focus in 'products'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 7,
+        "prs_merged": 6,
+        "merge_rate": 0.857,
+        "directory_concentration": 0.552,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "products/conversations/frontend/scenes/settings/SupportSettingsScene.tsx"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51047,
+          "title": "feat: support email channel",
+          "url": "https://github.com/PostHog/posthog/pull/51047"
+        },
+        {
+          "number": 51041,
+          "title": "fix: veria-fix-support",
+          "url": "https://github.com/PostHog/posthog/pull/51041"
+        },
+        {
+          "number": 50857,
+          "title": "feat: parse names in slack correctly",
+          "url": "https://github.com/PostHog/posthog/pull/50857"
+        }
+      ],
+      "top_files": [
+        "products/conversations/frontend/scenes/settings/SupportSettingsScene.tsx",
+        "products/conversations/backend/formatting.py",
+        "products/conversations/backend/slack.py",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png"
+      ]
+    },
+    "haacked": {
+      "username": "haacked",
+      "name": "Phil Haack",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19977?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 77.7,
+        "reviewer": 36.7,
+        "infra": 13.7
+      },
+      "primary_reason": "Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.",
+      "metrics": {
+        "prs_authored": 13,
+        "prs_merged": 9,
+        "merge_rate": 0.692,
+        "directory_concentration": 0.586,
+        "repeat_files_count": 3,
+        "repeat_files": [
+          "rust/feature-flags/src/api/auth.rs",
+          "posthog/api/feature_flag.py",
+          "rust/feature-flags/src/metrics/consts.rs"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "rust",
+        "reviews_given": 7,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.286,
+        "avg_review_speed_hours": 2.0,
+        "reviewed_merge_rate": 0.5,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.077,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "other-infra"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51070,
+          "title": "feat(flags): replace auth cache warming with lazy per-token ReadThroughCache",
+          "url": "https://github.com/PostHog/posthog/pull/51070"
+        },
+        {
+          "number": 51069,
+          "title": "feat(flags): pre-compute flag dependencies in the Django hypercache",
+          "url": "https://github.com/PostHog/posthog/pull/51069"
+        },
+        {
+          "number": 51055,
+          "title": "feat: track personal API key auth source on local evaluation endpoint",
+          "url": "https://github.com/PostHog/posthog/pull/51055"
+        }
+      ],
+      "top_files": [
+        "rust/feature-flags/src/api/auth.rs",
+        "rust/feature-flags/src/metrics/consts.rs",
+        "posthog/api/feature_flag.py",
+        "rust/feature-flags/src/utils/test_utils.rs",
+        "rust/feature-flags/tests/test_flag_definitions.rs"
+      ]
+    },
+    "robbie-c": {
+      "username": "robbie-c",
+      "name": "Robbie",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2056078?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 47.2,
+        "reviewer": 40.1,
+        "infra": null
+      },
+      "primary_reason": "Authored 4 PRs (3 merged) with 77% focus in 'posthog'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 3,
+        "merge_rate": 0.75,
+        "directory_concentration": 0.774,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 6,
+        "prs_reviewed": 2,
+        "changes_requested_count": 1,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.167,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.333,
+        "avg_review_speed_hours": 1.0,
+        "reviewed_merge_rate": 0.5,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51062,
+          "title": "feat(analytics-platform): Automated pass of categorising clickhouse errors",
+          "url": "https://github.com/PostHog/posthog/pull/51062"
+        },
+        {
+          "number": 50931,
+          "title": "feat(analytics-platform): Extract host and pathname from referer URL in report_user_action",
+          "url": "https://github.com/PostHog/posthog/pull/50931"
+        },
+        {
+          "number": 50876,
+          "title": "feat(analytics-platform): Add limited support for cohorts in real-time filters",
+          "url": "https://github.com/PostHog/posthog/pull/50876"
+        }
+      ],
+      "top_files": [
+        "posthog/api/test/test_insight.py",
+        "posthog/event_usage.py",
+        "posthog/test/test_event_usage.py",
+        "posthog/errors.py",
+        "posthog/api/test/test_event_definition.py"
+      ]
+    },
+    "sakce": {
+      "username": "sakce",
+      "name": "Jovan Sakovic",
+      "avatar_url": "https://avatars.githubusercontent.com/u/49978945?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 44.5,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 9 PRs (4 merged) with 43% focus in 'products'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 9,
+        "prs_merged": 4,
+        "merge_rate": 0.444,
+        "directory_concentration": 0.432,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "products/endpoints/backend/api.py"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 2,
+        "prs_reviewed": 2,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 14.7,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51077,
+          "title": "chore(endpoints): add endpoints system tables",
+          "url": "https://github.com/PostHog/posthog/pull/51077"
+        },
+        {
+          "number": 51075,
+          "title": "chore(devex): add hogli db commands for connecting to local DBs",
+          "url": "https://github.com/PostHog/posthog/pull/51075"
+        },
+        {
+          "number": 51046,
+          "title": "fix(hogql): postgres printer should be case insensitive",
+          "url": "https://github.com/PostHog/posthog/pull/51046"
+        }
+      ],
+      "top_files": [
+        "products/endpoints/backend/api.py",
+        "frontend/src/queries/schema.json",
+        "frontend/src/queries/schema/schema-general.ts",
+        "posthog/hogql/database/schema/system.py",
+        "posthog/hogql/database/schema/test/test_system_tables.py"
+      ]
+    },
+    "sampennington": {
+      "username": "sampennington",
+      "name": "Sam Pennington",
+      "avatar_url": "https://avatars.githubusercontent.com/u/56024559?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": 39.8,
+        "reviewer": 44.1,
+        "infra": null
+      },
+      "primary_reason": "Gave 14 reviews across 6 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 2,
+        "merge_rate": 0.4,
+        "directory_concentration": 0.844,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 14,
+        "prs_reviewed": 11,
+        "changes_requested_count": 0,
+        "approved_count": 10,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 6,
+        "avg_comment_substance_ratio": 0.071,
+        "avg_review_speed_hours": 4.0,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 3,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 51059,
+          "title": "refactor(filter tests): Make taxonomicBreakdownFilterLogic tests simpler",
+          "url": "https://github.com/PostHog/posthog/pull/51059"
+        },
+        {
+          "number": 50961,
+          "title": "feat(dashboard): Adds an info icon dashboard tile header",
+          "url": "https://github.com/PostHog/posthog/pull/50961"
+        },
+        {
+          "number": 50895,
+          "title": "chore(insight): Adds Insights component tests setup",
+          "url": "https://github.com/PostHog/posthog/pull/50895"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-two-variants--light.png",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--light.png",
+        "frontend/src/scenes/insights/filters/BreakdownFilter/taxonomicBreakdownFilterLogic.test.ts",
+        "frontend/src/lib/components/Cards/CardMeta.tsx",
+        "frontend/src/lib/hooks/useDelayedHover.ts"
+      ]
+    },
+    "VojtechBartos": {
+      "username": "VojtechBartos",
+      "name": "Vojta Barto\u0161",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1526646?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": 46.6,
+        "reviewer": 13.9,
+        "infra": 64.5
+      },
+      "primary_reason": "Drove 4 infra PRs (80% of total); touched 3 infra subsystems: root-config, .github, other-infra.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 3,
+        "merge_rate": 0.6,
+        "directory_concentration": 0.545,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "services/mcp/scripts/generate-orval-schemas.mjs"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "services",
+        "reviews_given": 5,
+        "prs_reviewed": 5,
+        "changes_requested_count": 0,
+        "approved_count": 5,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.9,
+        "reviewed_merge_rate": 0.4,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 4,
+        "infra_pr_ratio": 0.8,
+        "infra_merge_rate": 0.75,
+        "dep_update_prs_count": 1,
+        "cicd_file_changes": 1,
+        "infra_subsystems": [
+          "root-config",
+          ".github",
+          "other-infra"
+        ],
+        "infra_subsystem_count": 3
+      },
+      "top_prs": [
+        {
+          "number": 50955,
+          "title": "fix(mcp): fix schema exclusions to prevent shared schema mutation",
+          "url": "https://github.com/PostHog/posthog/pull/50955"
+        },
+        {
+          "number": 50819,
+          "title": "feat(mcp): add annotations MCP tools",
+          "url": "https://github.com/PostHog/posthog/pull/50819"
+        },
+        {
+          "number": 50811,
+          "title": "fix(hogai): preserve layouts in upsert_dashboard updates",
+          "url": "https://github.com/PostHog/posthog/pull/50811"
+        }
+      ],
+      "top_files": [
+        "services/mcp/scripts/generate-orval-schemas.mjs",
+        "services/mcp/scripts/lib/schema-exclusions.mjs",
+        "services/mcp/src/generated/actions/api.ts",
+        "services/mcp/src/generated/cohorts/api.ts",
+        "services/mcp/schema/generated-tool-definitions.json"
+      ]
+    },
+    "z0br0wn": {
+      "username": "z0br0wn",
+      "name": "Zach Brown",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5431182?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 25.6,
+        "infra": null
+      },
+      "primary_reason": "Gave 5 reviews across 2 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 0,
+        "prs_merged": 0,
+        "merge_rate": 0,
+        "directory_concentration": 0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0,
+        "primary_subsystem": "",
+        "reviews_given": 5,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.2,
+        "avg_review_speed_hours": 8.8,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [],
+      "top_files": []
+    },
+    "gesh": {
+      "username": "gesh",
+      "name": "Georgis Andonis",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6430745?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 59.0,
+        "reviewer": 29.2,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (3 merged) with 100% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 3,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.25,
+        "avg_review_speed_hours": 2.1,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50935,
+          "title": "fix(tooltips): do not hide the tooltip when hover back on the same bar",
+          "url": "https://github.com/PostHog/posthog/pull/50935"
+        },
+        {
+          "number": 50805,
+          "title": "chore: clean up inline events stale feature flag",
+          "url": "https://github.com/PostHog/posthog/pull/50805"
+        },
+        {
+          "number": 50798,
+          "title": "chore: cleanup explicit date toggle feature flag",
+          "url": "https://github.com/PostHog/posthog/pull/50798"
+        }
+      ],
+      "top_files": [
+        "frontend/src/lib/constants.tsx",
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-two-variants--dark.png",
+        "frontend/src/queries/nodes/DataVisualization/Components/Charts/LineGraph.tsx",
+        "frontend/src/scenes/insights/useInsightTooltip.ts",
+        "frontend/src/scenes/insights/views/LineGraph/LineGraph.tsx"
+      ]
+    },
+    "hpouillot": {
+      "username": "hpouillot",
+      "name": "Hugues Pouillot",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3455883?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 24.7,
+        "reviewer": null,
+        "infra": 19.8
+      },
+      "primary_reason": "Authored 4 PRs (1 merged) with 47% focus in 'products'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 1,
+        "merge_rate": 0.25,
+        "directory_concentration": 0.473,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 3,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.25,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "bin"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 50870,
+          "title": "feat(hogvm): implement JSONExtract in TypeScript and Python STLs",
+          "url": "https://github.com/PostHog/posthog/pull/50870"
+        },
+        {
+          "number": 50841,
+          "title": "feat(error-tracking): refactor rules UI to card-based design with modals",
+          "url": "https://github.com/PostHog/posthog/pull/50841"
+        },
+        {
+          "number": 50840,
+          "title": "feat(error-tracking): evaluate suppression rules server-side",
+          "url": "https://github.com/PostHog/posthog/pull/50840"
+        }
+      ],
+      "top_files": [
+        "posthog/models/remote_config.py",
+        "products/error_tracking/frontend/generated/api.schemas.ts",
+        "services/mcp/src/api/generated.ts",
+        "common/hogvm/__tests__/__snapshots__/json.hoge",
+        "common/hogvm/__tests__/__snapshots__/json.js"
+      ]
+    },
+    "pauldambra": {
+      "username": "pauldambra",
+      "name": "Paul D'Ambra",
+      "avatar_url": "https://avatars.githubusercontent.com/u/984817?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 62.3,
+        "reviewer": null,
+        "infra": 20.3
+      },
+      "primary_reason": "Authored 12 PRs (7 merged) with 82% focus in 'frontend'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 12,
+        "prs_merged": 7,
+        "merge_rate": 0.583,
+        "directory_concentration": 0.821,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 2,
+        "prs_reviewed": 2,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.2,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.167,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 3,
+        "infra_subsystems": [
+          ".github"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51076,
+          "title": "chore: remove beta label from instance settings tab",
+          "url": "https://github.com/PostHog/posthog/pull/51076"
+        },
+        {
+          "number": 51063,
+          "title": "feat(taxonomic-filter): add recent selections tab",
+          "url": "https://github.com/PostHog/posthog/pull/51063"
+        },
+        {
+          "number": 51036,
+          "title": "fix: promote $current_url to top of search results when searching for \"url\"",
+          "url": "https://github.com/PostHog/posthog/pull/51036"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/src/lib/components/TaxonomicFilter/TaxonomicFilter.test.tsx",
+        "frontend/src/lib/components/TaxonomicFilter/taxonomicFilterLogic.tsx",
+        ".github/workflows/ci-storybook.yml",
+        "frontend/src/lib/components/TaxonomicFilter/infiniteListLogic.ts"
+      ]
+    },
+    "vdekrijger": {
+      "username": "vdekrijger",
+      "name": "Vasco de Krijger",
+      "avatar_url": "https://avatars.githubusercontent.com/u/66254686?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 30.4,
+        "infra": null
+      },
+      "primary_reason": "Gave 6 reviews across 4 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 0,
+        "prs_merged": 0,
+        "merge_rate": 0,
+        "directory_concentration": 0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0,
+        "primary_subsystem": "",
+        "reviews_given": 6,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 4,
+        "avg_comment_substance_ratio": 0.167,
+        "avg_review_speed_hours": 5.6,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 2,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [],
+      "top_files": []
+    },
+    "benjackwhite": {
+      "username": "benjackwhite",
+      "name": "Ben White",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2536520?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 12.1,
+        "infra": 61.0
+      },
+      "primary_reason": "Drove 1 infra PRs (100% of total); touched 3 infra subsystems: bin, root-config, docker.",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.302,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "rust",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 6.0,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 1.0,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          "bin",
+          "root-config",
+          "docker"
+        ],
+        "infra_subsystem_count": 3
+      },
+      "top_prs": [
+        {
+          "number": 50936,
+          "title": "feat(metrics): Initial capture and ingestion scaffolding",
+          "url": "https://github.com/PostHog/posthog/pull/50936"
+        }
+      ],
+      "top_files": [
+        "bin/clickhouse-metrics-init",
+        "bin/clickhouse-metrics.sql",
+        "bin/mprocs.yaml",
+        "bin/start-rust-service",
+        "common/hogli/manifest.yaml"
+      ]
+    },
+    "raquelmsmith": {
+      "username": "raquelmsmith",
+      "name": "Raquel Smith",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18598166?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 24.7,
+        "reviewer": null,
+        "infra": 22.7
+      },
+      "primary_reason": "Authored 3 PRs (1 merged) with 43% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 1,
+        "merge_rate": 0.333,
+        "directory_concentration": 0.429,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 0,
+        "prs_reviewed": 0,
+        "changes_requested_count": 0,
+        "approved_count": 0,
+        "changes_requested_ratio": 0,
+        "unique_authors_reviewed": 0,
+        "avg_comment_substance_ratio": 0,
+        "avg_review_speed_hours": 999,
+        "reviewed_merge_rate": 0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.333,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          ".github"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51045,
+          "title": "feat: add pipeline system tables",
+          "url": "https://github.com/PostHog/posthog/pull/51045"
+        },
+        {
+          "number": 50920,
+          "title": "feat: add system table for modeling jobs",
+          "url": "https://github.com/PostHog/posthog/pull/50920"
+        },
+        {
+          "number": 50892,
+          "title": "feat: data ops scene",
+          "url": "https://github.com/PostHog/posthog/pull/50892"
+        }
+      ],
+      "top_files": [
+        "posthog/hogql/database/schema/system.py",
+        "posthog/hogql/database/schema/test/test_system_tables.py",
+        "posthog/hogql/database/test/__snapshots__/test_database.ambr",
+        "products/posthog_ai/skills/query-examples/references/models-data-warehouse.md",
+        "products/data_warehouse/backend/test/__snapshots__/test_hogql_fixer_ai.ambr"
+      ]
+    },
+    "oliverb123": {
+      "username": "oliverb123",
+      "name": "Oliver Browne",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8105072?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 44.0,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (2 merged) with 80% focus in 'products'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 2,
+        "merge_rate": 0.667,
+        "directory_concentration": 0.8,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 0.8,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50864,
+          "title": "fix(sig): no more toString(timestamp), pre-validate embedding requests",
+          "url": "https://github.com/PostHog/posthog/pull/50864"
+        },
+        {
+          "number": 50862,
+          "title": "fix(sig): add metric for dropped embedding requests",
+          "url": "https://github.com/PostHog/posthog/pull/50862"
+        },
+        {
+          "number": 50788,
+          "title": "fix(sig): limit to 8k tokens",
+          "url": "https://github.com/PostHog/posthog/pull/50788"
+        }
+      ],
+      "top_files": [
+        "products/signals/backend/api.py",
+        "posthog/api/embedding_worker.py",
+        "products/signals/backend/management/commands/list_signal_reports.py",
+        "products/signals/backend/temporal/deletion.py",
+        "products/signals/backend/temporal/reingestion.py"
+      ]
+    },
+    "jordanm-posthog": {
+      "username": "jordanm-posthog",
+      "name": "Jordan Mryyan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/245956587?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 40.9,
+        "reviewer": null,
+        "infra": 18.0
+      },
+      "primary_reason": "Authored 5 PRs (4 merged) with 41% focus in 'frontend'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 4,
+        "merge_rate": 0.8,
+        "directory_concentration": 0.409,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 3.5,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 0.2,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 1,
+        "infra_subsystems": [
+          ".github"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 51000,
+          "title": "chore: Add ClickHouse kill switch in Temporal Health Check Framework",
+          "url": "https://github.com/PostHog/posthog/pull/51000"
+        },
+        {
+          "number": 50877,
+          "title": "fix(livestream): Make Redis pub/sub publish nonblocking to unblock Kafka consumption",
+          "url": "https://github.com/PostHog/posthog/pull/50877"
+        },
+        {
+          "number": 50711,
+          "title": "chore: Use a seperate temporal queue for Health Check jobs",
+          "url": "https://github.com/PostHog/posthog/pull/50711"
+        }
+      ],
+      "top_files": [
+        "frontend/src/lib/constants.tsx",
+        "posthog/temporal/health_checks/README.md",
+        "posthog/temporal/health_checks/activities.py",
+        "livestream/configs/configs.go",
+        "livestream/configs/configs_test.go"
+      ]
+    },
+    "lricoy": {
+      "username": "lricoy",
+      "name": "Lucas Ricoy",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2034367?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": 38.3,
+        "reviewer": 53.3,
+        "infra": null
+      },
+      "primary_reason": "Gave 14 reviews across 8 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 4,
+        "prs_merged": 3,
+        "merge_rate": 0.75,
+        "directory_concentration": 0.417,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "posthog",
+        "reviews_given": 14,
+        "prs_reviewed": 14,
+        "changes_requested_count": 0,
+        "approved_count": 14,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 8,
+        "avg_comment_substance_ratio": 0.143,
+        "avg_review_speed_hours": 1.9,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50885,
+          "title": "fix(bing-ads): validate account_id is numeric before sync",
+          "url": "https://github.com/PostHog/posthog/pull/50885"
+        },
+        {
+          "number": 50763,
+          "title": "feat(web-analytics): add host + path breakdown option for paths tile",
+          "url": "https://github.com/PostHog/posthog/pull/50763"
+        },
+        {
+          "number": 50738,
+          "title": "feat(dagster): add concurrent run protection to sdk versions job",
+          "url": "https://github.com/PostHog/posthog/pull/50738"
+        }
+      ],
+      "top_files": [
+        "posthog/temporal/data_imports/sources/bing_ads/source.py",
+        "posthog/temporal/data_imports/sources/bing_ads/tests/test_bing_ads_source.py",
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-five-variants--dark.png",
+        "frontend/__snapshots__/scenes-app-experiments--experiment-frequentist-two-variants--dark.png",
+        "frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--light.png"
+      ]
+    },
+    "dmarticus": {
+      "username": "dmarticus",
+      "name": "Dylan Martin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4853149?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": 22.9,
+        "reviewer": null,
+        "infra": 36.0
+      },
+      "primary_reason": "Drove 2 infra PRs (40% of total); touched 2 infra subsystems: .github, docker.",
+      "metrics": {
+        "prs_authored": 5,
+        "prs_merged": 1,
+        "merge_rate": 0.2,
+        "directory_concentration": 0.408,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 2,
+        "prs_reviewed": 2,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 1.1,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 2,
+        "infra_pr_ratio": 0.4,
+        "infra_merge_rate": 0.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 1,
+        "infra_subsystems": [
+          ".github",
+          "docker"
+        ],
+        "infra_subsystem_count": 2
+      },
+      "top_prs": [
+        {
+          "number": 51042,
+          "title": "feat(early-access): add option to ignore opt-outs when promoting to GA",
+          "url": "https://github.com/PostHog/posthog/pull/51042"
+        },
+        {
+          "number": 51001,
+          "title": "fix(feature-flags): fix BIGINT type mismatch in realtime cohort provider and add test infra",
+          "url": "https://github.com/PostHog/posthog/pull/51001"
+        },
+        {
+          "number": 50748,
+          "title": "feat(feature-flags): add clickable tick marks to rollout percentage slider",
+          "url": "https://github.com/PostHog/posthog/pull/50748"
+        }
+      ],
+      "top_files": [
+        "rust/feature-flags/src/utils/test_utils.rs",
+        "frontend/src/scenes/feature-flags/featureFlagReleaseConditionsLogic.ts",
+        "frontend/src/lib/api.ts",
+        "products/early_access_features/backend/api.py",
+        "products/early_access_features/backend/test/test_early_access_feature.py"
+      ]
+    },
+    "andrewjmcgehee": {
+      "username": "andrewjmcgehee",
+      "name": "andrew j. mcgehee",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23667085?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 46.5,
+        "reviewer": 30.0,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (3 merged) with 50% focus in 'products'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 3,
+        "merge_rate": 1.0,
+        "directory_concentration": 0.5,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 9,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.111,
+        "avg_review_speed_hours": 1.2,
+        "reviewed_merge_rate": 0.5,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 1,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50893,
+          "title": "chore(modeling): add 10/minute rate limit on running saved queries for mcp",
+          "url": "https://github.com/PostHog/posthog/pull/50893"
+        },
+        {
+          "number": 50759,
+          "title": "style: formatting and ui tweak",
+          "url": "https://github.com/PostHog/posthog/pull/50759"
+        },
+        {
+          "number": 50755,
+          "title": "feat(modeling): update code refs to use dag_fk",
+          "url": "https://github.com/PostHog/posthog/pull/50755"
+        }
+      ],
+      "top_files": [
+        "posthog/rate_limit.py",
+        "products/data_warehouse/backend/api/saved_query.py",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png",
+        "frontend/src/scenes/data-warehouse/scene/modeling/Node.tsx"
+      ]
+    },
+    "frankh": {
+      "username": "frankh",
+      "name": "Frank Hamand",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2088870?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 9.6,
+        "infra": null
+      },
+      "primary_reason": "Gave 4 reviews across 1 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 0,
+        "prs_merged": 0,
+        "merge_rate": 0,
+        "directory_concentration": 0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0,
+        "primary_subsystem": "",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 2.2,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [],
+      "top_files": []
+    },
+    "Gilbert09": {
+      "username": "Gilbert09",
+      "name": "Tom Owers",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1459269?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 37.6,
+        "infra": null
+      },
+      "primary_reason": "Gave 8 reviews across 2 unique authors; requested changes 1 times (12% of reviews).",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.429,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "frontend",
+        "reviews_given": 8,
+        "prs_reviewed": 7,
+        "changes_requested_count": 1,
+        "approved_count": 7,
+        "changes_requested_ratio": 0.125,
+        "unique_authors_reviewed": 2,
+        "avg_comment_substance_ratio": 0.25,
+        "avg_review_speed_hours": 2.9,
+        "reviewed_merge_rate": 0.857,
+        "times_requested_as_reviewer": 2,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50964,
+          "title": "feat(data-warehouse): Added hog function creation for webhook sources in the wizard",
+          "url": "https://github.com/PostHog/posthog/pull/50964"
+        }
+      ],
+      "top_files": [
+        "frontend/src/lib/api.ts",
+        "frontend/src/queries/schema.json",
+        "frontend/src/queries/schema/schema-general.ts",
+        "frontend/src/scenes/data-warehouse/external/forms/SourceForm.tsx",
+        "frontend/src/scenes/data-warehouse/external/forms/SyncMethodForm.tsx"
+      ]
+    },
+    "georgemunyoro": {
+      "username": "georgemunyoro",
+      "name": "George Munyoro",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32019551?v=4",
+      "primary_bucket": "reviewer",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 29.2,
+        "infra": null
+      },
+      "primary_reason": "Gave 4 reviews across 3 unique authors; requested changes 0 times (0% of reviews).",
+      "metrics": {
+        "prs_authored": 0,
+        "prs_merged": 0,
+        "merge_rate": 0,
+        "directory_concentration": 0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0,
+        "primary_subsystem": "",
+        "reviews_given": 4,
+        "prs_reviewed": 4,
+        "changes_requested_count": 0,
+        "approved_count": 4,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.25,
+        "avg_review_speed_hours": 6.2,
+        "reviewed_merge_rate": 0.75,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [],
+      "top_files": []
+    },
+    "andrewm4894": {
+      "username": "andrewm4894",
+      "name": "Andrew Maguire",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2178292?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 50.1,
+        "reviewer": 14.6,
+        "infra": null
+      },
+      "primary_reason": "Authored 10 PRs (5 merged) with 54% focus in 'products'; owns 1 repeat files.",
+      "metrics": {
+        "prs_authored": 10,
+        "prs_merged": 5,
+        "merge_rate": 0.5,
+        "directory_concentration": 0.537,
+        "repeat_files_count": 1,
+        "repeat_files": [
+          "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png"
+        ],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "products",
+        "reviews_given": 4,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 2,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 3,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 9.7,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 0,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50941,
+          "title": "feat(llma): add sentiment tab for scanning user messages",
+          "url": "https://github.com/PostHog/posthog/pull/50941"
+        },
+        {
+          "number": 50890,
+          "title": "fix(llm-gateway): restore client user param for analytics distinct_id",
+          "url": "https://github.com/PostHog/posthog/pull/50890"
+        },
+        {
+          "number": 50859,
+          "title": "feat(data-warehouse): add MCP tools for materialized views",
+          "url": "https://github.com/PostHog/posthog/pull/50859"
+        }
+      ],
+      "top_files": [
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--dark.png",
+        "frontend/__snapshots__/components-editorfilters--with-long-filter-value--light.png",
+        "products/llm_analytics/frontend/ConversationDisplay/ConversationMessagesDisplay.tsx",
+        "products/llm_analytics/frontend/LLMAnalyticsTraceScene.tsx",
+        "products/llm_analytics/frontend/components/EventContentWithAsyncData.tsx"
+      ]
+    },
+    "meikelmosby": {
+      "username": "meikelmosby",
+      "name": "Meikel Ratz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8418536?v=4",
+      "primary_bucket": "feature_owner",
+      "scores": {
+        "feature_owner": 21.0,
+        "reviewer": null,
+        "infra": null
+      },
+      "primary_reason": "Authored 3 PRs (0 merged) with 68% focus in 'nodejs'; owns 0 repeat files.",
+      "metrics": {
+        "prs_authored": 3,
+        "prs_merged": 0,
+        "merge_rate": 0.0,
+        "directory_concentration": 0.68,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": "nodejs",
+        "reviews_given": 1,
+        "prs_reviewed": 1,
+        "changes_requested_count": 0,
+        "approved_count": 1,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 23.4,
+        "reviewed_merge_rate": 1.0,
+        "times_requested_as_reviewer": 1,
+        "infra_prs_count": 0,
+        "infra_pr_ratio": 0.0,
+        "infra_merge_rate": 0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [],
+        "infra_subsystem_count": 0
+      },
+      "top_prs": [
+        {
+          "number": 50952,
+          "title": "fix(cdp): handle binary responses correctly in webhook HTTP responses",
+          "url": "https://github.com/PostHog/posthog/pull/50952"
+        },
+        {
+          "number": 50926,
+          "title": "feat(cdp): add metrics to scale hog workers",
+          "url": "https://github.com/PostHog/posthog/pull/50926"
+        },
+        {
+          "number": 50924,
+          "title": "chore(workflows): rework billing",
+          "url": "https://github.com/PostHog/posthog/pull/50924"
+        }
+      ],
+      "top_files": [
+        "nodejs/src/cdp/cdp-api.ts",
+        "nodejs/src/cdp/consumers/cdp-source-webhooks.consumer.test.ts",
+        "nodejs/src/cdp/consumers/cdp-source-webhooks.consumer.ts",
+        "nodejs/src/cdp/templates/_sources/pixel/pixel.template.test.ts",
+        "nodejs/src/cdp/templates/_sources/pixel/pixel.template.ts"
+      ]
+    },
+    "rnegron": {
+      "username": "rnegron",
+      "name": "Ra\u00fal Negr\u00f3n-Otero",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4153103?v=4",
+      "primary_bucket": "infra",
+      "scores": {
+        "feature_owner": null,
+        "reviewer": 9.6,
+        "infra": 46.0
+      },
+      "primary_reason": "Drove 1 infra PRs (100% of total); touched 1 infra subsystems: .github.",
+      "metrics": {
+        "prs_authored": 1,
+        "prs_merged": 1,
+        "merge_rate": 1.0,
+        "directory_concentration": 1.0,
+        "repeat_files_count": 0,
+        "repeat_files": [],
+        "avg_pr_size": 0.0,
+        "primary_subsystem": ".github",
+        "reviews_given": 4,
+        "prs_reviewed": 3,
+        "changes_requested_count": 0,
+        "approved_count": 3,
+        "changes_requested_ratio": 0.0,
+        "unique_authors_reviewed": 1,
+        "avg_comment_substance_ratio": 0.0,
+        "avg_review_speed_hours": 4.0,
+        "reviewed_merge_rate": 0.667,
+        "times_requested_as_reviewer": 2,
+        "infra_prs_count": 1,
+        "infra_pr_ratio": 1.0,
+        "infra_merge_rate": 1.0,
+        "dep_update_prs_count": 0,
+        "cicd_file_changes": 0,
+        "infra_subsystems": [
+          ".github"
+        ],
+        "infra_subsystem_count": 1
+      },
+      "top_prs": [
+        {
+          "number": 50693,
+          "title": "chore(ci): increase SETUP_OVERHEAD_SECONDS from 20 to 60",
+          "url": "https://github.com/PostHog/posthog/pull/50693"
+        }
+      ],
+      "top_files": [
+        ".github/scripts/turbo-discover.js"
+      ]
+    }
+  }
+}
