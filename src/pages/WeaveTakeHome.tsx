@@ -352,11 +352,11 @@ const WeaveTakeHome = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#0f1117', color: '#e8eaf0', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: 14 }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#0f1117', color: '#e8eaf0', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: 14 }}>
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-7 flex-shrink-0" style={{ padding: '16px 28px 12px', borderBottom: '1px solid #2e3350' }}>
-        <div className="flex items-center gap-3">
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, padding: '16px 28px 12px', borderBottom: '1px solid #2e3350' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Back */}
           <Link to="/" className="flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: '#8b90a8', textDecoration: 'none' }}>
             <ArrowLeft className="w-4 h-4" />
@@ -364,7 +364,7 @@ const WeaveTakeHome = () => {
           </Link>
           <div style={{ width: 1, height: 20, backgroundColor: '#2e3350' }} />
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className="flex items-center justify-center rounded font-black text-xs text-white" style={{ width: 28, height: 28, backgroundColor: '#f54e00', borderRadius: 6, fontSize: 13, letterSpacing: '-0.5px' }}>PH</div>
             <div>
               <div className="font-bold" style={{ fontSize: 17 }}>PostHog Engineering Impact</div>
@@ -374,8 +374,8 @@ const WeaveTakeHome = () => {
         </div>
 
         {/* Dropdown trigger */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex gap-1.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
             {['take-home', 'posthog/posthog', '90-day window'].map(tag => (
               <span key={tag} className="font-['DM_Mono',monospace]" style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, backgroundColor: '#22263a', color: '#5a5a7a' }}>{tag}</span>
             ))}
@@ -383,8 +383,8 @@ const WeaveTakeHome = () => {
           <button
             ref={btnRef}
             onClick={toggleDropdown}
-            className="flex items-center gap-2 font-['DM_Mono',monospace] transition-colors"
-            style={{ fontSize: 13, padding: '6px 12px', borderRadius: 8, border: '1px solid #2e3350', backgroundColor: '#22263a', color: '#e8eaf0', cursor: 'pointer' }}
+            className="font-['DM_Mono',monospace]"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 12px', borderRadius: 8, border: '1px solid #2e3350', backgroundColor: '#22263a', color: '#e8eaf0', cursor: 'pointer' }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta.color }} />
             {meta.title}
@@ -394,15 +394,15 @@ const WeaveTakeHome = () => {
       </header>
 
       {/* ── Main ── */}
-      <main className="flex-1 flex flex-col overflow-hidden" style={{ padding: '18px 28px 0' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '18px 28px 0', minHeight: 0 }}>
         {/* Bucket header */}
-        <div className="flex items-center gap-2 flex-shrink-0" style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginBottom: 14 }}>
           <span className="font-semibold uppercase" style={{ fontSize: 13, color: '#8b90a8', letterSpacing: '0.06em' }}>{meta.title}</span>
           <span style={{ fontSize: 12, color: '#8b90a8', marginLeft: 4 }}>{meta.desc}</span>
         </div>
 
         {/* Cards grid */}
-        <div className="flex-1 overflow-hidden" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+        <div style={{ flex: 1, overflow: 'hidden', minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
           {topEngineers.map((eng, i) => (
             <EngineerCard
               key={eng.username}
