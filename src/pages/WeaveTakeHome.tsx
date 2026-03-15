@@ -260,7 +260,7 @@ const WeaveTakeHome = () => {
   const activeMeta = BUCKETS.find(b => b.key === activeBucket)!;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1117]">
+    <div className="h-screen flex flex-col bg-[#0f1117] overflow-hidden">
 
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-5 py-3 border-b border-[#2a2a3a] flex-shrink-0">

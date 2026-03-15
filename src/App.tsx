@@ -17,10 +17,18 @@ function AppContent() {
   const location = useLocation();
   const isTakeHome = location.pathname.startsWith('/take-homes/');
 
+  if (isTakeHome) {
+    return (
+      <Routes>
+        <Route path="/take-homes/weave" element={<WeaveTakeHome />} />
+      </Routes>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
-      {!isTakeHome && <Header />}
-      <main className={isTakeHome ? '' : 'flex-grow'}>
+      <Header />
+      <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/projects" element={<Projects />} />
@@ -31,10 +39,9 @@ function AppContent() {
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/spearfishing/voice-agent" element={<DrugMarketplace />} />
-          <Route path="/take-homes/weave" element={<WeaveTakeHome />} />
         </Routes>
       </main>
-      {!isTakeHome && <Footer />}
+      <Footer />
     </div>
   );
 }
