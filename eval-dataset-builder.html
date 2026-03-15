@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eval Dataset Builder — LLM Eval Datasets in Hours</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #10101a;
+    --bg3: #16162a;
+    --accent: #7c6aff;
+    --accent2: #ff6a9a;
+    --accent3: #6affe0;
+    --accent4: #ffc96a;
+    --text: #e8e8f0;
+    --text2: #9090b0;
+    --border: #2a2a45;
+    --glow: rgba(124,106,255,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,106,255,0.12) 0%, transparent 70%);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.3;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
+  }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(124,106,255,0.3);
+    border-radius: 100px;
+    background: rgba(124,106,255,0.08);
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text2);
+    max-width: 580px;
+    margin-bottom: 3rem;
+    line-height: 1.8;
+    position: relative;
+  }
+  .hero-cta {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.75rem 2rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--glow);
+    color: var(--accent);
+    text-decoration: none;
+    margin-bottom: 3rem;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .hero-cta:hover { background: rgba(124,106,255,0.25); }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    max-width: 700px;
+    position: relative;
+  }
+  .toc a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text2);
+    text-decoration: none;
+    transition: all 0.2s;
+    background: var(--bg2);
+  }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  /* SECTIONS */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 6rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .section-tag::after { content: ''; flex:1; height:1px; background: linear-gradient(to right, var(--accent), transparent); opacity:0.3; }
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+    color: var(--accent3);
+  }
+  p { color: var(--text2); margin-bottom: 1.2rem; font-size: 1rem; }
+  p strong { color: var(--text); font-weight: 500; }
+  .lead { font-size: 1.15rem; color: var(--text); line-height: 1.9; }
+
+  /* CODE / MATH BLOCKS */
+  .math-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+    position: relative;
+    line-height: 1.6;
+  }
+  .math-block .label {
+    position: absolute;
+    top: -1px;
+    right: 12px;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #000;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0 0 4px 4px;
+    font-weight: 500;
+  }
+  .math-block pre { white-space: pre-wrap; color: var(--text2); }
+  .math-block pre strong { color: var(--accent); }
+  .math-block.green { border-left-color: var(--accent3); }
+  .math-block.green .label { background: var(--accent3); }
+  .math-block.pink { border-left-color: var(--accent2); }
+  .math-block.pink .label { background: var(--accent2); }
+  .math-block.yellow { border-left-color: var(--accent4); }
+  .math-block.yellow .label { background: var(--accent4); }
+
+  /* CALLOUT BOXES */
+  .callout {
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid;
+  }
+  .callout.insight { background: rgba(124,106,255,0.08); border-color: var(--accent); }
+  .callout.insight::before { content: '💡 Key Insight — '; font-weight: 600; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.05em; }
+  .callout.warning { background: rgba(255,106,154,0.08); border-color: var(--accent2); }
+  .callout.warning::before { content: '⚡ Important — '; font-weight: 600; color: var(--accent2); font-size: 0.85rem; }
+  .callout.gpu { background: rgba(106,255,224,0.08); border-color: var(--accent3); }
+  .callout.gpu::before { content: '🖥 Architecture — '; font-weight: 600; color: var(--accent3); font-size: 0.85rem; }
+  .callout p { margin: 0; color: var(--text); }
+
+  /* ARCHITECTURE DIAGRAMS */
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 2rem auto;
+    max-width: 520px;
+  }
+  .arch-block {
+    width: 100%;
+    padding: 0.9rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg2);
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    position: relative;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .arch-block:hover { border-color: var(--accent); background: var(--glow); }
+  .arch-block .desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 0.25rem;
+  }
+  .arch-block.accent { border-color: var(--accent); background: rgba(124,106,255,0.1); color: var(--accent); }
+  .arch-block.green { border-color: var(--accent3); background: rgba(106,255,224,0.08); color: var(--accent3); }
+  .arch-block.pink { border-color: var(--accent2); background: rgba(255,106,154,0.08); color: var(--accent2); }
+  .arch-block.yellow { border-color: var(--accent4); background: rgba(255,201,106,0.08); color: var(--accent4); }
+  .arch-arrow {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    position: relative;
+  }
+  .arch-arrow::after {
+    content: '▼';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--accent);
+    font-size: 0.6rem;
+  }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+    padding: 1.2rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    justify-content: center;
+  }
+  .flow-box {
+    padding: 0.4rem 0.9rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text2);
+    text-align: center;
+  }
+  .flow-box .sub { font-size: 0.6rem; color: var(--text2); opacity: 0.7; display: block; margin-top: 2px; }
+  .flow-box.hi { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+  .flow-box.hi2 { border-color: var(--accent3); color: var(--accent3); background: rgba(106,255,224,0.08); }
+  .flow-box.hi3 { border-color: var(--accent4); color: var(--accent4); background: rgba(255,201,106,0.08); }
+  .flow-box.hi4 { border-color: var(--accent2); color: var(--accent2); background: rgba(255,106,154,0.08); }
+  .flow-arrow { color: var(--text2); font-size: 1rem; flex-shrink: 0; }
+
+  /* INTERACTIVE DEMO */
+  .interactive-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 2rem 0;
+  }
+  .demo-header {
+    background: var(--bg3);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .demo-header span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .demo-body { padding: 1.5rem; }
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--glow); }
+  .btn.active { background: var(--accent); color: #000; }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(to right, var(--accent), var(--accent3));
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  /* COMPARE TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+  .compare-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    background: var(--bg2);
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  .compare-table td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  .compare-table td:first-child { color: var(--text); font-weight: 500; }
+  .compare-table tr:hover td { background: var(--bg2); }
+
+  /* KBD KEYS */
+  kbd {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  /* LABELING DEMO */
+  .label-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+  }
+  .label-card .field-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 0.4rem;
+  }
+  .label-card .field-val { color: var(--text); font-size: 0.9rem; line-height: 1.6; }
+  .label-card.accepted { border-color: var(--accent3); background: rgba(106,255,224,0.05); }
+  .label-card.rejected { border-color: var(--accent2); background: rgba(255,106,154,0.05); opacity: 0.5; }
+  .label-card.flagged { border-color: var(--accent4); background: rgba(255,201,106,0.05); }
+  .key-row {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .key-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+  }
+
+  /* PRICING CARD */
+  .pricing-card {
+    background: var(--bg2);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    position: relative;
+    max-width: 400px;
+    margin: 2rem auto;
+    box-shadow: 0 0 60px rgba(124,106,255,0.1);
+  }
+  .pricing-card .price {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin: 0.5rem 0;
+  }
+  .pricing-card .price-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    margin-bottom: 2rem;
+  }
+  .pricing-card ul {
+    list-style: none;
+    margin-bottom: 2rem;
+    text-align: left;
+  }
+  .pricing-card ul li {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text2);
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .pricing-card ul li::before { content: '✓'; color: var(--accent3); }
+  .cta-btn {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.9rem 2rem;
+    background: var(--accent);
+    color: #000;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .cta-btn:hover { background: #9e8eff; }
+
+  /* AXIS TAG CLOUD */
+  .axis-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+  }
+  .axis-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 100px;
+    border: 1px solid;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .axis-tag:hover { transform: translateY(-1px); }
+  .axis-tag.purple { border-color: rgba(124,106,255,0.4); color: var(--accent); background: rgba(124,106,255,0.08); }
+  .axis-tag.green { border-color: rgba(106,255,224,0.4); color: var(--accent3); background: rgba(106,255,224,0.06); }
+  .axis-tag.pink { border-color: rgba(255,106,154,0.4); color: var(--accent2); background: rgba(255,106,154,0.06); }
+  .axis-tag.yellow { border-color: rgba(255,201,106,0.4); color: var(--accent4); background: rgba(255,201,106,0.06); }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 4rem 2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(20px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  .section { animation: fadeUp 0.6s ease both; }
+
+  /* INLINE BADGE */
+  .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 3px;
+    background: rgba(124,106,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,106,255,0.3);
+    margin: 0 0.1rem;
+    vertical-align: middle;
+  }
+  .badge.green { background: rgba(106,255,224,0.1); color: var(--accent3); border-color: rgba(106,255,224,0.3); }
+  .badge.yellow { background: rgba(255,201,106,0.1); color: var(--accent4); border-color: rgba(255,201,106,0.3); }
+
+  @media (max-width: 600px) {
+    .pricing-card { padding: 2rem 1.5rem; }
+    .flow { gap: 0.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">LLM Infrastructure · Build Better Evals</div>
+  <h1>Eval <em>Dataset</em><br>Builder</h1>
+  <p class="hero-sub">You've got a fine-tuned model and 8 hand-written examples. You need 500 diverse, labeled evals. This generates them in hours — not weeks.</p>
+  <a href="https://eval.nsk1755server.com" class="hero-cta" target="_blank">Try it → eval.nsk1755server.com</a>
+  <div class="toc">
+    <a href="#s1">01 · The Problem</a>
+    <a href="#s2">02 · How It Works</a>
+    <a href="#s3">03 · Example</a>
+    <a href="#s4">04 · Architecture</a>
+    <a href="#s5">05 · Tech Stack</a>
+    <a href="#s6">06 · Pricing</a>
+    <a href="#s7">07 · What I Learned</a>
+  </div>
+</div>
+
+<!-- S1: THE PROBLEM -->
+<div class="section" id="s1">
+  <div class="section-tag">Section 01</div>
+  <h2>The Wall Every LLM Team Hits</h2>
+  <p class="lead">You've fine-tuned a model. You have a schema, a prompt template, maybe 5–10 hand-written examples. Now you need 200–500 diverse, labeled examples to run meaningful evals. Doing it manually takes two weeks of a PM or engineer's time.</p>
+
+  <p>The dataset problem is the silent bottleneck of LLM development. Not the model. Not the infra. The <strong>evaluation data</strong>. You can't know if your fine-tune is regressing on edge cases you haven't labeled.</p>
+
+  <div class="flow">
+    <div class="flow-box hi4">Schema defined<span class="sub">5 fields</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Seed examples<span class="sub">8 handwritten</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi4">2-week bottleneck<span class="sub">manual labeling</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">200 examples<span class="sub">barely enough</span></div>
+  </div>
+
+  <p>Teams either ship without meaningful evals, or burn engineering time on data entry. Neither is acceptable. <strong>Eval Dataset Builder</strong> eliminates the bottleneck.</p>
+
+  <div class="callout warning"><p>Fine-tuned models frequently regress on edge cases that weren't in the original training distribution. Without labeled eval data covering your diversity axes, you won't catch regressions until they hit production.</p></div>
+</div>
+
+<!-- S2: HOW IT WORKS -->
+<div class="section" id="s2">
+  <div class="section-tag">Section 02</div>
+  <h2>Six Steps to a Full Eval Suite</h2>
+  <p class="lead">Paste your schema. Add a few seeds. Get 500 labeled examples.</p>
+
+  <div class="arch-diagram">
+    <div class="arch-block accent">
+      01 · Define Your Schema
+      <div class="desc">Paste one JSON object. Mark fields as input or output.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">
+      02 · Add Seed Examples
+      <div class="desc">3–10 high-quality examples, typed or pasted as JSONL.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block green">
+      03 · Axis Extraction
+      <div class="desc">Claude identifies 5–8 diversity dimensions for your domain. Edit, add, or remove.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block yellow">
+      04 · Batch Generation
+      <div class="desc">Select 50–500 examples. Parallel Claude batches stream results live via SSE.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">
+      05 · Keyboard-Driven Labeling
+      <div class="desc">A / R / E / F / Space — never blocked on a network call.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block pink">
+      06 · Export
+      <div class="desc">JSONL · CSV · Hugging Face · LangSmith format.</div>
+    </div>
+  </div>
+
+  <h3>Keyboard-First Labeling</h3>
+  <p>The labeling interface keeps a local queue of 50 examples and fires background saves for every action. You're never blocked on a network round-trip.</p>
+
+  <div class="interactive-demo">
+    <div class="demo-header">
+      <span>Interactive · Labeling UI</span>
+      <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text2)">Try the keyboard shortcuts below</span>
+    </div>
+    <div class="demo-body">
+      <div id="labelCard" class="label-card">
+        <div class="field-tag">raw_bullet — input</div>
+        <div class="field-val" id="labelInput">–</div>
+        <div class="field-tag" style="margin-top:1rem;">enhanced_bullet — output</div>
+        <div class="field-val" id="labelOutput">–</div>
+      </div>
+      <div id="labelStatus" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2);min-height:1.5rem;text-align:center;"></div>
+      <div class="key-row">
+        <div class="key-item"><kbd>A</kbd> Accept</div>
+        <div class="key-item"><kbd>R</kbd> Reject</div>
+        <div class="key-item"><kbd>E</kbd> Edit</div>
+        <div class="key-item"><kbd>F</kbd> Flag</div>
+        <div class="key-item"><kbd>Space</kbd> Skip</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3: EXAMPLE -->
+<div class="section" id="s3">
+  <div class="section-tag">Section 03</div>
+  <h2>Example: Resume Bullet <em>Enhancer</em></h2>
+  <p class="lead">A model that transforms raw, vague resume bullets into structured, achievement-focused ones. Here's how Eval Dataset Builder generates a full eval suite for it in under 3 minutes.</p>
+
+  <h3>The Schema</h3>
+  <p>One JSON object defines the entire dataset structure. You mark fields as input or output — that's it.</p>
+
+  <div class="math-block">
+    <div class="label">schema.json</div>
+    <pre>{
+  "raw_bullet":      "Created realtime activity tracking system for mobile app",
+  "enhanced_bullet": "To track daily habits, built The Progress App with React Native
+                      and Redis. Implemented realtime activity tracking, push notifications,
+                      and streak detection, helping 10,000+ users build consistent routines."
+}
+
+INPUT  →  raw_bullet
+OUTPUT →  enhanced_bullet</pre>
+  </div>
+
+  <h3>Axis Extraction</h3>
+  <p>Claude reads your schema and seed examples, then identifies the diversity dimensions that matter for your domain. For a resume enhancer, it surfaces dimensions like these — and you can edit, add, or remove any of them before generating.</p>
+
+  <div class="axis-cloud">
+    <span class="axis-tag purple">Tech Stack — frontend / backend / full-stack / mobile / data+ML</span>
+    <span class="axis-tag green">Project Scale — personal / team / startup / enterprise</span>
+    <span class="axis-tag pink">Impact Type — performance / adoption / revenue / efficiency</span>
+    <span class="axis-tag yellow">Goal Clarity — implicit / vague / clear / explicit</span>
+    <span class="axis-tag purple">Feature Complexity — single / basic / advanced / complex</span>
+    <span class="axis-tag green">Role Seniority — junior / mid / senior / staff</span>
+  </div>
+
+  <div class="callout insight"><p>The axis extraction prompt is the most important part of the system. Getting Claude to identify the right diversity dimensions — ones that actually matter for the domain — is what makes the generated dataset useful rather than just large. A dataset without intentional diversity will miss entire regions of your model's failure space.</p></div>
+
+  <h3>What 500 Examples Covers</h3>
+  <p>With 6 axes and 3–4 values each, the combinatorial space is massive. 500 examples sampled across all combinations gives you a meaningful eval suite that catches regressions across every axis.</p>
+
+  <div class="math-block green">
+    <div class="label">coverage math</div>
+    <pre>Tech Stack × Project Scale × Impact Type × Goal Clarity × Feature Complexity × Seniority
+    4       ×      4        ×      4       ×      4        ×         4          ×     3
+                                                     = 3,072 unique combinations
+
+500 examples covers ~16% of the space — enough to catch systematic failures
+without redundancy. Random sampling with axis-aware prompting ensures coverage.</pre>
+  </div>
+
+  <div class="flow">
+    <div class="flow-box hi">500 examples</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">34 batches</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi2">7 groups of 5</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi3">~2m 45s total</div>
+  </div>
+</div>
+
+<!-- S4: ARCHITECTURE -->
+<div class="section" id="s4">
+  <div class="section-tag">Section 04</div>
+  <h2>Architecture <em>Highlights</em></h2>
+  <p class="lead">Four decisions that made the product actually work.</p>
+
+  <h3>Parallel Batches with SSE Streaming</h3>
+  <p>Generation runs as parallel groups of 5 Claude API calls (15 examples each), not one long sequential call. Results stream back to the frontend via <strong>Server-Sent Events</strong> as each group completes — so you see real progress, not a spinner.</p>
+
+  <div class="math-block yellow">
+    <div class="label">concurrency model</div>
+    <pre>User requests 500 examples
+
+  ├── Group 1: Batches 1–5   (75 examples)  ← fired concurrently
+  ├── Group 2: Batches 6–10  (75 examples)  ← starts after Group 1
+  ├── Group 3: Batches 11–15 (75 examples)
+  ├── Group 4: Batches 16–20 (75 examples)
+  ├── Group 5: Batches 21–25 (75 examples)
+  ├── Group 6: Batches 26–30 (75 examples)
+  └── Group 7: Batches 31–34 (60 examples)
+
+SSE heartbeat every 15s → keeps Cloudflare Tunnel alive
+Total wall-clock time: ~70s (vs ~600s sequential)</pre>
+  </div>
+
+  <h3>Persistent Server, Not Serverless</h3>
+  <p>Running on <strong>Railway</strong> (persistent Node.js process) instead of Vercel serverless means a 90-second streaming request is just a normal HTTP request. No <code style="font-family:'DM Mono',monospace;font-size:0.85em;color:var(--accent3)">maxDuration</code> configs, no Vercel Pro plan for long-running functions, no architectural workarounds.</p>
+
+  <div class="callout gpu"><p>Serverless function timeouts would have forced chunking generation into multiple client-initiated requests, adding complexity and failure surfaces. A persistent Railway server running <code style="font-family:'DM Mono',monospace;font-size:0.85em">next start</code> makes this a non-issue. The right infra choice eliminates an entire class of problems.</p></div>
+
+  <h3>Client-First Labeling State</h3>
+  <p>The labeling page fetches 50 examples into local React state and fires background <code style="font-family:'DM Mono',monospace;font-size:0.85em;color:var(--accent4)">PATCH</code> requests for every action — never awaited. Failed saves retry silently twice before surfacing a toast. The user is never blocked.</p>
+
+  <div class="arch-diagram" style="max-width:600px;">
+    <div class="arch-block accent">User presses A (Accept)<div class="desc">instant local state update → card slides away</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block green">Background PATCH fires<div class="desc">PATCH /api/examples/:id — not awaited</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Next example renders immediately<div class="desc">from local queue of 50 — zero network wait</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block yellow">Queue refills in background<div class="desc">when queue.length drops below 10, fetch next 50</div></div>
+  </div>
+
+  <h3>Fault-Tolerant Generation</h3>
+  <p>Every raw Claude response is stored before parsing. If JSON extraction fails on a batch, it's retried once. If it fails again, that batch is skipped and logged — generation continues. You never lose the whole run because of one malformed response.</p>
+
+  <div class="math-block pink">
+    <div class="label">error handling</div>
+    <pre>For each batch:
+  1. Call Claude API
+  2. Store raw response → DB (before parsing)
+  3. Extract JSON → if fails → retry once
+  4. If retry fails → log + skip batch → continue
+
+Result: a 500-example run with 1 bad batch returns 485 examples,
+not an error. The UI surfaces "14/15 batches succeeded."</pre>
+  </div>
+</div>
+
+<!-- S5: TECH STACK -->
+<div class="section" id="s5">
+  <div class="section-tag">Section 05</div>
+  <h2>Tech Stack</h2>
+  <p class="lead">Boring choices made deliberately. Every tool is there because the alternative was worse for this specific use case.</p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Layer</th>
+        <th>Choice</th>
+        <th>Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Framework</td>
+        <td><span class="badge">Next.js 16</span> App Router + TypeScript</td>
+        <td>Server Components for data fetching, Route Handlers for streaming endpoints, one deploy target.</td>
+      </tr>
+      <tr>
+        <td>Hosting</td>
+        <td><span class="badge green">Railway</span> persistent Node.js</td>
+        <td>No function timeout limits. One long-running SSE stream is just a normal HTTP request.</td>
+      </tr>
+      <tr>
+        <td>Database + Auth</td>
+        <td><span class="badge">Supabase</span> Postgres + RLS</td>
+        <td>Row Level Security isolates user data at the DB layer. Email auth built in. No separate auth service.</td>
+      </tr>
+      <tr>
+        <td>Payments</td>
+        <td><span class="badge green">Stripe</span> Subscriptions</td>
+        <td>Webhooks handle subscription state. Billing portal out of the box. Usage metering via metadata.</td>
+      </tr>
+      <tr>
+        <td>LLM</td>
+        <td><span class="badge">Claude</span> claude-sonnet-4-20250514</td>
+        <td>Best instruction-following for structured JSON output. Reliable axis extraction across diverse domains.</td>
+      </tr>
+      <tr>
+        <td>Tunnel</td>
+        <td><span class="badge yellow">Cloudflare</span> Tunnel</td>
+        <td>Custom domain with no exposed ports. Handles TLS. SSE heartbeats prevent 100s timeout.</td>
+      </tr>
+      <tr>
+        <td>Email</td>
+        <td><span class="badge green">Resend</span></td>
+        <td>Feedback form → inbox. Dead simple transactional email with a good dev experience.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- S6: PRICING -->
+<div class="section" id="s6">
+  <div class="section-tag">Section 06</div>
+  <h2>Pricing</h2>
+  <p class="lead">One flat plan. No seat licensing, no per-user fees, no enterprise sales process.</p>
+
+  <div class="pricing-card">
+    <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text2);margin-bottom:0.5rem;">Monthly</div>
+    <div class="price">$49</div>
+    <div class="price-sub">/ month · cancel anytime</div>
+    <ul>
+      <li>1,000 examples generated / month</li>
+      <li>Unlimited schemas & projects</li>
+      <li>All export formats (JSONL, CSV, HF, LangSmith)</li>
+      <li>Axis extraction & keyboard labeling</li>
+      <li>SSE streaming progress</li>
+      <li>Overage: $10 per 500 additional examples</li>
+    </ul>
+    <a href="https://eval.nsk1755server.com" class="cta-btn" target="_blank">Start building evals →</a>
+  </div>
+
+  <div class="callout insight"><p>500 examples at $49/month is $0.10 per labeled example. A PM spending 2 weeks building the same dataset manually costs $3,000–$8,000 in loaded salary. The ROI is immediate on the first eval suite.</p></div>
+</div>
+
+<!-- S7: WHAT I LEARNED -->
+<div class="section" id="s7">
+  <div class="section-tag">Section 07</div>
+  <h2>What I Learned Building This</h2>
+  <p class="lead">Four non-obvious decisions that shaped the product.</p>
+
+  <h3>The Axis Extraction Prompt Is Everything</h3>
+  <p>Getting Claude to identify the right diversity dimensions — ones that actually matter for the domain — is what makes the generated dataset useful rather than just large. A naive prompt produces generic axes. The final prompt gives Claude your schema, your seed examples, and explicit instructions to think about what varies in the real world for that task type.</p>
+
+  <div class="math-block">
+    <div class="label">prompt design</div>
+    <pre>Bad:  "Identify diversity axes for this dataset."
+      → Returns: Length, Formality, Topic, Tone, Complexity
+      → Generic. Applies to any text task.
+
+Good: "Given this schema and these seed examples, identify 5–8
+       dimensions of variation that would cause a model fine-tuned
+       on this task to fail differently across each dimension."
+      → Returns: Tech Stack, Project Scale, Impact Measurability,
+                 Role Seniority, Feature Interdependence
+      → Domain-specific. Actually catches real failure modes.</pre>
+  </div>
+
+  <h3>Streaming Is Table Stakes, Not a Nice-To-Have</h3>
+  <p>Without live progress, a 60-second generation feels broken — users assume something failed. With SSE streaming showing "Generated 45 / 200 examples…", users stay engaged and trust the system.</p>
+
+  <div class="callout insight"><p>The first internal test had no streaming. Every tester clicked the button, waited 8 seconds, saw nothing, then clicked it again. The second click started a duplicate run. Streaming fixed both the perception problem and the duplicate-run problem simultaneously.</p></div>
+
+  <h3>Persistent Server Beats Serverless for Streaming Products</h3>
+  <p>The decision to use Railway instead of Vercel saved weeks of architectural work. Vercel serverless functions have max duration limits (10s free, 60s–300s Pro). A streaming generation request that runs 90 seconds is trivial on Railway and a real problem on Vercel.</p>
+
+  <h3>Optimistic UI Is the Right Model for Labeling</h3>
+  <p>The labeling UI keeps everything in local React state and fires background saves. The first version awaited every <code style="font-family:'DM Mono',monospace;font-size:0.85em;color:var(--accent4)">PATCH</code> call before advancing to the next example — 200–400ms of latency per label action. With background saves, the same labeling session feels instant. The UX difference is dramatic.</p>
+
+  <div class="callout gpu"><p>Background saves with silent retries and toast-on-failure is the right architecture for any high-frequency user action. The user doesn't care about the network call — they care about the item being labeled. Decouple those two things and both feel better.</p></div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:1rem;font-size:0.9rem;font-family:'Playfair Display',serif;color:var(--text);">Ready to stop doing data entry?</p>
+  <a href="https://eval.nsk1755server.com" style="font-size:0.85rem;letter-spacing:0.05em;">eval.nsk1755server.com</a>
+  <p style="margin-top:2rem;">Built with Next.js · Railway · Supabase · Stripe · Claude</p>
+</footer>
+
+<script>
+// --- LABELING DEMO ---
+const examples = [
+  {
+    input: "Built login page for web app",
+    output: "To enable secure user access, built the Auth Portal with React and JWT. Implemented OAuth2 login, session management, and RBAC, reducing unauthorized access incidents by 100% at launch."
+  },
+  {
+    input: "Improved database query performance",
+    output: "To eliminate 8s page loads, redesigned the PostgreSQL query layer with indexed materialized views. Implemented query batching and connection pooling, cutting P95 latency from 8,200ms to 340ms for 50,000 daily users."
+  },
+  {
+    input: "Created API for mobile app",
+    output: "To power real-time features for the iOS app, built a GraphQL API with Node.js and Redis. Implemented subscriptions, offline sync, and rate limiting, supporting 200 concurrent users with 99.9% uptime."
+  },
+  {
+    input: "Fixed bugs in payment system",
+    output: "To resolve checkout failures affecting 3% of transactions, audited the Stripe integration and rebuilt the webhook handler. Implemented idempotency keys and retry logic, reducing failed payments from 340/day to 0."
+  },
+  {
+    input: "Made the dashboard faster",
+    output: "To eliminate 6s dashboard loads, profiled the React render tree and implemented virtual scrolling with memo boundaries. Reduced initial load from 6.2s to 0.8s and cut re-renders by 94% for 12,000 daily active users."
+  }
+];
+
+let labelIdx = 0;
+
+function loadExample() {
+  const ex = examples[labelIdx % examples.length];
+  const card = document.getElementById('labelCard');
+  card.className = 'label-card';
+  document.getElementById('labelInput').textContent = ex.input;
+  document.getElementById('labelOutput').textContent = ex.output;
+  document.getElementById('labelStatus').textContent = 'Example ' + (labelIdx + 1) + ' of ' + examples.length + ' · use keyboard shortcuts to label';
+  document.getElementById('labelStatus').style.color = 'var(--text2)';
+}
+
+function labelAction(action) {
+  const card = document.getElementById('labelCard');
+  const statusEl = document.getElementById('labelStatus');
+  const msgs = { A: ['accepted', 'var(--accent3)', '✓ Accepted — saved in background'], R: ['rejected', 'var(--accent2)', '✗ Rejected'], F: ['flagged', 'var(--accent4)', '⚑ Flagged for review'], E: [null, 'var(--accent)', '✎ Edit mode — inline editing would open here'] };
+  const m = msgs[action];
+  if (m[0]) card.className = 'label-card ' + m[0];
+  statusEl.style.color = m[1];
+  statusEl.textContent = m[2];
+  if (action !== 'E') {
+    setTimeout(() => { labelIdx++; loadExample(); }, 700);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const map = { 'a': 'A', 'A': 'A', 'r': 'R', 'R': 'R', 'f': 'F', 'F': 'F', 'e': 'E', 'E': 'E' };
+  if (map[e.key]) { e.preventDefault(); labelAction(map[e.key]); }
+  if (e.key === ' ') { e.preventDefault(); labelIdx++; loadExample(); }
+});
+
+loadExample();
+</script>
+</body>
+</html>

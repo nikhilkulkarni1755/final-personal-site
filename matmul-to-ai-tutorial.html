@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Matrices to Minds</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #10101a;
+    --bg3: #16162a;
+    --accent: #7c6aff;
+    --accent2: #ff6a9a;
+    --accent3: #6affe0;
+    --accent4: #ffc96a;
+    --text: #e8e8f0;
+    --text2: #9090b0;
+    --border: #2a2a45;
+    --glow: rgba(124,106,255,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,106,255,0.12) 0%, transparent 70%);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.3;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
+  }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(124,106,255,0.3);
+    border-radius: 100px;
+    background: rgba(124,106,255,0.08);
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text2);
+    max-width: 560px;
+    margin-bottom: 3rem;
+    line-height: 1.8;
+  }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    max-width: 700px;
+  }
+  .toc a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text2);
+    text-decoration: none;
+    transition: all 0.2s;
+    background: var(--bg2);
+  }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  /* SECTIONS */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 6rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .section-tag::after { content: ''; flex:1; height:1px; background: linear-gradient(to right, var(--accent), transparent); opacity:0.3; }
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+    color: var(--accent3);
+  }
+  p { color: var(--text2); margin-bottom: 1.2rem; font-size: 1rem; }
+  p strong { color: var(--text); font-weight: 500; }
+  .lead { font-size: 1.15rem; color: var(--text); line-height: 1.9; }
+
+  /* CODE / MATH BLOCKS */
+  .math-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    position: relative;
+  }
+  .math-block .label {
+    position: absolute;
+    top: -1px;
+    right: 12px;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #000;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0 0 4px 4px;
+    font-weight: 500;
+  }
+  .math-block.green { border-left-color: var(--accent3); }
+  .math-block.green .label { background: var(--accent3); }
+  .math-block.pink { border-left-color: var(--accent2); }
+  .math-block.pink .label { background: var(--accent2); }
+  .math-block.yellow { border-left-color: var(--accent4); }
+  .math-block.yellow .label { background: var(--accent4); }
+
+  /* MATRIX VIZ */
+  .matrix-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+  .matrix-demo h4 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+  }
+  .matrix-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .matrix {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    padding: 0.5rem 0;
+  }
+  .matrix::before, .matrix::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 6px;
+    border: 2px solid var(--text2);
+  }
+  .matrix::before { left: -10px; border-right: none; border-radius: 3px 0 0 3px; }
+  .matrix::after { right: -10px; border-left: none; border-radius: 0 3px 3px 0; }
+  .matrix-row-cells {
+    display: flex;
+    gap: 4px;
+  }
+  .cell {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .cell.highlight { background: rgba(124,106,255,0.25); border-color: var(--accent); color: var(--accent); }
+  .cell.result-highlight { background: rgba(106,255,224,0.2); border-color: var(--accent3); color: var(--accent3); }
+  .op-symbol {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--accent2);
+  }
+
+  /* INTERACTIVE DEMO */
+  .interactive-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 2rem 0;
+  }
+  .demo-header {
+    background: var(--bg3);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .demo-header span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .demo-body { padding: 1.5rem; }
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--glow); }
+  .btn.active { background: var(--accent); color: #000; }
+
+  /* CALLOUT BOXES */
+  .callout {
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid;
+  }
+  .callout.insight { background: rgba(124,106,255,0.08); border-color: var(--accent); }
+  .callout.insight::before { content: '💡 Key Insight — '; font-weight: 600; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.05em; }
+  .callout.warning { background: rgba(255,106,154,0.08); border-color: var(--accent2); }
+  .callout.warning::before { content: '⚡ Important — '; font-weight: 600; color: var(--accent2); font-size: 0.85rem; }
+  .callout.gpu { background: rgba(106,255,224,0.08); border-color: var(--accent3); }
+  .callout.gpu::before { content: '🖥 Hardware — '; font-weight: 600; color: var(--accent3); font-size: 0.85rem; }
+  .callout p { margin: 0; color: var(--text); }
+
+  /* ARCHITECTURE DIAGRAMS */
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 2rem auto;
+    max-width: 500px;
+  }
+  .arch-block {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg2);
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    position: relative;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .arch-block:hover { border-color: var(--accent); background: var(--glow); }
+  .arch-block .desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 0.2rem;
+  }
+  .arch-block.accent { border-color: var(--accent); background: rgba(124,106,255,0.1); color: var(--accent); }
+  .arch-block.green { border-color: var(--accent3); background: rgba(106,255,224,0.08); color: var(--accent3); }
+  .arch-block.pink { border-color: var(--accent2); background: rgba(255,106,154,0.08); color: var(--accent2); }
+  .arch-block.yellow { border-color: var(--accent4); background: rgba(255,201,106,0.08); color: var(--accent4); }
+  .arch-arrow {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    position: relative;
+  }
+  .arch-arrow::after {
+    content: '▼';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--accent);
+    font-size: 0.6rem;
+  }
+
+  /* GPU GRID */
+  .gpu-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 3px;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .gpu-core {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    transition: background 0.3s;
+  }
+  .gpu-core.active { background: var(--accent); border-color: var(--accent); }
+  .gpu-core.done { background: var(--accent3); border-color: var(--accent3); }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+  .compare-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    background: var(--bg2);
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  .compare-table td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  .compare-table td:first-child { color: var(--text); font-weight: 500; }
+  .compare-table tr:hover td { background: var(--bg2); }
+
+  /* PROGRESS */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(to right, var(--accent), var(--accent3));
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+    padding: 1.2rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    justify-content: center;
+  }
+  .flow-box {
+    padding: 0.4rem 0.9rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text2);
+    text-align: center;
+  }
+  .flow-box.hi { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+  .flow-box.hi2 { border-color: var(--accent3); color: var(--accent3); background: rgba(106,255,224,0.08); }
+  .flow-box.hi3 { border-color: var(--accent4); color: var(--accent4); background: rgba(255,201,106,0.08); }
+  .flow-arrow { color: var(--text2); font-size: 1rem; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 4rem 2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    border-top: 1px solid var(--border);
+  }
+
+  /* CANVAS */
+  canvas { display: block; margin: 0 auto; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ANIMATION */
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(20px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  .section { animation: fadeUp 0.6s ease both; }
+
+  .tag-chip {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 3px;
+    margin-right: 0.4rem;
+    background: rgba(124,106,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,106,255,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Complete Technical Deep-Dive</div>
+  <h1>From <em>Matrices</em><br>to Minds</h1>
+  <p class="hero-sub">How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.</p>
+  <div class="toc">
+    <a href="#s1">01 · Matrix Basics</a>
+    <a href="#s2">02 · Matrix Multiplication</a>
+    <a href="#s3">03 · Neurons & Layers</a>
+    <a href="#s4">04 · CNNs</a>
+    <a href="#s5">05 · RNNs & LSTMs</a>
+    <a href="#s6">06 · Transformers</a>
+    <a href="#s7">07 · Tokens & Embeddings</a>
+    <a href="#s8">08 · GPUs & TPUs</a>
+    <a href="#s9">09 · The Full Stack</a>
+  </div>
+</div>
+
+<!-- S1: MATRIX BASICS -->
+<div class="section" id="s1">
+  <div class="section-tag">Chapter 01</div>
+  <h2>What is a Matrix?</h2>
+  <p class="lead">A matrix is just a rectangular grid of numbers — nothing more. But when you learn to multiply them, you unlock the fundamental operation behind every neural network ever built.</p>
+
+  <p>Imagine you have a 3×3 grid of numbers. Each position is called an <strong>element</strong>. The grid has <strong>rows</strong> (horizontal) and <strong>columns</strong> (vertical). We describe a matrix by its shape: rows × columns.</p>
+
+  <div class="matrix-demo">
+    <h4>A 3×2 Matrix · "Shape is (3, 2)"</h4>
+    <div class="matrix-row">
+      <div style="text-align:center">
+        <div class="matrix" style="margin: 0 18px;">
+          <div class="matrix-row-cells">
+            <div class="cell">2</div><div class="cell">5</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell">−1</div><div class="cell">3</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell">4</div><div class="cell">0</div>
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--text2); margin-top:1rem;">3 rows · 2 columns</div>
+      </div>
+      <div style="text-align:left; max-width:350px; color:var(--text2); font-size:0.9rem; line-height:1.8;">
+        <p style="color:var(--text); font-weight:500; margin-bottom:0.5rem;">Notation: A[i][j]</p>
+        <p>Row index <strong style="color:var(--accent)">i</strong> goes top→bottom<br>
+        Column index <strong style="color:var(--accent3)">j</strong> goes left→right<br>
+        So A[0][1] = <strong style="color:var(--accent2)">5</strong><br>
+        And A[2][0] = <strong style="color:var(--accent2)">4</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Why do we need matrices?</h3>
+  <p>Matrices are a compact way to represent <strong>linear transformations</strong> — functions that rotate, scale, stretch, or project data. Instead of writing 100 separate equations, you write one matrix operation.</p>
+
+  <div class="callout insight"><p>In deep learning, a matrix row is often a <strong>data sample</strong> and columns are <strong>features</strong>. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there.</p></div>
+</div>
+
+<!-- S2: MATRIX MULTIPLICATION -->
+<div class="section" id="s2">
+  <div class="section-tag">Chapter 02</div>
+  <h2>Matrix Multiplication</h2>
+  <p class="lead">This is <em>the</em> operation. Every layer in every neural network is fundamentally doing this one thing.</p>
+
+  <h3>The Rule</h3>
+  <p>To multiply matrix <strong>A</strong> (shape m×k) by matrix <strong>B</strong> (shape k×n), the <strong>inner dimensions must match</strong>. The result is shape m×n.</p>
+
+  <div class="math-block">
+    <div class="label">shape rule</div>
+    <pre>
+  A      ×      B      =      C
+(m × k)    (k × n)       (m × n)
+
+  ↑               ↑
+  These must match!</pre>
+  </div>
+
+  <p>Each element C[i][j] is computed as the <strong>dot product</strong> of row i of A with column j of B:</p>
+
+  <div class="math-block green">
+    <div class="label">dot product</div>
+    <pre>
+  C[i][j] = Σ  A[i][k] × B[k][j]
+             k
+
+  = A[i][0]·B[0][j] + A[i][1]·B[1][j] + A[i][2]·B[2][j] + ...</pre>
+  </div>
+
+  <h3>Step-by-step Example</h3>
+
+  <div class="interactive-demo">
+    <div class="demo-header">
+      <span>Interactive · 2×3 times 3×2</span>
+      <button class="btn" id="animBtn" onclick="runMatMulAnim()">▶ Animate</button>
+    </div>
+    <div class="demo-body">
+      <div class="matrix-row" style="margin-bottom:1.5rem;">
+        <div style="text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">A (2×3)</div>
+          <div class="matrix" style="margin:0 14px">
+            <div class="matrix-row-cells">
+              <div class="cell" id="a00">1</div><div class="cell" id="a01">2</div><div class="cell" id="a02">3</div>
+            </div>
+            <div class="matrix-row-cells">
+              <div class="cell" id="a10">4</div><div class="cell" id="a11">5</div><div class="cell" id="a12">6</div>
+            </div>
+          </div>
+        </div>
+        <div class="op-symbol">×</div>
+        <div style="text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">B (3×2)</div>
+          <div class="matrix" style="margin:0 14px">
+            <div class="matrix-row-cells">
+              <div class="cell" id="b00">7</div><div class="cell" id="b01">8</div>
+            </div>
+            <div class="matrix-row-cells">
+              <div class="cell" id="b10">9</div><div class="cell" id="b11">10</div>
+            </div>
+            <div class="matrix-row-cells">
+              <div class="cell" id="b20">11</div><div class="cell" id="b21">12</div>
+            </div>
+          </div>
+        </div>
+        <div class="op-symbol">=</div>
+        <div style="text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">C (2×2)</div>
+          <div class="matrix" style="margin:0 14px">
+            <div class="matrix-row-cells">
+              <div class="cell" id="c00">?</div><div class="cell" id="c01">?</div>
+            </div>
+            <div class="matrix-row-cells">
+              <div class="cell" id="c10">?</div><div class="cell" id="c11">?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="animExplain" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--text2);text-align:center;min-height:2rem;">
+        Click Animate to see each dot product computed step by step.
+      </div>
+    </div>
+  </div>
+
+  <h3>FLOP Count — Why this matters for AI</h3>
+  <p>Multiplying an (m×k) matrix by a (k×n) matrix requires <strong>m × k × n multiplications and additions</strong> — called FLOPs (Floating Point Operations). For a single transformer layer with hidden size 4096:</p>
+
+  <div class="math-block yellow">
+    <div class="label">example</div>
+    <pre>
+  Weight matrix shape:     (4096 × 4096)
+  Batch of 512 tokens:     (512 × 4096)
+  
+  FLOPs per layer:         512 × 4096 × 4096 ≈ 8.6 Billion
+  Layers in GPT-3:         96
+  
+  Total FLOPs per forward pass: ~830 Billion</pre>
+  </div>
+
+  <div class="callout insight"><p>Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel.</p></div>
+</div>
+
+<!-- S3: NEURONS AND LAYERS -->
+<div class="section" id="s3">
+  <div class="section-tag">Chapter 03</div>
+  <h2>From Matrix Multiplication to Neural Networks</h2>
+  <p class="lead">A neural network is, at its core, a sequence of matrix multiplications separated by non-linear functions.</p>
+
+  <h3>The Single Neuron</h3>
+  <p>One neuron takes a vector of inputs <strong>x</strong>, multiplies by a weight vector <strong>w</strong>, adds a bias <strong>b</strong>, then applies an activation function <strong>f</strong>:</p>
+
+  <div class="math-block">
+    <div class="label">neuron</div>
+    <pre>
+  output = f( w₁x₁ + w₂x₂ + w₃x₃ + b )
+         = f( w·x + b )
+         = f( dot_product(w, x) + b )</pre>
+  </div>
+
+  <h3>A Full Layer = One Matrix Multiply</h3>
+  <p>A layer with <strong>n</strong> neurons, each looking at <strong>m</strong> inputs, is just one matrix multiply:</p>
+
+  <div class="math-block green">
+    <div class="label">linear layer</div>
+    <pre>
+  Inputs:   x  shape (batch_size, m)    — B samples, m features each
+  Weights:  W  shape (m, n)             — m inputs → n outputs
+  Bias:     b  shape (n,)
+  
+  Output = f( x @ W + b )              — shape (batch_size, n)
+  
+  "@" = matrix multiply
+  f   = activation (ReLU, sigmoid, etc.)</pre>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-block accent">Input Layer<div class="desc">x — raw features</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Linear: y = xW + b<div class="desc">one matrix multiply</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block green">Activation: f(y)<div class="desc">ReLU, GELU, sigmoid...</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Linear: z = yW₂ + b₂<div class="desc">another matrix multiply</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block pink">Output Layer<div class="desc">predictions / logits</div></div>
+  </div>
+
+  <h3>Activation Functions — The Non-Linearity</h3>
+  <p>Without activation functions, stacking linear layers would still be linear (you can always combine two matrix multiplies into one). Activations are what let networks learn <strong>curved decision boundaries</strong>.</p>
+
+  <div class="math-block">
+    <div class="label">activations</div>
+    <pre>
+  ReLU(x)    = max(0, x)           ← most common in CNNs/MLPs
+  GELU(x)    ≈ x·Φ(x)             ← used in GPT, BERT
+  Sigmoid(x) = 1 / (1 + e⁻ˣ)     ← outputs 0→1, for gates
+  Tanh(x)    = (eˣ - e⁻ˣ)/(eˣ+e⁻ˣ)  ← outputs -1→1, for RNNs
+  Softmax(x) = eˣⁱ / Σeˣʲ         ← for probability distributions</pre>
+  </div>
+
+  <h3>Backpropagation — Learning via Chain Rule</h3>
+  <p>Networks learn by computing the gradient of the loss with respect to every weight, then nudging weights in the direction that reduces loss. This uses the <strong>chain rule of calculus</strong> applied backward through the network — hence "backprop".</p>
+
+  <div class="math-block pink">
+    <div class="label">gradient descent</div>
+    <pre>
+  Forward:  x → [W₁] → [ReLU] → [W₂] → [softmax] → loss L
+  
+  Backward: ∂L/∂W₁ = ∂L/∂y₂ · ∂y₂/∂y₁ · ∂y₁/∂W₁   (chain rule)
+  
+  Update:   W₁ ← W₁ - α·∂L/∂W₁     (α = learning rate)
+  
+  This backward pass is ALSO mostly matrix multiplications!</pre>
+  </div>
+
+  <div class="callout warning"><p>Both the <strong>forward pass</strong> (inference) and the <strong>backward pass</strong> (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible.</p></div>
+</div>
+
+<!-- S4: CNNs -->
+<div class="section" id="s4">
+  <div class="section-tag">Chapter 04</div>
+  <h2>Convolutional Neural Networks (CNNs)</h2>
+  <p class="lead">CNNs handle spatial data like images. They replace big matrix multiplies with sliding <em>filters</em> — but it's still matrix multiplication under the hood.</p>
+
+  <h3>The Convolution Operation</h3>
+  <p>Instead of connecting every input pixel to every neuron (which would be enormous), a CNN uses a small <strong>kernel/filter</strong> (e.g., 3×3) that slides across the image, computing a dot product at each position:</p>
+
+  <div class="math-block">
+    <div class="label">convolution</div>
+    <pre>
+  Input image:     H × W × C    (height × width × channels)
+  Filter/Kernel:   K × K × C    (usually 3×3 or 5×5)
+  
+  For each position (i,j) in the output:
+    output[i][j] = sum( input[i:i+K, j:j+K] ⊙ kernel )
+                                ↑
+                        element-wise multiply, then sum
+                        = dot product of two vectors!</pre>
+  </div>
+
+  <div class="matrix-demo">
+    <h4>3×3 Convolution — Edge Detection</h4>
+    <div class="matrix-row" style="align-items:flex-start;">
+      <div style="text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">Input Patch</div>
+        <div class="matrix" style="margin:0 14px">
+          <div class="matrix-row-cells">
+            <div class="cell">0</div><div class="cell highlight">255</div><div class="cell highlight">255</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell">0</div><div class="cell highlight">255</div><div class="cell highlight">255</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell">0</div><div class="cell">0</div><div class="cell">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="op-symbol">⊙</div>
+      <div style="text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">Sobel Kernel</div>
+        <div class="matrix" style="margin:0 14px">
+          <div class="matrix-row-cells">
+            <div class="cell" style="color:var(--accent2)">-1</div><div class="cell" style="color:var(--accent2)">0</div><div class="cell">+1</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell" style="color:var(--accent2)">-2</div><div class="cell">0</div><div class="cell">+2</div>
+          </div>
+          <div class="matrix-row-cells">
+            <div class="cell" style="color:var(--accent2)">-1</div><div class="cell" style="color:var(--accent2)">0</div><div class="cell">+1</div>
+          </div>
+        </div>
+      </div>
+      <div class="op-symbol">=</div>
+      <div style="text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text2);margin-bottom:0.5rem;">Output</div>
+        <div class="matrix" style="margin:0 14px">
+          <div class="matrix-row-cells">
+            <div class="cell result-highlight">1020</div>
+          </div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text2);margin-top:0.5rem;">Strong edge detected!</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Convolution is Matrix Multiplication (im2col)</h3>
+  <p>Modern frameworks convert convolution into a matrix multiply using <strong>im2col</strong>: each filter application becomes a column, and you batch all of them into one big matrix multiply that GPUs love.</p>
+
+  <div class="math-block green">
+    <div class="label">im2col trick</div>
+    <pre>
+  1. Reshape input patches → matrix of shape (N·H'·W', K²·C)
+  2. Reshape filters       → matrix of shape (K²·C, F)
+  3. One matrix multiply   → output of shape (N·H'·W', F)
+  4. Reshape back          → (N, H', W', F)
+  
+  This is why convolution training is fast: it's all GEMM!</pre>
+  </div>
+
+  <h3>Typical CNN Architecture</h3>
+
+  <div class="arch-diagram">
+    <div class="arch-block yellow">Input Image (224×224×3)<div class="desc">3 channels: R, G, B</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Conv Layer (64 filters, 3×3)<div class="desc">extracts local features</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block green">BatchNorm + ReLU<div class="desc">normalize + non-linearity</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">MaxPool (2×2)<div class="desc">downsample: 112×112</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">More Conv Blocks...<div class="desc">deeper features emerge</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block accent">Global Average Pool<div class="desc">spatial → vector</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block pink">Fully Connected + Softmax<div class="desc">final matrix multiply → classes</div></div>
+  </div>
+</div>
+
+<!-- S5: RNNs -->
+<div class="section" id="s5">
+  <div class="section-tag">Chapter 05</div>
+  <h2>Recurrent Neural Networks (RNNs & LSTMs)</h2>
+  <p class="lead">CNNs handle space. RNNs handle <em>time</em> — sequences of data where the order matters, like text, audio, or sensor readings.</p>
+
+  <h3>The Core Idea: Hidden State</h3>
+  <p>An RNN processes one token at a time, maintaining a <strong>hidden state</strong> h that acts as "memory" of everything seen so far. At each step:</p>
+
+  <div class="math-block">
+    <div class="label">rnn step</div>
+    <pre>
+  hₜ = tanh( Wₕₕ · hₜ₋₁  +  Wₓₕ · xₜ  +  b )
+              ↑ previous     ↑ current
+              hidden          input
+  
+  yₜ = Wₕ_out · hₜ                  ← output at step t
+
+  Still just matrix multiplications!</pre>
+  </div>
+
+  <h3>The Vanishing Gradient Problem</h3>
+  <p>RNNs struggle with <strong>long-range dependencies</strong>. Gradients flowing backward through many time steps get multiplied by the same weight matrix repeatedly — they either <strong>vanish</strong> (→ 0) or <strong>explode</strong> (→ ∞).</p>
+
+  <h3>LSTM: Gated Memory</h3>
+  <p>LSTMs (Long Short-Term Memory) add explicit <strong>gates</strong> to control what gets remembered, forgotten, or output. All gates are... matrix multiplications:</p>
+
+  <div class="math-block pink">
+    <div class="label">lstm gates</div>
+    <pre>
+  fₜ = σ( Wf · [hₜ₋₁, xₜ] + bf )   ← Forget gate: what to erase
+  iₜ = σ( Wi · [hₜ₋₁, xₜ] + bi )   ← Input gate:  what to write
+  g̃ₜ = tanh(Wg · [hₜ₋₁, xₜ] + bg)  ← Candidate memory
+  oₜ = σ( Wo · [hₜ₋₁, xₜ] + bo )   ← Output gate: what to read
+  
+  Cell:  cₜ = fₜ ⊙ cₜ₋₁ + iₜ ⊙ g̃ₜ  ← Update cell state
+  Hidden: hₜ = oₜ ⊙ tanh(cₜ)        ← New hidden state
+  
+  ⊙ = element-wise multiply
+  σ = sigmoid (outputs between 0 and 1 = "gate open/closed")</pre>
+  </div>
+
+  <div class="callout warning"><p>The <strong>fundamental problem</strong> with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve.</p></div>
+</div>
+
+<!-- S6: TRANSFORMERS -->
+<div class="section" id="s6">
+  <div class="section-tag">Chapter 06</div>
+  <h2>Transformers & Attention</h2>
+  <p class="lead">The 2017 paper "Attention Is All You Need" discarded recurrence entirely. Instead, every position attends to every other position — simultaneously, in parallel — using one elegant matrix operation.</p>
+
+  <h3>Self-Attention: The Core Mechanism</h3>
+  <p>For each token, we compute three vectors by multiplying its embedding by three learned weight matrices:</p>
+
+  <div class="math-block">
+    <div class="label">qkv projections</div>
+    <pre>
+  Q = X · Wq    (Queries — "what am I looking for?")
+  K = X · Wk    (Keys    — "what do I contain?")
+  V = X · Wv    (Values  — "what do I output if you look at me?")
+  
+  X shape:  (seq_len, d_model)       e.g., (512, 768)
+  W shapes: (d_model, d_k)           e.g., (768, 64)</pre>
+  </div>
+
+  <p>Then attention scores are computed, scaled, softmaxed, and used to weight the values:</p>
+
+  <div class="math-block green">
+    <div class="label">attention formula</div>
+    <pre>
+  Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V
+                                ↑         ↑      ↑
+                          dot product  scale   weighted
+                          of all pairs         sum of V
+  
+  Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
+  After softmax: each row sums to 1 (probability distribution)
+  Final output:  (seq_len, d_k)      ← rich, context-aware vectors</pre>
+  </div>
+
+  <div class="interactive-demo">
+    <div class="demo-header">
+      <span>Attention Heatmap — "The cat sat on the mat"</span>
+    </div>
+    <div class="demo-body">
+      <div id="attnGrid" style="display:grid; gap:2px; max-width:380px; margin:0 auto;"></div>
+      <div style="margin-top:1rem; font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--text2); text-align:center;">
+        Each cell = attention weight from row-token → col-token. Darker = stronger attention.
+      </div>
+    </div>
+  </div>
+
+  <h3>Multi-Head Attention</h3>
+  <p>Instead of one attention pass, Transformers run <strong>h heads</strong> in parallel — each learning a different type of relationship (e.g., one head learns syntax, another learns coreference):</p>
+
+  <div class="math-block yellow">
+    <div class="label">multi-head</div>
+    <pre>
+  head_i = Attention(X·Wq_i, X·Wk_i, X·Wv_i)
+
+  MultiHead(X) = Concat(head_1, ..., head_h) · Wo
+  
+  If d_model=768, h=12:  each head d_k = 768/12 = 64
+  
+  Total params per attention layer ≈ 4 × d_model²
+  For d_model=768: ≈ 2.4 million params per layer</pre>
+  </div>
+
+  <h3>The Full Transformer Block</h3>
+
+  <div class="arch-diagram">
+    <div class="arch-block yellow">Input Embeddings<div class="desc">token embeddings + positional encoding</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block accent">Multi-Head Self-Attention<div class="desc">Q·Kᵀ/√d · V — parallel matrix ops</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Add & LayerNorm<div class="desc">residual connection</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block green">Feed-Forward Network<div class="desc">2 linear layers: 4× expand then contract</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block">Add & LayerNorm<div class="desc">residual connection</div></div>
+    <div class="arch-arrow"></div>
+    <div class="arch-block pink">→ Repeat N times (e.g., 96 layers in GPT-3)</div>
+  </div>
+
+  <h3>Why Transformers Beat RNNs</h3>
+  <table class="compare-table">
+    <tr><th>Property</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+    <tr><td>Parallelism</td><td>Sequential — can't parallelize across tokens</td><td>Fully parallel — all tokens computed at once</td></tr>
+    <tr><td>Long-range context</td><td>Degrades with distance (vanishing gradients)</td><td>O(1) path between any two positions</td></tr>
+    <tr><td>Memory</td><td>Fixed-size hidden state bottleneck</td><td>Explicit attention over all positions</td></tr>
+    <tr><td>Compute</td><td>O(n) time per layer</td><td>O(n²) attention but massively parallel</td></tr>
+    <tr><td>Scaling</td><td>Stops improving past ~1B params</td><td>Power-law scaling — bigger = better</td></tr>
+  </table>
+</div>
+
+<!-- S7: TOKENS -->
+<div class="section" id="s7">
+  <div class="section-tag">Chapter 07</div>
+  <h2>Tokens & Embeddings</h2>
+  <p class="lead">Before any matrix can multiply, raw text must become numbers. The tokenization pipeline is the bridge between human language and matrix operations.</p>
+
+  <h3>What is a Token?</h3>
+  <p>Tokens are the atomic units a model sees. They are <strong>not</strong> words — they are subword pieces chosen to minimize vocabulary size while handling any input. Using <strong>Byte-Pair Encoding (BPE)</strong>:</p>
+
+  <div class="math-block">
+    <div class="label">tokenization</div>
+    <pre>
+  "ChatGPT is amazing!" 
+  → ["Chat", "G", "PT", " is", " amaz", "ing", "!"]
+  → [  9890,  38,  2898,  374,  16682,   278,   0  ]
+                          ↑
+                    token IDs (integers)</pre>
+  </div>
+
+  <h3>Embeddings — From ID to Vector</h3>
+  <p>Each token ID is looked up in an <strong>embedding matrix</strong> — a learned table mapping every token to a dense vector. This lookup is itself a matrix multiply (one-hot vector times embedding matrix):</p>
+
+  <div class="math-block green">
+    <div class="label">embedding lookup</div>
+    <pre>
+  Vocabulary size:  50,257 tokens  (GPT-2)
+  Embedding dim:    768            (GPT-2 small)
+  
+  Embedding matrix E:  shape (50257, 768)
+  Token ID = 9890:     → E[9890]  = vector of 768 floats
+  
+  Full sequence of 512 tokens → matrix (512, 768)
+  This is X — the input to the first Transformer block.</pre>
+  </div>
+
+  <h3>Positional Encoding</h3>
+  <p>Attention is <strong>permutation-invariant</strong> — it doesn't know that token 0 comes before token 1. Positional encodings inject this order information:</p>
+
+  <div class="math-block yellow">
+    <div class="label">sinusoidal (original)</div>
+    <pre>
+  PE[pos, 2i]   = sin( pos / 10000^(2i/d_model) )
+  PE[pos, 2i+1] = cos( pos / 10000^(2i/d_model) )
+  
+  Input to transformer = token_embedding + positional_embedding
+  
+  Modern LLMs use RoPE (Rotary Position Embedding) instead —
+  it applies rotation matrices directly inside attention,
+  allowing better extrapolation to longer sequences.</pre>
+  </div>
+
+  <h3>From Token to Output Probability</h3>
+
+  <div class="flow">
+    <div class="flow-box hi">token IDs<div style="font-size:0.6rem;color:var(--text2)">[9890, 38, ...]</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">embedding lookup<div style="font-size:0.6rem;color:var(--text2)">(vocab, d_model)</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">+ pos encoding</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi2">N × Transformer blocks<div style="font-size:0.6rem;color:var(--text2)">attention + FFN</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">final LayerNorm</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi3">lm_head · Wᵀ<div style="font-size:0.6rem;color:var(--text2)">(d_model → vocab)</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">softmax<div style="font-size:0.6rem;color:var(--text2)">→ probabilities</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box hi">sample next token</div>
+  </div>
+
+  <div class="callout insight"><p>The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer.</p></div>
+</div>
+
+<!-- S8: GPUs & TPUs -->
+<div class="section" id="s8">
+  <div class="section-tag">Chapter 08</div>
+  <h2>GPUs & TPUs: The Hardware Behind the Math</h2>
+  <p class="lead">Matrix multiplication is embarrassingly parallel. GPUs and TPUs are purpose-built to exploit this — they're not fast computers, they're fast matrix multipliers.</p>
+
+  <h3>CPU vs GPU Architecture</h3>
+  <table class="compare-table">
+    <tr><th>Property</th><th>CPU (e.g. Intel Xeon)</th><th>GPU (e.g. NVIDIA H100)</th></tr>
+    <tr><td>Core count</td><td>8–128 complex cores</td><td>14,592 CUDA cores</td></tr>
+    <tr><td>Design goal</td><td>Low latency, serial tasks</td><td>High throughput, parallel tasks</td></tr>
+    <tr><td>Cache</td><td>Large L1/L2/L3 cache hierarchy</td><td>Small cache, high bandwidth HBM memory</td></tr>
+    <tr><td>Memory bandwidth</td><td>~100 GB/s</td><td>3.35 TB/s (H100 SXM)</td></tr>
+    <tr><td>FP16 FLOPS</td><td>~1–2 TFLOPS</td><td>989 TFLOPS (tensor cores)</td></tr>
+    <tr><td>Ideal workload</td><td>OS, databases, branchy code</td><td>Matrix multiplies, convolutions</td></tr>
+  </table>
+
+  <h3>Tensor Cores — The Secret Weapon</h3>
+  <p>NVIDIA's Tensor Cores (introduced in Volta, 2017) execute a <strong>4×4 matrix multiply-accumulate (MMA)</strong> in a single clock cycle at mixed precision (FP16 inputs, FP32 accumulation). GPUs have thousands of these:</p>
+
+  <div class="math-block">
+    <div class="label">tensor core mma</div>
+    <pre>
+  D = A × B + C
+  
+  A, B: (4×4) FP16 matrices
+  C, D: (4×4) FP32 accumulator
+  
+  This is a "WMMA" (Warp Matrix Multiply-Accumulate)
+  One tensor core does this in 1 clock cycle.
+  H100 has 528 tensor cores × 2GHz × 16 ops/cycle
+  = ~989 TFLOPS in FP16</pre>
+  </div>
+
+  <h3>CUDA Thread Hierarchy</h3>
+  <p>GPUs organize computation in a hierarchy. Understanding this explains how a single matrix multiply maps to hardware:</p>
+
+  <div class="math-block green">
+    <div class="label">cuda hierarchy</div>
+    <pre>
+  Thread  → executes one FMA (fused multiply-add) operation
+  Warp    → 32 threads that execute in lockstep (SIMT)
+  Block   → many warps; share fast Shared Memory (~100 KB)
+  Grid    → all blocks executing the same kernel
+  
+  For a matrix multiply (GEMM):
+  • Each thread block computes a TILE of the output matrix
+  • Tile is loaded into shared memory (fast!)
+  • Inner loop multiplies the tile
+  • Result written back to global GPU memory (HBM)</pre>
+  </div>
+
+  <div class="interactive-demo">
+    <div class="demo-header">
+      <span>GPU Core Visualization — Parallel MatMul</span>
+      <button class="btn" id="gpuBtn" onclick="animateGPU()">▶ Run</button>
+    </div>
+    <div class="demo-body">
+      <p style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text2);margin-bottom:1rem;">256 GPU cores computing a matrix multiply in parallel. Each core = one output cell.</p>
+      <div class="gpu-grid" id="gpuGrid"></div>
+      <div id="gpuStatus" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2);margin-top:1rem;text-align:center;">Ready</div>
+    </div>
+  </div>
+
+  <h3>Memory Hierarchy & Bandwidth</h3>
+  <p>The biggest bottleneck in LLM inference isn't compute — it's <strong>memory bandwidth</strong>. Reading weights from HBM (high-bandwidth memory) into compute units is the bottleneck:</p>
+
+  <div class="math-block yellow">
+    <div class="label">memory bandwidth math</div>
+    <pre>
+  Llama-3 70B model:    70 billion params × 2 bytes (FP16)
+                      = 140 GB just to store weights
+  
+  H100 HBM bandwidth:   3.35 TB/s
+  
+  Time to read all weights once:  140 GB / 3.35 TB/s ≈ 42ms
+  
+  At 1 token/step, this is your latency floor for 1 token.
+  → This is why batching matters: same weight read, more tokens!</pre>
+  </div>
+
+  <h3>TPUs — Google's Dedicated Matrix Engine</h3>
+  <p>Google's <strong>Tensor Processing Units</strong> take specialization further. They're built entirely around matrix multiplication, sacrificing general-purpose computation for raw GEMM performance:</p>
+
+  <div class="math-block pink">
+    <div class="label">tpu architecture</div>
+    <pre>
+  Core component: Systolic Array
+  ┌──────────────────────────────────────────────┐
+  │  Matrix data flows through a grid of 256×256 │
+  │  multiply-accumulate (MAC) units in a wave.  │
+  │  Each MAC unit receives partial results from  │
+  │  its neighbor and passes its own along.       │
+  │                                              │
+  │  TPU v4:  275 TFLOPS (BF16) per chip         │
+  │  TPU v4 Pod: 4096 chips → ~1 ExaFLOP!        │
+  └──────────────────────────────────────────────┘
+  
+  Key advantages over GPU:
+  • On-chip HBM closer to compute → less latency
+  • Deterministic execution (no warp divergence)
+  • Custom network topology (ICI) for pod scaling
+  • 4x more energy-efficient for Transformer workloads</pre>
+  </div>
+
+  <h3>Precision Formats</h3>
+  <p>Not all numbers are equal in AI training. Lower precision = fewer bits = faster multiply + less memory:</p>
+
+  <table class="compare-table">
+    <tr><th>Format</th><th>Bits</th><th>Range</th><th>Use Case</th></tr>
+    <tr><td>FP64 (double)</td><td>64</td><td>±1.8×10³⁰⁸</td><td>Scientific computing</td></tr>
+    <tr><td>FP32 (single)</td><td>32</td><td>±3.4×10³⁸</td><td>Gradient accumulation, master weights</td></tr>
+    <tr><td>BF16</td><td>16</td><td>same as FP32</td><td>Training (same range, less precision)</td></tr>
+    <tr><td>FP16</td><td>16</td><td>±65,504</td><td>Inference, tensor core compute</td></tr>
+    <tr><td>INT8</td><td>8</td><td>-128 to 127</td><td>Quantized inference (2× speed)</td></tr>
+    <tr><td>INT4 / NF4</td><td>4</td><td>16 values</td><td>QLoRA, edge deployment (4× speed)</td></tr>
+  </table>
+
+  <h3>Parallelism Strategies for Giant Models</h3>
+  <div class="math-block">
+    <div class="label">distributed training</div>
+    <pre>
+  Data Parallelism    — split BATCH across GPUs; same model everywhere
+                        GPUs sync gradients after each step (AllReduce)
+  
+  Tensor Parallelism  — split WEIGHT MATRICES across GPUs
+                        e.g., row 1–2048 on GPU0, row 2049–4096 on GPU1
+                        requires AllReduce within every layer
+  
+  Pipeline Parallelism — split LAYERS across GPUs
+                        GPU0 runs layers 1–24, GPU1 runs 25–48...
+                        uses micro-batching to keep GPUs busy
+  
+  Expert Parallelism  — each GPU handles different MoE experts
+                        only activates a subset of params per token
+  
+  GPT-3 used: 8-way tensor × 8-way pipeline × data parallelism
+              running on 1024 A100 GPUs</pre>
+  </div>
+</div>
+
+<!-- S9: FULL STACK -->
+<div class="section" id="s9">
+  <div class="section-tag">Chapter 09</div>
+  <h2>The Full Stack: Putting it All Together</h2>
+  <p class="lead">Every token you generate traces through this entire stack — from characters in a text box to numbers in a matrix to probability distributions sampled into words.</p>
+
+  <h3>One Forward Pass, Top to Bottom</h3>
+
+  <div class="flow" style="flex-direction:column; align-items:stretch; gap:0.5rem; max-width:600px; margin:2rem auto;">
+    <div class="flow-box hi" style="padding:0.8rem 1.5rem;">
+      <strong>"Paris is the capital of"</strong>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:0.3rem;">Raw text input</div>
+    </div>
+    <div style="text-align:center;color:var(--text2)">↓</div>
+    <div class="flow-box" style="padding:0.8rem 1.5rem;">
+      BPE Tokenizer → [9521, 318, 262, 3139, 286]
+      <div style="font-size:0.7rem;color:var(--text2)">5 token IDs</div>
+    </div>
+    <div style="text-align:center;color:var(--text2)">↓</div>
+    <div class="flow-box" style="padding:0.8rem 1.5rem;">
+      Embedding matrix lookup + positional encoding
+      <div style="font-size:0.7rem;color:var(--text2)">→ X of shape (5, 4096)</div>
+    </div>
+    <div style="text-align:center;color:var(--text2)">↓</div>
+    <div class="flow-box hi2" style="padding:0.8rem 1.5rem;">
+      32 × Transformer Block
+      <div style="font-size:0.7rem;color:var(--text2)">Each: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm</div>
+    </div>
+    <div style="text-align:center;color:var(--text2)">↓</div>
+    <div class="flow-box" style="padding:0.8rem 1.5rem;">
+      LM head: (5, 4096) × (4096, 32000) → logits (5, 32000)
+    </div>
+    <div style="text-align:center;color:var(--text2)">↓</div>
+    <div class="flow-box hi3" style="padding:0.8rem 1.5rem;">
+      Softmax → probabilities → sample last position
+      <div style="font-size:0.7rem;color:var(--text2)">→ token 3681 = "France" 🎉</div>
+    </div>
+  </div>
+
+  <h3>The Numbers Behind "Thinking"</h3>
+
+  <div class="math-block">
+    <div class="label">gpt-4 class model estimates</div>
+    <pre>
+  Parameters:          ~1 Trillion
+  Layers:              ~128 transformer blocks
+  d_model:             ~12,288
+  Attention heads:     ~96
+  Context window:      128,000 tokens
+  
+  Per-token inference:
+    Matrix ops:        ~2T FLOPs
+    Memory reads:      ~2 TB from HBM
+    Time on H100:      ~15ms per token
+  
+  Training compute:    ~10²⁵ FLOPs
+  Training time:       ~3 months on ~30,000 H100s
+  Training cost:       ~$100 million</pre>
+  </div>
+
+  <h3>The Architecture Zoo</h3>
+  <table class="compare-table">
+    <tr><th>Model Family</th><th>Architecture</th><th>Key Innovation</th><th>Primary Use</th></tr>
+    <tr><td>ResNet, VGG</td><td>CNN</td><td>Skip connections, deep convolutions</td><td>Image classification</td></tr>
+    <tr><td>LSTM, GRU</td><td>RNN</td><td>Gated memory cells</td><td>Sequential data, NLP (legacy)</td></tr>
+    <tr><td>BERT</td><td>Encoder Transformer</td><td>Bidirectional attention, MLM</td><td>Classification, embedding</td></tr>
+    <tr><td>GPT family</td><td>Decoder Transformer</td><td>Causal attention, RLHF</td><td>Text generation</td></tr>
+    <tr><td>T5, BART</td><td>Encoder-Decoder</td><td>Seq2seq with cross-attention</td><td>Translation, summarization</td></tr>
+    <tr><td>ViT</td><td>Vision Transformer</td><td>Image patches as tokens</td><td>Image understanding</td></tr>
+    <tr><td>Mixtral, GPT-4</td><td>MoE Transformer</td><td>Sparse expert routing</td><td>Efficient LLM at scale</td></tr>
+    <tr><td>Mamba, RWKV</td><td>State Space Models</td><td>Linear complexity attention alternatives</td><td>Long context, efficiency</td></tr>
+  </table>
+
+  <div class="callout insight">
+    <p>Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. <strong>The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.</strong></p>
+  </div>
+
+  <div class="callout gpu">
+    <p>The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth.</p>
+  </div>
+</div>
+
+<footer>
+  From Matrices to Minds · A Technical Deep-Dive<br>
+  matmul → neurons → convolutions → attention → transformers → tokens → compute
+</footer>
+
+<script>
+// ─── MATRIX MULTIPLY ANIMATION ───
+const A = [[1,2,3],[4,5,6]];
+const B = [[7,8],[9,10],[11,12]];
+const C = [[0,0],[0,0]];
+for(let i=0;i<2;i++) for(let j=0;j<2;j++) for(let k=0;k<3;k++) C[i][j]+=A[i][k]*B[k][j];
+
+let animRunning = false;
+async function runMatMulAnim() {
+  if(animRunning) return;
+  animRunning = true;
+  const btn = document.getElementById('animBtn');
+  btn.classList.add('active');
+  btn.textContent = '⏸';
+  
+  // Reset
+  ['c00','c01','c10','c11'].forEach(id => { document.getElementById(id).textContent='?'; document.getElementById(id).className='cell'; });
+  
+  const explain = document.getElementById('animExplain');
+  const steps = [
+    { row:0, col:0, aIds:['a00','a01','a02'], bIds:['b00','b10','b20'], result:C[0][0], expr:'1×7 + 2×9 + 3×11 = 58' },
+    { row:0, col:1, aIds:['a00','a01','a02'], bIds:['b01','b11','b21'], result:C[0][1], expr:'1×8 + 2×10 + 3×12 = 64' },
+    { row:1, col:0, aIds:['a10','a11','a12'], bIds:['b00','b10','b20'], result:C[1][0], expr:'4×7 + 5×9 + 6×11 = 139' },
+    { row:1, col:1, aIds:['a10','a11','a12'], bIds:['b01','b11','b21'], result:C[1][1], expr:'4×8 + 5×10 + 6×12 = 154' },
+  ];
+  
+  for(const step of steps) {
+    // Clear highlights
+    document.querySelectorAll('.cell').forEach(c => c.classList.remove('highlight','result-highlight'));
+    step.aIds.forEach(id => document.getElementById(id).classList.add('highlight'));
+    step.bIds.forEach(id => document.getElementById(id).classList.add('highlight'));
+    explain.textContent = `C[${step.row}][${step.col}] = ${step.expr}`;
+    await sleep(1200);
+    const cId = `c${step.row}${step.col}`;
+    document.getElementById(cId).textContent = step.result;
+    document.getElementById(cId).classList.add('result-highlight');
+    await sleep(600);
+  }
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove('highlight'));
+  explain.textContent = 'Done! Result matrix C = [[58, 64], [139, 154]]';
+  btn.classList.remove('active');
+  btn.textContent = '↺ Replay';
+  animRunning = false;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── ATTENTION HEATMAP ───
+const tokens = ['The','cat','sat','on','the','mat'];
+const n = tokens.length;
+// Fake but plausible attention weights
+const attnWeights = [
+  [0.9, 0.3, 0.1, 0.05, 0.7, 0.1],
+  [0.4, 0.8, 0.5, 0.1, 0.2, 0.3],
+  [0.1, 0.6, 0.9, 0.4, 0.1, 0.2],
+  [0.05,0.1, 0.3, 0.9, 0.2, 0.6],
+  [0.7, 0.2, 0.1, 0.15,0.9, 0.3],
+  [0.1, 0.3, 0.2, 0.5, 0.3, 0.8],
+];
+
+function buildAttnGrid() {
+  const grid = document.getElementById('attnGrid');
+  if(!grid) return;
+  const cellSize = 40;
+  const labelW = 36;
+  const total = labelW + n * cellSize;
+  
+  grid.style.gridTemplateColumns = `${labelW}px` + ` ${cellSize}px`.repeat(n);
+  grid.style.maxWidth = total + 'px';
+  
+  // Header row
+  const empty = document.createElement('div');
+  empty.style.cssText = 'height:36px;';
+  grid.appendChild(empty);
+  
+  tokens.forEach(t => {
+    const h = document.createElement('div');
+    h.style.cssText = `height:36px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text2);writing-mode:vertical-rl;transform:rotate(180deg);`;
+    h.textContent = t;
+    grid.appendChild(h);
+  });
+  
+  tokens.forEach((rowTok, i) => {
+    const label = document.createElement('div');
+    label.style.cssText = `height:${cellSize}px;display:flex;align-items:center;font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text2);padding-right:4px;`;
+    label.textContent = rowTok;
+    grid.appendChild(label);
+    
+    attnWeights[i].forEach((w, j) => {
+      const cell = document.createElement('div');
+      const alpha = w;
+      cell.style.cssText = `width:${cellSize}px;height:${cellSize}px;border-radius:3px;background:rgba(124,106,255,${alpha * 0.8});border:1px solid rgba(124,106,255,0.2);title:'${w.toFixed(2)}';display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.55rem;color:rgba(255,255,255,${w > 0.5 ? 0.8 : 0.3});transition:transform 0.15s;cursor:default;`;
+      cell.textContent = w.toFixed(1);
+      cell.title = `${tokens[i]} → ${tokens[j]}: ${w.toFixed(2)}`;
+      cell.addEventListener('mouseenter', () => cell.style.transform = 'scale(1.1)');
+      cell.addEventListener('mouseleave', () => cell.style.transform = 'scale(1)');
+      grid.appendChild(cell);
+    });
+  });
+}
+buildAttnGrid();
+
+// ─── GPU VISUALIZATION ───
+function buildGPUGrid() {
+  const grid = document.getElementById('gpuGrid');
+  if(!grid) return;
+  for(let i=0;i<256;i++) {
+    const core = document.createElement('div');
+    core.className = 'gpu-core';
+    core.id = `core${i}`;
+    grid.appendChild(core);
+  }
+}
+buildGPUGrid();
+
+let gpuRunning = false;
+async function animateGPU() {
+  if(gpuRunning) return;
+  gpuRunning = true;
+  const btn = document.getElementById('gpuBtn');
+  btn.classList.add('active');
+  const status = document.getElementById('gpuStatus');
+  
+  // Reset
+  for(let i=0;i<256;i++) { const c = document.getElementById(`core${i}`); c.className='gpu-core'; }
+  
+  status.textContent = 'Loading matrix tiles into shared memory...';
+  await sleep(600);
+  
+  // Wave activation — simulate tiling
+  const waves = 8;
+  const perWave = 32;
+  status.textContent = 'Executing matrix multiply — all cores firing in parallel!';
+  
+  for(let w=0;w<waves;w++) {
+    const start = w * perWave;
+    for(let i=start;i<start+perWave;i++) {
+      const c = document.getElementById(`core${i}`);
+      if(c) c.className='gpu-core active';
+    }
+    await sleep(80);
+  }
+  
+  status.textContent = 'Accumulating results → writing output tile to HBM...';
+  await sleep(300);
+  
+  for(let i=0;i<256;i++) {
+    const c = document.getElementById(`core${i}`);
+    if(c) c.className='gpu-core done';
+  }
+  
+  status.textContent = '✓ Matrix multiply complete — 256 outputs computed in parallel!';
+  btn.classList.remove('active');
+  btn.textContent = '↺ Replay';
+  gpuRunning = false;
+}
+</script>
+</body>
+</html>

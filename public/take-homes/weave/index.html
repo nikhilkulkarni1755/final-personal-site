@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PostHog Engineering Impact</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --text: #e8eaf0;
+      --muted: #8b90a8;
+      --blue: #4a9eff;
+      --blue-bg: rgba(74,158,255,0.12);
+      --green: #3ecf8e;
+      --green-bg: rgba(62,207,142,0.12);
+      --amber: #f5a623;
+      --amber-bg: rgba(245,166,35,0.12);
+      --posthog: #f54e00;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 28px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; flex-direction: column; text-align: center; }
+    .logo {
+      width: 28px; height: 28px;
+      background: var(--posthog);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #fff; letter-spacing: -0.5px;
+    }
+    h1 { font-size: 17px; font-weight: 700; color: var(--text); }
+    .subtitle { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+
+    /* ── Dropdown ── */
+    .bucket-selector { display: flex; align-items: center; gap: 8px; }
+    .bucket-selector label { font-size: 12px; color: var(--muted); }
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 6px 12px 6px 10px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b90a8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select:focus { border-color: var(--blue); }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      padding: 18px 28px 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .bucket-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px; flex-shrink: 0;
+    }
+    .bucket-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .bucket-desc { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+    /* ── Cards grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+      overflow: hidden;
+      position: relative;
+    }
+    .card:hover { border-color: var(--blue); transform: translateY(-1px); }
+    .card.expanded { border-color: var(--blue); }
+
+    /* Card top */
+    .card-top { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      border: 2px solid var(--border);
+    }
+    .avatar-placeholder {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--surface2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: var(--muted);
+      border: 2px solid var(--border);
+    }
+    .card-identity { min-width: 0; flex: 1; }
+    .card-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-username { font-size: 11px; color: var(--muted); }
+    .card-username a { color: var(--muted); text-decoration: none; }
+    .card-username a:hover { color: var(--blue); }
+    .card-rank { font-size: 18px; font-weight: 800; color: var(--border); flex-shrink: 0; }
+
+    /* Badge */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 3px 8px; border-radius: 20px; flex-shrink: 0; width: fit-content;
+    }
+    .badge-feature_owner { background: var(--blue-bg); color: var(--blue); }
+    .badge-reviewer      { background: var(--green-bg); color: var(--green); }
+    .badge-infra         { background: var(--amber-bg); color: var(--amber); }
+    .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    /* Score bar */
+    .score-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .score-label { font-size: 11px; color: var(--muted); width: 40px; flex-shrink: 0; }
+    .score-bar-wrap { flex: 1; height: 5px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+    .score-bar { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+    .bar-feature_owner { background: var(--blue); }
+    .bar-reviewer      { background: var(--green); }
+    .bar-infra         { background: var(--amber); }
+    .score-val { font-size: 12px; font-weight: 700; width: 28px; text-align: right; flex-shrink: 0; }
+
+    /* Reason */
+    .reason {
+      font-size: 11px; color: var(--muted); line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; flex-shrink: 0;
+    }
+
+    /* Metrics */
+    .metrics-grid { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+    .metric-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+    .metric-label { font-size: 11px; color: var(--muted); }
+    .metric-value { font-size: 11px; font-weight: 600; color: var(--text); text-align: right; }
+
+    /* Top PRs */
+    .prs-section { flex-shrink: 0; }
+    .prs-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+    .pr-link {
+      display: block; font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-decoration: none; padding: 2px 0;
+      transition: color 0.1s;
+    }
+    .pr-link:hover { color: var(--blue); }
+    .pr-num { color: var(--blue); margin-right: 4px; font-weight: 600; }
+
+    /* Expanded details */
+    .expanded-details {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      margin-top: 2px;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .card.expanded .expanded-details { display: flex; }
+    .card.expanded .reason { -webkit-line-clamp: unset; }
+    .exp-section-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin-top: 4px; margin-bottom: 2px;
+    }
+    .exp-metric-row { display: flex; justify-content: space-between; gap: 8px; }
+    .exp-metric-label { font-size: 11px; color: var(--muted); }
+    .exp-metric-val { font-size: 11px; font-weight: 600; color: var(--text); text-align: right; }
+
+    .expand-hint {
+      font-size: 10px; color: var(--border);
+      text-align: center; flex-shrink: 0;
+      transition: color 0.1s;
+    }
+    .card:hover .expand-hint { color: var(--muted); }
+    .card.expanded .expand-hint { color: var(--blue); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 10px 28px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .footer-text { font-size: 11px; color: var(--muted); }
+    .footer-text a { color: var(--muted); text-decoration: underline; cursor: pointer; }
+    .footer-text a:hover { color: var(--text); }
+    .footer-meta { font-size: 11px; color: var(--border); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      max-width: 520px; width: 90%;
+      position: relative;
+    }
+    .modal h2 { font-size: 15px; margin-bottom: 14px; }
+    .modal p, .modal li { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .modal ul { padding-left: 18px; margin-top: 6px; }
+    .modal .formula { font-family: monospace; font-size: 12px; color: var(--text); background: var(--surface2); padding: 8px 12px; border-radius: 6px; margin: 8px 0; }
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; color: var(--muted);
+      font-size: 20px; cursor: pointer; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-section { margin-bottom: 16px; }
+    .modal-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .modal-section-title.blue { color: var(--blue); }
+    .modal-section-title.green { color: var(--green); }
+    .modal-section-title.amber { color: var(--amber); }
+
+    /* Loading */
+    #loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg); font-size: 14px; color: var(--muted);
+    }
+    #error-msg { color: #ff6b6b; display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loading">Loading data...</div>
+<div id="error-msg"></div>
+
+<header>
+  <div class="header-left">
+    <div class="logo">PH</div>
+    <div>
+      <h1>PostHog Engineering Impact</h1>
+      <div class="subtitle" id="subtitle">Last 90 days · Top 5 most impactful engineers</div>
+    </div>
+  </div>
+  <select id="bucket-select" style="display:none">
+    <option value="feature_owner">Feature Owners</option>
+    <option value="reviewer">Reviewers</option>
+    <option value="infra">Infrastructure</option>
+  </select>
+</header>
+
+<main>
+  <div class="bucket-header">
+    <span class="bucket-title" id="bucket-title">Feature Owners</span>
+    <span class="bucket-desc" id="bucket-desc">Engineers who own subsystems end-to-end with depth and continuity</span>
+  </div>
+  <div class="cards" id="cards"></div>
+</main>
+
+<footer>
+  <div class="footer-text">
+    Scores are normalized within each bucket. <a onclick="openModal()">See methodology</a>
+  </div>
+  <div class="footer-meta" id="footer-meta"></div>
+</footer>
+
+<!-- Methodology modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h2>Scoring Methodology</h2>
+    <p>Each engineer is scored 0–100 per bucket. Scores are normalized relative to the top performer in that metric across all 59 engineers analyzed. Primary bucket is whichever score is highest.</p>
+
+    <div class="modal-section" style="margin-top:14px">
+      <div class="modal-section-title blue">Feature Owner Score</div>
+      <div class="formula">merge_rate × 30% + dir_concentration × 25% + repeat_files × 25% + pr_volume × 20%</div>
+      <ul>
+        <li><b>Merge rate:</b> merged PRs ÷ total PRs opened</li>
+        <li><b>Dir concentration:</b> % of PRs touching the same top-level directory</li>
+        <li><b>Repeat files:</b> files touched 3+ times (normalized to top performer)</li>
+        <li><b>PR volume:</b> total PRs authored (normalized)</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title green">Reviewer Score</div>
+      <div class="formula">review_volume × 25% + changes_requested_ratio × 30% + comment_substance × 25% + unique_authors × 20%</div>
+      <ul>
+        <li><b>Review volume:</b> total reviews given (normalized)</li>
+        <li><b>Changes requested ratio:</b> CHANGES_REQUESTED ÷ all reviews (higher = more substantive)</li>
+        <li><b>Comment substance:</b> ratio of reviews with &gt;50 char body (normalized)</li>
+        <li><b>Unique authors:</b> breadth — how many distinct engineers reviewed (normalized)</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-title amber">Infrastructure Score</div>
+      <div class="formula">infra_pr_ratio × 35% + infra_pr_volume × 35% + subsystem_breadth × 30%</div>
+      <ul>
+        <li><b>Infra PR ratio:</b> infra-touching PRs ÷ total PRs authored</li>
+        <li><b>Infra PR volume:</b> raw count of infra PRs (normalized)</li>
+        <li><b>Subsystem breadth:</b> unique infra areas touched: .github, ci, docker, k8s, scripts, bin, terraform, root-config (normalized)</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:8px;font-size:11px;">Data source: PostHog/posthog — most recent 300 PRs targeting <code>master</code> within a 90-day window. Bots excluded. Minimum 3 PRs to qualify.</p>
+  </div>
+</div>
+
+<script>
+  const BUCKET_META = {
+    feature_owner: {
+      title: 'Feature Owners',
+      desc: 'Engineers who own subsystems end-to-end with depth and continuity',
+      color: 'var(--blue)',
+      barClass: 'bar-feature_owner',
+      badgeClass: 'badge-feature_owner',
+      label: 'Feature Owner',
+      keyMetrics: (m) => [
+        { label: 'PRs merged', value: `${m.prs_merged} / ${m.prs_authored}` },
+        { label: 'Primary subsystem', value: m.primary_subsystem || '—' },
+        { label: 'Dir. focus', value: `${Math.round(m.directory_concentration * 100)}%` },
+        { label: 'Repeat files owned', value: m.repeat_files_count },
+      ],
+      allMetrics: (m) => [
+        { label: 'PRs authored', value: m.prs_authored },
+        { label: 'PRs merged', value: m.prs_merged },
+        { label: 'Merge rate', value: `${Math.round(m.merge_rate * 100)}%` },
+        { label: 'Primary subsystem', value: m.primary_subsystem || '—' },
+        { label: 'Dir. concentration', value: `${Math.round(m.directory_concentration * 100)}%` },
+        { label: 'Repeat files (3+ touches)', value: m.repeat_files_count },
+        { label: 'Avg PR size (lines)', value: Math.round(m.avg_pr_size).toLocaleString() },
+      ],
+    },
+    reviewer: {
+      title: 'Reviewers',
+      desc: 'Engineers who unblock the team and maintain code quality',
+      color: 'var(--green)',
+      barClass: 'bar-reviewer',
+      badgeClass: 'badge-reviewer',
+      label: 'Reviewer',
+      keyMetrics: (m) => [
+        { label: 'Reviews given', value: m.reviews_given },
+        { label: 'Changes requested', value: `${m.changes_requested_count} (${Math.round(m.changes_requested_ratio * 100)}%)` },
+        { label: 'Unique authors', value: m.unique_authors_reviewed },
+        { label: 'Avg review speed', value: m.avg_review_speed_hours < 900 ? `${m.avg_review_speed_hours}h` : '—' },
+      ],
+      allMetrics: (m) => [
+        { label: 'Total reviews given', value: m.reviews_given },
+        { label: 'PRs reviewed', value: m.prs_reviewed },
+        { label: 'Changes requested', value: m.changes_requested_count },
+        { label: 'Approved', value: m.approved_count },
+        { label: 'Changes req. ratio', value: `${Math.round(m.changes_requested_ratio * 100)}%` },
+        { label: 'Unique authors reviewed', value: m.unique_authors_reviewed },
+        { label: 'Comment substance ratio', value: `${Math.round(m.avg_comment_substance_ratio * 100)}%` },
+        { label: 'Avg review speed', value: m.avg_review_speed_hours < 900 ? `${m.avg_review_speed_hours}h` : '—' },
+        { label: 'Reviewed PR merge rate', value: `${Math.round(m.reviewed_merge_rate * 100)}%` },
+        { label: 'Times requested as reviewer', value: m.times_requested_as_reviewer },
+      ],
+    },
+    infra: {
+      title: 'Infrastructure',
+      desc: 'Engineers who enable the team through tooling, CI/CD, and platform work',
+      color: 'var(--amber)',
+      barClass: 'bar-infra',
+      badgeClass: 'badge-infra',
+      label: 'Infra',
+      keyMetrics: (m) => [
+        { label: 'Infra PRs', value: `${m.infra_prs_count} (${Math.round(m.infra_pr_ratio * 100)}% of total)` },
+        { label: 'Subsystems touched', value: m.infra_subsystem_count },
+        { label: 'CI/CD file changes', value: m.cicd_file_changes },
+        { label: 'Dep. update PRs', value: m.dep_update_prs_count },
+      ],
+      allMetrics: (m) => [
+        { label: 'Total PRs authored', value: m.prs_authored },
+        { label: 'Infra PRs count', value: m.infra_prs_count },
+        { label: 'Infra PR ratio', value: `${Math.round(m.infra_pr_ratio * 100)}%` },
+        { label: 'Infra merge rate', value: `${Math.round(m.infra_merge_rate * 100)}%` },
+        { label: 'Infra subsystems', value: m.infra_subsystems.join(', ') || '—' },
+        { label: 'CI/CD file changes', value: m.cicd_file_changes },
+        { label: 'Dependency update PRs', value: m.dep_update_prs_count },
+      ],
+    },
+  };
+
+  let data = null;
+  let expandedCard = null;
+
+  async function loadData() {
+    try {
+      const resp = await fetch('./data.json');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      data = await resp.json();
+
+      const date = new Date(data.generated_at);
+      const fmt = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      document.getElementById('subtitle').textContent = `Last ${data.window_days} days · Generated ${fmt} · Top 5 most impactful engineers`;
+      document.getElementById('footer-meta').textContent = `${Object.keys(data.engineers).length} engineers · ${data.repo}`;
+
+      document.getElementById('loading').style.display = 'none';
+      renderBucket('feature_owner');
+    } catch (e) {
+      document.getElementById('loading').style.display = 'none';
+      const err = document.getElementById('error-msg');
+      err.style.display = 'block';
+      err.textContent = `Failed to load data.json: ${e.message}`;
+    }
+  }
+
+  function renderBucket(bucketKey) {
+    expandedCard = null;
+    const meta = BUCKET_META[bucketKey];
+    document.getElementById('bucket-title').textContent = meta.title;
+    document.getElementById('bucket-desc').textContent = meta.desc;
+
+    const topUsers = data.top_by_bucket[bucketKey] || [];
+    const container = document.getElementById('cards');
+    container.innerHTML = '';
+
+    topUsers.forEach((username, idx) => {
+      const eng = data.engineers[username];
+      if (!eng) return;
+      const score = eng.scores[bucketKey] ?? 0;
+      container.appendChild(buildCard(eng, score, bucketKey, meta, idx + 1));
+    });
+  }
+
+  function buildCard(eng, score, bucketKey, meta, rank) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = () => toggleExpand(card);
+
+    const m = eng.metrics;
+    const keyMetrics = meta.keyMetrics(m).slice(0, 3);
+    const allMetrics = meta.allMetrics(m);
+
+    // Avatar
+    const avatarHtml = eng.avatar_url
+      ? `<img class="avatar" src="${eng.avatar_url}" alt="${eng.name}" loading="lazy">`
+      : `<div class="avatar-placeholder">${(eng.name || eng.username).charAt(0).toUpperCase()}</div>`;
+
+    // Top PRs
+    const prLinks = (eng.top_prs || []).slice(0, 3).map(pr =>
+      `<a class="pr-link" href="${pr.url}" target="_blank" rel="noopener" onclick="e=>e.stopPropagation()">
+        <span class="pr-num">#${pr.number}</span>${escHtml(pr.title)}
+      </a>`
+    ).join('');
+
+    // All metrics for expanded view
+    const allMetricsHtml = allMetrics.map(r =>
+      `<div class="exp-metric-row">
+        <span class="exp-metric-label">${r.label}</span>
+        <span class="exp-metric-val">${escHtml(String(r.value))}</span>
+      </div>`
+    ).join('');
+
+    // Top files (expanded)
+    const topFilesHtml = (eng.top_files || []).slice(0, 5).map(f =>
+      `<div class="exp-metric-row"><span class="exp-metric-label" style="font-family:monospace;font-size:10px">${escHtml(f)}</span></div>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-top">
+        ${avatarHtml}
+        <div class="card-identity">
+          <div class="card-name">${escHtml(eng.name)}</div>
+          <div class="card-username"><a href="https://github.com/${eng.username}" target="_blank" rel="noopener" onclick="event.stopPropagation()">@${eng.username}</a></div>
+        </div>
+        <div class="card-rank">#${rank}</div>
+      </div>
+
+      <div class="badge badge-${bucketKey}"><span class="badge-dot"></span>${meta.label}</div>
+
+      <div class="score-row">
+        <span class="score-label">Score</span>
+        <div class="score-bar-wrap">
+          <div class="score-bar ${meta.barClass}" style="width:${score}%"></div>
+        </div>
+        <span class="score-val">${score}</span>
+      </div>
+
+      <div class="reason">${escHtml(eng.primary_reason)}</div>
+
+      <div class="metrics-grid">
+        ${keyMetrics.map(r => `
+          <div class="metric-row">
+            <span class="metric-label">${r.label}</span>
+            <span class="metric-value">${escHtml(String(r.value))}</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="prs-section">
+        <div class="prs-label">Top PRs</div>
+        ${prLinks}
+      </div>
+
+      <div class="expanded-details">
+        <div class="exp-section-label">All Metrics</div>
+        ${allMetricsHtml}
+        ${topFilesHtml ? `<div class="exp-section-label" style="margin-top:6px">Most-Touched Files</div>${topFilesHtml}` : ''}
+      </div>
+
+      <div class="expand-hint">▾ expand</div>
+    `;
+
+    return card;
+  }
+
+  function toggleExpand(card) {
+    // Stop clicks on links from toggling
+    if (event.target.tagName === 'A') return;
+
+    if (expandedCard && expandedCard !== card) {
+      expandedCard.classList.remove('expanded');
+      expandedCard.querySelector('.expand-hint').textContent = '▾ expand';
+    }
+    const isOpen = card.classList.toggle('expanded');
+    card.querySelector('.expand-hint').textContent = isOpen ? '▴ collapse' : '▾ expand';
+    expandedCard = isOpen ? card : null;
+  }
+
+  document.getElementById('bucket-select').addEventListener('change', (e) => {
+    renderBucket(e.target.value);
+  });
+
+  function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  function closeModalOnBg(e) { if (e.target === e.currentTarget) closeModal(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadData();
+</script>
+</body>
+</html>
