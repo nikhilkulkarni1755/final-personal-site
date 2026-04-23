@@ -11,13 +11,13 @@
   },
   {
     "id": 1,
-    "title": "I Built an AI Agent That Writes Cold Emails People Actually Reply To",
+    "title": "Cold Outreach Agent",
     "slug": "linkedin-agent",
-    "subtitle": "Discover, validate, generate, schedule, send, follow up, and handle replies — without ever reading like cold outreach.",
+    "subtitle": "Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.",
     "content": "",
-    "publishDate": "2026-04-22",
-    "readTime": 18,
-    "tags": ["Cold Outreach", "Claude Sonnet", "PostgreSQL", "FastAPI", "Gmail SMTP/IMAP"]
+    "publishDate": "2026-04-23",
+    "readTime": 12,
+    "tags": ["Profile Analysis", "LLM Pipeline", "Claude Sonnet", "PostgreSQL", "FastAPI"]
   }
   
 ]

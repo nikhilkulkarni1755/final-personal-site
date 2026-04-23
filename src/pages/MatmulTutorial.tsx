@@ -776,7 +776,7 @@ const MatmulTutorial = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
 
           {/* ─── Chapter 1: Matrix Basics ─── */}
-          <section id="s1" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s1" className="py-16">
             <SectionTag>Chapter 01</SectionTag>
             <SectionTitle>What is a Matrix?</SectionTitle>
             <Lead>A matrix is just a rectangular grid of numbers — nothing more. But when you learn to multiply them, you unlock the fundamental operation behind every neural network ever built.</Lead>
@@ -811,7 +811,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 2: Matrix Multiplication ─── */}
-          <section id="s2" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s2" className="py-16">
             <SectionTag>Chapter 02</SectionTag>
             <SectionTitle>Matrix Multiplication</SectionTitle>
             <Lead>This is <em>the</em> operation. Every layer in every neural network is fundamentally doing this one thing.</Lead>
@@ -850,7 +850,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 3: Neurons & Layers ─── */}
-          <section id="s3" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s3" className="py-16">
             <SectionTag>Chapter 03</SectionTag>
             <SectionTitle>From Matrix Multiplication to Neural Networks</SectionTitle>
             <Lead>A neural network is, at its core, a sequence of matrix multiplications separated by non-linear functions.</Lead>
@@ -910,7 +910,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 4: CNNs ─── */}
-          <section id="s4" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s4" className="py-16">
             <SectionTag>Chapter 04</SectionTag>
             <SectionTitle>Convolutional Neural Networks (CNNs)</SectionTitle>
             <Lead>CNNs handle spatial data like images. They replace big matrix multiplies with sliding <em>filters</em> — but it's still matrix multiplication under the hood.</Lead>
@@ -987,7 +987,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 5: RNNs & LSTMs ─── */}
-          <section id="s5" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s5" className="py-16">
             <SectionTag>Chapter 05</SectionTag>
             <SectionTitle>Recurrent Neural Networks (RNNs & LSTMs)</SectionTitle>
             <Lead>CNNs handle space. RNNs handle <em>time</em> — sequences of data where the order matters, like text, audio, or sensor readings.</Lead>
@@ -1024,7 +1024,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 6: Transformers ─── */}
-          <section id="s6" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s6" className="py-16">
             <SectionTag>Chapter 06</SectionTag>
             <SectionTitle>Transformers & Attention</SectionTitle>
             <Lead>The 2017 paper "Attention Is All You Need" discarded recurrence entirely. Instead, every position attends to every other position — simultaneously, in parallel — using one elegant matrix operation.</Lead>
@@ -1093,7 +1093,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 7: Tokens & Embeddings ─── */}
-          <section id="s7" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s7" className="py-16">
             <SectionTag>Chapter 07</SectionTag>
             <SectionTitle>Tokens & Embeddings</SectionTitle>
             <Lead>Before any matrix can multiply, raw text must become numbers. The tokenization pipeline is the bridge between human language and matrix operations.</Lead>
@@ -1154,7 +1154,7 @@ const MatmulTutorial = () => {
           </section>
 
           {/* ─── Chapter 8: GPUs & TPUs ─── */}
-          <section id="s8" className="py-16 border-b border-[#d0d0e0] dark:border-[#2a2a45]">
+          <section id="s8" className="py-16">
             <SectionTag>Chapter 08</SectionTag>
             <SectionTitle>GPUs & TPUs: The Hardware Behind the Math</SectionTitle>
             <Lead>Matrix multiplication is embarrassingly parallel. GPUs and TPUs are purpose-built to exploit this — they're not fast computers, they're fast matrix multipliers.</Lead>
