@@ -12,6 +12,7 @@ import Privacy from './pages/Privacy';
 import DrugMarketplace from './pages/DrugMarketplace';
 import MatmulTutorial from './pages/MatmulTutorial';
 import LinkedinAgentPost from './pages/LinkedinAgentPost';
+import DockerSecretsPost from './pages/DockerSecretsPost';
 import WeaveTakeHome from './pages/WeaveTakeHome';
 
 function AppContent() {
@@ -36,6 +37,7 @@ function AppContent() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/matmul-to-ai" element={<MatmulTutorial />} />
           <Route path="/blog/linkedin-agent" element={<LinkedinAgentPost />} />
+          <Route path="/blog/docker-secrets-injection" element={<DockerSecretsPost />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/apps" element={<Apps />} />
           <Route path="/about" element={<About />} />

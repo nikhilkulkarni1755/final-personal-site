@@ -1,5 +1,15 @@
 [
   {
+    "id": 3,
+    "title": "Your Agentic Coding Tool is Reading Your Secrets",
+    "slug": "docker-secrets-injection",
+    "subtitle": "Why your coding agent should never see your secrets — and how Docker makes that possible.",
+    "content": "",
+    "publishDate": "2026-05-20",
+    "readTime": 3,
+    "tags": ["Docker", "Security", "LLM Agents", "Vibe Coding", "DevOps"]
+  },
+  {
     "id": 2,
     "title": "From Matrices to Minds",
     "slug": "matmul-to-ai",
