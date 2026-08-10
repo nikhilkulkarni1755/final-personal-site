@@ -6,27 +6,25 @@ import AutoRotatingCarousel from "../components/AutoRotatingCarousel";
 import projectsData from "../data/projects.json";
 import blogsData from "../data/blogs.json";
 import appsData from "../data/apps.json";
-import type { Project, BlogPost, App } from "../types";
+import contributionsData from "../data/contributions.json";
+import type { Project, BlogPost, App, Contribution } from "../types";
 import { usePageAnalytics } from "../hooks/usePageAnalytics";
 import ActiveViewers from "../components/ActiveViewers";
 import PageStats from "../components/PageStats";
 import LikeButton from "../components/LikeButton";
+import ContributionCard from "../components/ContributionCard";
+
+// The carousel starts scrolled to 0, where a gradient fades the left edge and the
+// first card is the first to scroll away. Moving the last item to the front puts
+// item 0 into the second, most visible slot.
+const rotateLastToFront = <T,>(items: T[]) =>
+  items.length > 0 ? [items[items.length - 1], ...items.slice(0, -1)] : items;
 
 const Home = () => {
-  const projectsData_ = projectsData as Project[];
-  const blogsData_ = blogsData as BlogPost[];
-  const appsData_ = appsData as App[];
-
-  // Reorder arrays: last element first, then rest in order
-  const projects = projectsData_.length > 0
-    ? [projectsData_[projectsData_.length - 1], ...projectsData_.slice(0, -1)]
-    : projectsData_;
-  const blogs = blogsData_.length > 0
-    ? [blogsData_[blogsData_.length - 1], ...blogsData_.slice(0, -1)]
-    : blogsData_;
-  const apps = appsData_.length > 0
-    ? [appsData_[appsData_.length - 1], ...appsData_.slice(0, -1)]
-    : appsData_;
+  const projects = rotateLastToFront(projectsData as Project[]);
+  const contributions = rotateLastToFront(contributionsData as Contribution[]);
+  const blogs = rotateLastToFront(blogsData as BlogPost[]);
+  const apps = rotateLastToFront(appsData as App[]);
 
   // Track page analytics
   const { pageId, activeUsers, analytics } = usePageAnalytics("Home");
@@ -50,10 +48,7 @@ const Home = () => {
     },
   ];
 
-  // Reorder certifications: last element first, then rest in order
-  const certifications = certificationsData.length > 0
-    ? [certificationsData[certificationsData.length - 1], ...certificationsData.slice(0, -1)]
-    : certificationsData;
+  const certifications = rotateLastToFront(certificationsData);
 
   useEffect(() => {
     // Load Credly embed script
@@ -93,16 +88,44 @@ const Home = () => {
           </span>
         )}
       </div>
-      <a
-        href={project.github}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-sm"
-      >
-        <span>GitHub</span>
-        <ExternalLink className="w-3.5 h-3.5" />
-      </a>
+      <div className="flex flex-wrap gap-2">
+        {project.liveUrl && (
+          <a
+            href={project.liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center flex-1 min-w-[9rem] space-x-1 px-3 py-2 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-xs whitespace-nowrap"
+          >
+            <span>Connect to Claude</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        )}
+        {project.demos && (
+          <Link
+            to={`/projects#${project.title.toLowerCase().replace(/\s+/g, "-")}`}
+            className="inline-flex items-center justify-center flex-1 min-w-[7rem] space-x-1 px-3 py-2 border border-[#001F3F] dark:border-white text-[#001F3F] dark:text-white rounded-lg hover:bg-[#001F3F]/5 dark:hover:bg-white/5 transition-all duration-300 text-xs whitespace-nowrap"
+          >
+            <span>Watch Demo</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
+        {project.github && !project.liveUrl && (
+          <a
+            href={project.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center flex-1 space-x-2 px-4 py-2 bg-[#001F3F] dark:bg-white text-white dark:text-[#001F3F] rounded-lg hover:opacity-80 transition-all duration-300 text-sm"
+          >
+            <span>GitHub</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        )}
+      </div>
     </div>
+  );
+
+  const renderContribution = (contribution: Contribution) => (
+    <ContributionCard contribution={contribution} />
   );
 
   const renderBlog = (blog: BlogPost) => (
@@ -256,20 +279,21 @@ const Home = () => {
             Building AI-Powered
             <br />
             <span className="bg-gradient-to-r from-[#001F3F] to-[#001F3F]/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
-              Fullstack Solutions
+              Agents in Production
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
-            Software Engineer specializing in Agentic MLOps, cloud infrastructure, and
-            full-stack development. 
+            Software Engineer specializing in agent orchestration, MCP tooling, and
+            cloud infrastructure.
           </p>
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
-            Impacted millions at Google Search (via Tata Consultancy Services), published iOS app,
-            completed AWS DevOps Professional Certification, built Impactful Agents
+            Creator of Iridium — a live MCP server giving AI agents real access to
+            LinkedIn. Contributor to vLLM and SGLang. Impacted millions at Google Search
+            (via Tata Consultancy Services), AWS DevOps Professional certified.
           </p>
 
           {/* Resume Button */}
@@ -305,12 +329,27 @@ const Home = () => {
           />
         </motion.div>
 
-        {/* Certifications Row */}
+        {/* Open Source Contributions Row */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <AutoRotatingCarousel
+            items={contributions}
+            renderItem={renderContribution}
+            title="Open Source Contributions"
+            interval={5000}
+          />
+        </motion.div>
+
+        {/* Certifications Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
         >
           <AutoRotatingCarousel
             items={certifications}
@@ -325,7 +364,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
         >
           <AutoRotatingCarousel
             items={blogs}
@@ -340,7 +379,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
         >
           <AutoRotatingCarousel
             items={apps}

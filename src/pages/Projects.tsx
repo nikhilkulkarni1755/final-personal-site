@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ProjectCard from '../components/ProjectCard';
 import projectsData from '../data/projects.json';
@@ -6,9 +8,18 @@ import { usePageAnalytics } from '../hooks/usePageAnalytics';
 
 const Projects = () => {
   const projects = projectsData as Project[];
+  const { hash } = useLocation();
 
   // Track page analytics
   usePageAnalytics('Projects');
+
+  // React Router does not scroll to hash targets, so do it here
+  useEffect(() => {
+    if (!hash) return;
+    document
+      .getElementById(hash.slice(1))
+      ?.scrollIntoView({ behavior: 'smooth' });
+  }, [hash]);
 
   return (
     <div className="min-h-screen">

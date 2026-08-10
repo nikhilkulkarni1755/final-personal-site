@@ -3,9 +3,21 @@ export type Project = {
   title: string;
   description: string;
   youtubeId?: string;
-  github: string;
+  github?: string;
+  liveUrl?: string;
+  demos?: { label: string; src: string; poster: string }[];
   techStack: string[];
   image?: string;
+}
+
+export type Contribution = {
+  id: number;
+  org: string;
+  repo: string;
+  url: string;
+  merged: number;
+  highlight: string;
+  techStack: string[];
 }
 
 export type BlogPost = {

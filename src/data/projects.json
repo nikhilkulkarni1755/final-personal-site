@@ -1,5 +1,38 @@
 [
   {
+    "id": 6,
+    "title": "Iridium",
+    "description": "Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.",
+    "liveUrl": "https://iridiumhqmcp.com",
+    "demos": [
+      {
+        "label": "Feature Demo",
+        "src": "/videos/iridium-feature-demo.mp4",
+        "poster": "/videos/iridium-feature-demo.jpg"
+      },
+      {
+        "label": "Live Demo @ WorkOS Demo Night",
+        "src": "/videos/iridium-live-demo.mp4",
+        "poster": "/videos/iridium-live-demo.jpg"
+      }
+    ],
+    "techStack": ["MCP", "Agent Orchestration", "Human-in-the-Loop", "Tool-Calling Design", "OAuth", "Multi-Tenant", "FastAPI", "PostgreSQL", "Evals"]
+  },
+  {
+    "id": 7,
+    "title": "Iridium Agent",
+    "description": "Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.",
+    "github": "https://github.com/nikhilkulkarni1755/iridium-agent",
+    "techStack": ["Cloudflare Agents", "MCP Client", "Durable Objects", "Workers AI", "OAuth", "TypeScript"]
+  },
+  {
+    "id": 8,
+    "title": "vLLM on EKS",
+    "description": "Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.",
+    "github": "https://github.com/nikhilkulkarni1755/vllm-eks-deployment",
+    "techStack": ["vLLM", "LLM Inference", "EKS", "Multi-Tenant", "Observability", "Terraform"]
+  },
+  {
     "id": 1,
     "title": "Linkedin Agent",
     "description": "Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!",

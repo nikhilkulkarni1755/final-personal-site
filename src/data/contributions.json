@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "org": "vllm-project",
+    "repo": "vllm",
+    "url": "https://github.com/vllm-project/vllm/pulls?q=is%3Apr+author%3Anikhilkulkarni1755",
+    "merged": 1,
+    "highlight": "Fixed a Plamo2 runner crash on transformers v5, where _tied_weights_keys changed from list to dict.",
+    "techStack": ["LLM Inference", "GPU Serving", "PyTorch", "CI/Build"]
+  },
+  {
+    "id": 2,
+    "org": "sgl-project",
+    "repo": "sglang",
+    "url": "https://github.com/sgl-project/sglang/pull/32977",
+    "merged": 1,
+    "highlight": "Preserved request priority through batched embedding requests, so scheduling order survives batching.",
+    "techStack": ["LLM Inference", "Batching", "Scheduling"]
+  },
+  {
+    "id": 3,
+    "org": "ax-platform",
+    "repo": "ax-agent-studio",
+    "url": "https://github.com/ax-platform/ax-agent-studio/pulls?q=is%3Apr+author%3Anikhilkulkarni1755",
+    "merged": 2,
+    "highlight": "Built integrated auth and the monitoring dashboard (+766 lines), plus a long-polling message-format fix.",
+    "techStack": ["MCP Agents", "Auth", "Observability"]
+  }
+]
