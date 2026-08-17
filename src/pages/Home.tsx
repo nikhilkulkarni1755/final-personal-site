@@ -283,11 +283,11 @@ const Home = () => {
             </span>
           </h1>
 
-          {/* Subtitle */}
+          {/* Subtitle
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
             Software Engineer specializing in agent orchestration, MCP tooling, and
             cloud infrastructure.
-          </p>
+          </p> */}
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl lg:text-2xl text-[#001F3F]/70 dark:text-white/70 max-w-3xl mx-auto">
