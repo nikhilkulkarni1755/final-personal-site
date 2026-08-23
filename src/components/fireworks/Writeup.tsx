@@ -56,6 +56,27 @@ const Writeup = ({ run }: { run: CaptureRun }) => {
         <em> misses</em>, not for the raw token count.
       </P>
 
+      <H>Serialization order is a caching decision</H>
+      <P>
+        A radix tree matches on a token sequence, so a cache hit ends at the first byte that differs.
+        Which means the order you serialize a project in quietly decides what an edit costs.
+      </P>
+      <P>
+        This project is sent in sorted path order. Edit <Code>frontend/style.css</Code>, sorted near the
+        end, and <Strong>about 85% of the prefix still matches</Strong>. Edit{' '}
+        <Code>backend/agent.py</Code>, sorted near the front, and roughly <Strong>97% is
+        invalidated</Strong> — the same size change, an order of magnitude apart in what it costs to
+        serve. You can watch this happen in the workbench above: the header reports how much of the
+        prefix survives whatever you have edited.
+      </P>
+      <P>
+        The useful consequence is that a coding agent should not order context alphabetically. It
+        should order it by <em>how likely each file is to change</em> — stable dependencies first,
+        the file currently being worked on last — so that the common case invalidates the smallest
+        possible suffix. That is a cheap change to a context builder and it is worth real money at
+        scale.
+      </P>
+
       <H>The arithmetic that decides your topology</H>
       <P>
         This demo was originally specified for a single 96GB card. That is not possible, and the

@@ -14,6 +14,7 @@ interface WorkbenchProps {
   canonicalText: (path: string) => string;
   dirtyPaths: Set<string>;
   prefixDiverged: boolean;
+  cacheableFraction: number;
   applyEdit: (path: string, text: string) => void;
   resetProject: () => void;
 }
@@ -42,6 +43,7 @@ const Workbench = ({
   canonicalText,
   dirtyPaths,
   prefixDiverged,
+  cacheableFraction,
   applyEdit,
   resetProject,
 }: WorkbenchProps) => {
@@ -154,14 +156,41 @@ const Workbench = ({
         </div>
       </div>
 
-      {/* the divergence lesson */}
-      {prefixDiverged && (
-        <div className="border-b border-[#C2670A]/30 bg-[#C2670A]/[0.07] px-3 py-2 text-[11px] text-[#001F3F]/80 dark:border-[#C87A16]/30 dark:bg-[#C87A16]/[0.09] dark:text-white/75">
-          <strong className="font-semibold">Your copy has diverged.</strong> These edits live only in this browser
-          tab — nothing is saved anywhere. But the project is also the prompt prefix, so your next request no longer
-          matches the one the engine has cached: it would pay full prefill again. Reset to get the cache hit back.
-        </div>
-      )}
+      {/* which copy you are on, and what it costs */}
+      <div
+        className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-3 py-2 text-[11px] ${
+          prefixDiverged
+            ? 'border-[#C2670A]/30 bg-[#C2670A]/[0.07] text-[#001F3F]/80 dark:border-[#C87A16]/30 dark:bg-[#C87A16]/[0.09] dark:text-white/75'
+            : 'border-[#001F3F]/10 bg-[#001F3F]/[0.02] text-[#001F3F]/60 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55'
+        }`}
+      >
+        {prefixDiverged ? (
+          <>
+            <strong className="font-semibold">Your working copy</strong>
+            <span>
+              — {dirtyPaths.size} file{dirtyPaths.size === 1 ? '' : 's'} changed, in this browser tab only.
+              The canonical project is untouched, for you and for everyone else.
+            </span>
+            <span className="w-full">
+              Files are sent in sorted order and the cache matches on a prefix, so a hit ends at your
+              first changed byte:{' '}
+              <strong className="font-semibold tabular-nums">
+                {Math.round(cacheableFraction * 100)}% of the prefix is still reusable
+              </strong>
+              . Edit something sorted late and you keep nearly all of it; edit{' '}
+              <code className="font-mono">backend/agent.py</code> and you lose most of it.
+            </span>
+          </>
+        ) : (
+          <>
+            <strong className="font-semibold">Canonical project</strong>
+            <span>
+              — byte-identical for every visitor, which is exactly why it is worth caching. Edits
+              stay local and never change it.
+            </span>
+          </>
+        )}
+      </div>
 
       {/* three panes */}
       <div className="grid min-h-[420px] grid-cols-1 md:grid-cols-[180px_1fr] lg:grid-cols-[180px_1fr_320px]">

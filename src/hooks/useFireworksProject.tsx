@@ -15,6 +15,20 @@ import { DATA_BASE, type CorpusFile, type CorpusSnapshot } from '../components/f
  * is the prompt prefix the engine has cached. The moment a visitor edits a
  * file, their prefix diverges and the next request can no longer hit the radix
  * cache — `prefixDiverged` drives the banner that says so.
+ *
+ * Two states, and the distinction is deliberate:
+ *
+ *   canonical     the project as shipped. Byte-identical for every visitor, so
+ *                 it is the one prefix worth caching, and it is the only thing
+ *                 the engine is warmed with. Never modified by anyone.
+ *   working copy  this visitor's edits layered on top. Theirs alone, discarded
+ *                 on reload, and invisible to every other visitor.
+ *
+ * Iteration happens on the working copy — a second prompt sees the result of the
+ * first, which is how a real coding agent behaves. What it costs is the cache:
+ * once the working copy diverges, no other visitor shares that prefix, so it
+ * cannot be a hit. That trade is the honest one to show, and it is why the page
+ * says which state you are in rather than hiding it.
  */
 const LANGUAGES: Record<string, string> = {
   py: 'python',
@@ -106,6 +120,25 @@ export const useFireworksProject = () => {
 
   const dirtyPaths = useMemo(() => new Set(Object.keys(edits)), [edits]);
 
+  /**
+   * How much of the prefix survives divergence.
+   *
+   * The radix tree matches on a token sequence, so a hit ends at the first byte
+   * that differs. Files are serialized in sorted path order, which means editing
+   * `backend/agent.py` invalidates everything after it while `frontend/style.css`
+   * — sorted last — costs almost nothing. Same edit, very different cache bill,
+   * and worth showing rather than asserting.
+   */
+  const cacheableFraction = useMemo(() => {
+    if (!snapshot || dirtyPaths.size === 0) return 1;
+    const firstDirty = snapshot.files.findIndex((file) => dirtyPaths.has(file.path));
+    if (firstDirty < 0) return 1;
+    const surviving = snapshot.files
+      .slice(0, firstDirty)
+      .reduce((sum, file) => sum + file.approx_tokens, 0);
+    return surviving / Math.max(snapshot.prefix_approx_tokens, 1);
+  }, [snapshot, dirtyPaths]);
+
   return {
     snapshot,
     files,
@@ -117,6 +150,8 @@ export const useFireworksProject = () => {
     dirtyPaths,
     /** True once the visitor's project no longer matches the cached prefix. */
     prefixDiverged: dirtyPaths.size > 0,
+    /** Fraction of the shared prefix still reusable, 0..1. */
+    cacheableFraction,
     loading,
     error,
   };

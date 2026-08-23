@@ -159,6 +159,7 @@ const FireworksAI = () => {
             canonicalText={project.canonicalText}
             dirtyPaths={project.dirtyPaths}
             prefixDiverged={project.prefixDiverged}
+            cacheableFraction={project.cacheableFraction}
             applyEdit={project.applyEdit}
             resetProject={project.resetProject}
           />
