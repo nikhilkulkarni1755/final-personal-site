@@ -14,6 +14,7 @@ import MatmulTutorial from './pages/MatmulTutorial';
 import LinkedinAgentPost from './pages/LinkedinAgentPost';
 import DockerSecretsPost from './pages/DockerSecretsPost';
 import WeaveTakeHome from './pages/WeaveTakeHome';
+import FireworksAI from './pages/FireworksAI';
 
 function AppContent() {
   const location = useLocation();
@@ -43,6 +44,7 @@ function AppContent() {
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/spearfishing/voice-agent" element={<DrugMarketplace />} />
+          <Route path="/spearfishing/fireworks-ai" element={<FireworksAI />} />
         </Routes>
       </main>
       <Footer />

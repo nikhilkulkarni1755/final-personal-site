@@ -1,0 +1,112 @@
+{
+  "root": "docscribe",
+  "prefix_sha256": "97e097a907a1fe4acedc361865df3747d00140dcd6640a58285e60c276fe381c",
+  "prefix_chars": 82429,
+  "prefix_approx_tokens": 21543,
+  "file_count": 17,
+  "total_lines": 2338,
+  "files": [
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "lines": 74,
+      "approx_tokens": 740
+    },
+    {
+      "path": "backend/agent.py",
+      "language": "python",
+      "lines": 167,
+      "approx_tokens": 1377
+    },
+    {
+      "path": "backend/app.py",
+      "language": "python",
+      "lines": 210,
+      "approx_tokens": 1865
+    },
+    {
+      "path": "backend/chunker.py",
+      "language": "python",
+      "lines": 220,
+      "approx_tokens": 1541
+    },
+    {
+      "path": "backend/config.py",
+      "language": "python",
+      "lines": 76,
+      "approx_tokens": 625
+    },
+    {
+      "path": "backend/jobqueue.py",
+      "language": "python",
+      "lines": 177,
+      "approx_tokens": 1341
+    },
+    {
+      "path": "backend/store.py",
+      "language": "python",
+      "lines": 260,
+      "approx_tokens": 2018
+    },
+    {
+      "path": "backend/tools.py",
+      "language": "python",
+      "lines": 204,
+      "approx_tokens": 1594
+    },
+    {
+      "path": "backend/utils.py",
+      "language": "python",
+      "lines": 176,
+      "approx_tokens": 1404
+    },
+    {
+      "path": "docs/caching-strategies.md",
+      "language": "markdown",
+      "lines": 31,
+      "approx_tokens": 235
+    },
+    {
+      "path": "docs/inference-primer.md",
+      "language": "markdown",
+      "lines": 57,
+      "approx_tokens": 482
+    },
+    {
+      "path": "docs/mixture-of-experts.md",
+      "language": "markdown",
+      "lines": 41,
+      "approx_tokens": 318
+    },
+    {
+      "path": "frontend/animate.js",
+      "language": "javascript",
+      "lines": 151,
+      "approx_tokens": 1365
+    },
+    {
+      "path": "frontend/api.js",
+      "language": "javascript",
+      "lines": 130,
+      "approx_tokens": 1136
+    },
+    {
+      "path": "frontend/index.html",
+      "language": "html",
+      "lines": 42,
+      "approx_tokens": 428
+    },
+    {
+      "path": "frontend/robot.js",
+      "language": "javascript",
+      "lines": 112,
+      "approx_tokens": 1778
+    },
+    {
+      "path": "frontend/style.css",
+      "language": "css",
+      "lines": 210,
+      "approx_tokens": 2889
+    }
+  ]
+}
