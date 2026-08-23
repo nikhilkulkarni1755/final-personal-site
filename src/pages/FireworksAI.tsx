@@ -2,10 +2,13 @@ import { motion } from 'framer-motion';
 import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
 import { useFireworksProject } from '../hooks/useFireworksProject';
+import { useFireworksLive } from '../hooks/useFireworksLive';
 import CacheCliffChart from '../components/fireworks/CacheCliffChart';
+import LiveRunPanel from '../components/fireworks/LiveRunPanel';
 import PoolUtilizationChart from '../components/fireworks/PoolUtilizationChart';
 import RunBadge from '../components/fireworks/RunBadge';
 import TailLatencyChart from '../components/fireworks/TailLatencyChart';
+import Writeup from '../components/fireworks/Writeup';
 import Workbench from '../components/fireworks/Workbench';
 import { SERIES_VARS } from '../components/fireworks/chartTokens';
 
@@ -54,6 +57,7 @@ const FireworksAI = () => {
 
   const { active, activePair, mode, setMode, canCompare, loading, error } = useFireworksCaptures();
   const project = useFireworksProject();
+  const live = useFireworksLive();
 
   if (loading || project.loading) {
     return (
@@ -217,6 +221,20 @@ const FireworksAI = () => {
             </li>
           </ul>
         </motion.section>
+
+        <div className="my-16">
+          <LiveRunPanel live={live} />
+        </div>
+
+        {/* --------------------------------------------------------- writeup */}
+        <Section
+          eyebrow="The argument"
+          title="Why any of this is the right shape"
+          blurb="The charts are evidence. This is what they are evidence for — and where the reasoning stops."
+        >
+          <Writeup run={active} />
+        </Section>
+
       </div>
     </div>
   );
