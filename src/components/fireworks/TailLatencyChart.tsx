@@ -23,9 +23,11 @@ const quantile = (values: number[], p: number): number => {
  * TailLatencyChart - p50 to p99 time-to-first-token, both modes at once.
  *
  * A range plot rather than two bar charts, because the distance between p50 and
- * p99 *is* the finding: colocated has the better median and the far worse tail.
- * Bars of p50 and p99 side by side would hide that relationship; a span makes it
- * the shape of the mark.
+ * p99 is the interesting quantity — a tail is a relationship between two numbers,
+ * and bars side by side hide it. The span makes it the shape of the mark.
+ *
+ * Measured, this chart does not say what it was built to say: disaggregation lost
+ * both quantiles. That is the result, so it is what the caption states.
  *
  * Both modes are shown together deliberately — this is the one chart where the
  * comparison is the point, so it does not follow the page's mode toggle.
@@ -96,8 +98,9 @@ const TailLatencyChart = ({ disaggregated, colocated }: TailLatencyChartProps) =
       </svg>
 
       <figcaption className="mt-1 text-[11px] text-[#001F3F]/55 dark:text-white/50">
-        {rows[0].count} concurrent requests, no shared prefix. Colocated wins the median and loses the tail —
-        that trade is the reason disaggregation exists, and it is also why it is the wrong choice at low load.
+        {rows[0].count} concurrent requests, no shared prefix — the case disaggregation exists for. It lost
+        both the median and the tail. Eight requests on two H100s never generates the phase contention the split
+        is meant to resolve, so it only pays the cost.
       </figcaption>
     </figure>
   );

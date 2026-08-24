@@ -11,6 +11,7 @@ import TailLatencyChart from '../components/fireworks/TailLatencyChart';
 import Writeup from '../components/fireworks/Writeup';
 import Workbench from '../components/fireworks/Workbench';
 import { SERIES_VARS } from '../components/fireworks/chartTokens';
+import { phaseTimeline } from '../components/fireworks/phases';
 
 const Section = ({
   eyebrow,
@@ -85,6 +86,14 @@ const FireworksAI = () => {
 
   const prefixTokens = active.prefix.approx_tokens.toLocaleString();
 
+  // Both hero panels share the slower run's duration, so flipping the mode
+  // toggle compares two runs rather than two differently-stretched pictures.
+  const heroDomainMs = Math.max(
+    ...[activePair?.colocated, activePair?.disaggregated, active]
+      .filter((run): run is NonNullable<typeof run> => Boolean(run))
+      .map((run) => phaseTimeline(run, 'set2').durationMs),
+  );
+
   return (
     <div className={`min-h-screen bg-white dark:bg-[#001F3F] ${SERIES_VARS}`}>
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 lg:px-8">
@@ -104,8 +113,15 @@ const FireworksAI = () => {
           <p className="max-w-3xl text-lg text-[#001F3F]/70 dark:text-white/65">
             Serving a coding agent is two jobs with opposite shapes. Reading a {prefixTokens}-token project is
             compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run
-            them on the same GPUs and every scheduling choice is a compromise. This page splits them and measures
-            what that buys — including where it costs.
+            them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and
+            measured it against a colocated baseline on the same hardware.
+          </p>
+          <p className="mt-3 max-w-3xl text-lg text-[#001F3F]/70 dark:text-white/65">
+            <strong className="font-semibold text-[#001F3F] dark:text-white">
+              Disaggregation lost, on almost every axis.
+            </strong>{' '}
+            Everything below is that measurement — what it did, why the obvious explanation turned out to be wrong,
+            and what it says about when the technique is actually the right call.
           </p>
         </motion.header>
 
@@ -139,11 +155,11 @@ const FireworksAI = () => {
 
         {/* ------------------------------------------------------------ hero */}
         <Section
-          eyebrow="The hero"
-          title="Two pools, or one bottleneck"
-          blurb="A long prefill and a long decode, issued together. Watch what the decode pool is allowed to do while the prefill runs — then flip the toggle above."
+          eyebrow="What the split does"
+          title="Two pools, doing less than one"
+          blurb="A long prefill and a long decode, issued together, measured in both modes on the same two H100s. The split gives each phase its own device and its own scheduler — and on this rig it made everything slower. The toggle above switches between the two real runs."
         >
-          <PoolUtilizationChart run={active} />
+          <PoolUtilizationChart run={active} domainMs={heroDomainMs} />
         </Section>
 
         {/* ------------------------------------------------------- workbench */}
@@ -169,7 +185,7 @@ const FireworksAI = () => {
         <Section
           eyebrow="Prefix caching"
           title="Pay for the project once"
-          blurb="Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values and can skip straight to the new tokens."
+          blurb="Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values. This is the one thing that worked exactly as intended — and note how much smaller the win looks on hardware fast enough to make the prefill cheap anyway."
         >
           <CacheCliffChart run={active} />
         </Section>
@@ -178,8 +194,8 @@ const FireworksAI = () => {
         {activePair && (
           <Section
             eyebrow="Tail latency"
-            title="The median is not the problem"
-            blurb="Eight short requests at once, nothing shared, nothing cacheable. This is the case where colocated scheduling has to keep choosing between somebody's prefill and somebody else's next token."
+            title="Where the split was supposed to pay"
+            blurb="Eight short requests at once, nothing shared, nothing cacheable — the case disaggregation exists for. It lost the median and the tail. Eight concurrent requests is simply not enough load on two H100s for phase contention to be the thing that hurts."
           >
             <TailLatencyChart disaggregated={activePair.disaggregated} colocated={activePair.colocated} />
           </Section>
@@ -193,35 +209,38 @@ const FireworksAI = () => {
           transition={{ duration: 0.5 }}
           className="rounded-xl border border-[#001F3F]/10 bg-[#001F3F]/[0.02] p-6 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <h2 className="mb-4 text-xl font-bold text-[#001F3F] dark:text-white">Where this does not win</h2>
+          <h2 className="mb-4 text-xl font-bold text-[#001F3F] dark:text-white">What the measurement actually said</h2>
           <ul className="space-y-3 text-[#001F3F]/75 dark:text-white/70">
             <li>
-              <strong className="font-semibold text-[#001F3F] dark:text-white">At low load, don't split.</strong>{' '}
-              One request at a time has nothing to contend with, so disaggregation only adds a KV cache hop across
-              the interconnect. On the cold path above it is pure overhead, and colocated has the better median in
-              the tail-latency test too.
-            </li>
-            <li>
-              <strong className="font-semibold text-[#001F3F] dark:text-white">The interconnect decides.</strong>{' '}
-              These two GPUs talk over PCIe, not NVLink. Every KV transfer pays for that, so the win here is a
-              floor rather than a ceiling — the same split on NVLink-connected devices moves more cache for less.
+              <strong className="font-semibold text-[#001F3F] dark:text-white">Disaggregation lost.</strong>{' '}
+              Time to first token on a {prefixTokens}-token prefix: <strong>478ms colocated, 6,233ms
+              disaggregated</strong>. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing —
+              inter-token p99, by 2.7ms.
             </li>
             <li>
               <strong className="font-semibold text-[#001F3F] dark:text-white">
-                Scale-to-zero still needs a GPU to come back.
+                It was not the interconnect, which is what I expected.
               </strong>{' '}
-              Restoring a snapshot is fast; reacquiring a scarce accelerator at an arbitrary moment is not. Any real
-              SLO on top of this keeps a warm floor, and the honest version of "costs nothing when idle" is "costs
-              nothing when idle, and sometimes makes you wait."
+              The engine's own counters put KV transfer at <strong>0.75ms per request</strong> across NVLink. The
+              cache moved essentially for free. Every argument that begins "the link between the pools is the
+              floor" is wrong here, and I had written one before measuring.
+            </li>
+            <li>
+              <strong className="font-semibold text-[#001F3F] dark:text-white">
+                Two GPUs is the wrong size for this technique.
+              </strong>{' '}
+              Each disaggregated worker runs at tensor-parallel 1; the colocated baseline runs both cards on every
+              request at tensor-parallel 2. Splitting a two-GPU box gives up half the parallelism per request to buy
+              isolation that nothing at this scale needed. That accounts for roughly 2× of a 13× gap; the rest is
+              orchestration around chunked prefill, which I did not profile and will not guess at.
             </li>
             <li>
               <strong className="font-semibold text-[#001F3F] dark:text-white">Sparsity buys math, not memory.</strong>{' '}
-              An {active.model.total_params_b ?? '—'}B model with {active.model.active_params_b ?? '—'}B active still
-              has to hold every parameter resident. That constraint, not the FLOPs, is what decides how many workers
-              fit on a box — and it is why the split needs two GPUs at all.
+              Each worker held <strong>59GB</strong> of the same weights — the arithmetic that makes two GPUs the
+              minimum. A {active.model.total_params_b ?? '30.5'}B model with{' '}
+              {active.model.active_params_b ?? '3.3'}B active still has to hold all of it resident.
             </li>
-          </ul>
-        </motion.section>
+          </ul>        </motion.section>
 
         <div className="my-16">
           <LiveRunPanel live={live} />

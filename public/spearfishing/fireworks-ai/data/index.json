@@ -1,24 +1,24 @@
 {
   "runs": [
     {
-      "file": "synthetic-colocated.json",
-      "run_id": "synthetic-colocated",
+      "file": "riga-colocated.json",
+      "run_id": "riga-colocated",
       "mode": "colocated",
-      "source": "synthetic",
+      "source": "measured",
       "rig": "Rig A",
-      "gpu": "NVIDIA H100 80GB SXM5",
+      "gpu": "NVIDIA H100 80GB HBM3",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "timestamp": "2026-08-23T00:00:00Z"
+      "timestamp": "2026-08-24T00:56:10Z"
     },
     {
-      "file": "synthetic-disaggregated.json",
-      "run_id": "synthetic-disaggregated",
+      "file": "riga-disaggregated.json",
+      "run_id": "riga-disaggregated",
       "mode": "disaggregated",
-      "source": "synthetic",
+      "source": "measured",
       "rig": "Rig A",
-      "gpu": "NVIDIA H100 80GB SXM5",
+      "gpu": "NVIDIA H100 80GB HBM3",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "timestamp": "2026-08-23T00:00:00Z"
+      "timestamp": "2026-08-24T01:00:20Z"
     }
   ]
 }

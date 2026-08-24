@@ -1,210 +1,128 @@
 import { useMemo, useRef, useState } from 'react';
-import {
-  AXIS_TEXT_CLASS,
-  GRID_CLASS,
-  SERIES,
-  formatMs,
-  linePath,
-  percent,
-  scale,
-  ticks,
-} from './chartTokens';
+import { AXIS_TEXT_CLASS, GRID_CLASS, SERIES, formatMs, scale, ticks } from './chartTokens';
+import { phaseTimeline } from './phases';
 import type { CaptureRun } from './types';
 
 interface PoolUtilizationChartProps {
   run: CaptureRun;
+  /**
+   * Shared time domain across both modes. Without it each panel scales to its
+   * own duration and the slower run looks comparable to the faster one — the
+   * toggle would then compare two differently-stretched pictures rather than
+   * two runs.
+   */
+  domainMs?: number;
 }
 
 const WIDTH = 720;
-const HEIGHT = 300;
-const PAD = { top: 18, right: 92, bottom: 34, left: 44 };
-
-const PLOT_W = WIDTH - PAD.left - PAD.right;
-const PLOT_H = HEIGHT - PAD.top - PAD.bottom;
+const ROW_H = 34;
+const PAD = { top: 26, right: 24, bottom: 40, left: 132 };
 
 /**
- * How much of the response to plot.
+ * The hero: two requests with opposite shapes, and what each device was doing.
  *
- * All of the contention happens while the long prefill is in flight (~2.6s).
- * Stretched across a thirty-second decode it collapses into an unreadable sliver
- * against a wall of flat line. This is a fixed constant rather than a fraction of
- * the run so that the axis does not move when the mode toggle switches — two
- * charts drawn on different x-scales are not a comparison. The caption always
- * states the full duration so nothing is hidden by the crop.
+ * Drawn from measured token timings rather than a sampled gauge — see phases.ts
+ * for why, and for the limits of what this can claim. Each request is one row;
+ * the bar shows prefill then decode, so "was anything able to decode while that
+ * long prefill ran?" is answered by looking at whether the bars overlap.
+ *
+ * A Gantt rather than a utilization curve because that is what the data supports.
+ * Drawing a percentage would imply a busy-ness measurement these runs do not
+ * contain.
  */
-const WINDOW_MS = 8000;
-
-/**
- * PoolUtilizationChart - the hero.
- *
- * One timeline, two series: how busy the prefill pool is and how busy the decode
- * pool is, while a long prefill and a long decode are in flight together.
- *
- * Disaggregated, the two curves rise together — they are on different devices,
- * so neither waits for the other. Colocated, decode flatlines at the bottom until
- * the prefill finishes, because the same GPUs cannot do both. The gap between
- * those two pictures is the entire argument for splitting the pools, and it is
- * legible without reading a single number.
- */
-const PoolUtilizationChart = ({ run }: PoolUtilizationChartProps) => {
-  const [hoverX, setHoverX] = useState<number | null>(null);
+const PoolUtilizationChart = ({ run, domainMs }: PoolUtilizationChartProps) => {
+  const [hovered, setHovered] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const samples = useMemo(() => {
-    const request = run.sets.set2?.requests.find((item) => item.pool_util_samples?.length);
-    return request?.pool_util_samples ?? [];
-  }, [run]);
+  const timeline = useMemo(() => phaseTimeline(run, 'set2'), [run]);
 
-  const prefillEndMs = useMemo(() => {
-    const heavy = run.sets.set2?.requests.find((item) => item.id === 's2-prefill-heavy');
-    return heavy ? heavy.ttft_ms : null;
-  }, [run]);
-
-  if (!samples.length) {
+  if (!timeline.windows.length) {
     return (
       <p className="py-12 text-center text-sm text-[#001F3F]/40 dark:text-white/40">
-        This run has no pool utilization samples.
+        This run has no Set 2 requests.
       </p>
     );
   }
 
-  const fullDurationMs = samples[samples.length - 1].t_ms;
-  const windowMs = Math.min(WINDOW_MS, fullDurationMs);
-  const visible = samples.filter((sample) => sample.t_ms <= windowMs);
+  const domain = domainMs && domainMs > 0 ? domainMs : timeline.durationMs;
+  const height = PAD.top + timeline.windows.length * ROW_H + PAD.bottom;
+  const plotW = WIDTH - PAD.left - PAD.right;
+  const x = scale(0, domain, PAD.left, PAD.left + plotW);
+  const rowY = (index: number) => PAD.top + index * ROW_H + ROW_H / 2;
 
-  const x = scale(0, windowMs, PAD.left, PAD.left + PLOT_W);
-  const y = scale(0, 1, PAD.top + PLOT_H, PAD.top);
-
-  const prefillPoints = visible.map((s) => [x(s.t_ms), y(s.prefill_util ?? 0)] as [number, number]);
-  const decodePoints = visible.map((s) => [x(s.t_ms), y(s.decode_util ?? 0)] as [number, number]);
-
-  const hovered = hoverX === null
-    ? null
-    : visible.reduce((best, sample) =>
-        Math.abs(x(sample.t_ms) - hoverX) < Math.abs(x(best.t_ms) - hoverX) ? sample : best,
-      );
-
-  const handleMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const position = ((event.clientX - rect.left) / rect.width) * WIDTH;
-    setHoverX(position < PAD.left || position > PAD.left + PLOT_W ? null : position);
-  };
-
-  const last = visible[visible.length - 1];
+  const label = (id: string) =>
+    id.replace(/^s2-/, '').replace('prefill-heavy', 'long prompt').replace('decode-heavy', 'long answer');
 
   return (
     <figure className="m-0">
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full touch-none"
+        viewBox={`0 0 ${WIDTH} ${height}`}
+        className="w-full"
         role="img"
-        aria-label="Prefill and decode pool utilization over time"
-        onPointerMove={handleMove}
-        onPointerLeave={() => setHoverX(null)}
+        aria-label="When each request was prefilling and when it was decoding"
       >
-        {/* grid + y axis */}
-        {ticks(0, 1, 4).map((value) => (
+        {ticks(0, domain, 6).map((value) => (
           <g key={value}>
-            <line x1={PAD.left} x2={PAD.left + PLOT_W} y1={y(value)} y2={y(value)} className={GRID_CLASS} strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(value) + 3.5} textAnchor="end" className={`${AXIS_TEXT_CLASS} text-[10px]`}>
-              {percent(value)}
+            <line x1={x(value)} x2={x(value)} y1={PAD.top - 8} y2={height - PAD.bottom} className={GRID_CLASS} strokeWidth={1} />
+            <text x={x(value)} y={height - PAD.bottom + 16} textAnchor="middle" className={`${AXIS_TEXT_CLASS} text-[10px]`}>
+              {formatMs(value)}
             </text>
           </g>
         ))}
 
-        {/* x axis */}
-        {ticks(0, windowMs, 5).map((value) => (
-          <text
-            key={value}
-            x={x(value)}
-            y={PAD.top + PLOT_H + 18}
-            textAnchor="middle"
-            className={`${AXIS_TEXT_CLASS} text-[10px]`}
-          >
-            {formatMs(value)}
-          </text>
-        ))}
+        {/* legend — two series, so direct labels rather than a box */}
+        <g>
+          <rect x={PAD.left} y={PAD.top - 22} width={10} height={8} rx={2} fill={SERIES.prefill} />
+          <text x={PAD.left + 15} y={PAD.top - 15} className={`${AXIS_TEXT_CLASS} text-[10px]`}>reading the prompt</text>
+          <rect x={PAD.left + 118} y={PAD.top - 22} width={10} height={8} rx={2} fill={SERIES.decode} />
+          <text x={PAD.left + 133} y={PAD.top - 15} className={`${AXIS_TEXT_CLASS} text-[10px]`}>writing the answer</text>
+        </g>
 
-        {/* the prefill window, annotated once rather than labelled on every point */}
-        {prefillEndMs !== null && (
-          <>
-            <rect
-              x={PAD.left}
-              y={PAD.top}
-              width={Math.max(0, x(prefillEndMs) - PAD.left)}
-              height={PLOT_H}
-              fill="currentColor"
-              className="text-[#001F3F]/[0.04] dark:text-white/[0.05]"
-            />
-            <line
-              x1={x(prefillEndMs)}
-              x2={x(prefillEndMs)}
-              y1={PAD.top}
-              y2={PAD.top + PLOT_H}
-              className={GRID_CLASS}
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
-            <text
-              x={x(prefillEndMs) + 6}
-              y={PAD.top + 12}
-              className={`${AXIS_TEXT_CLASS} text-[9px]`}
+        {timeline.windows.map((w, index) => {
+          const dim = hovered !== null && hovered !== w.id;
+          const prefillW = Math.max(x(w.firstTokenMs) - x(w.startMs), 1);
+          const decodeW = Math.max(x(w.endMs) - x(w.firstTokenMs), 1);
+          return (
+            <g
+              key={w.id}
+              onPointerEnter={() => setHovered(w.id)}
+              onPointerLeave={() => setHovered(null)}
+              opacity={dim ? 0.45 : 1}
             >
-              ← long prefill in flight
-            </text>
-          </>
-        )}
-
-        {/* series */}
-        <path d={linePath(prefillPoints)} fill="none" stroke={SERIES.prefill} strokeWidth={2} strokeLinejoin="round" />
-        <path d={linePath(decodePoints)} fill="none" stroke={SERIES.decode} strokeWidth={2} strokeLinejoin="round" />
-
-        {/* direct labels at the series ends — no legend box needed at n=2 */}
-        <text x={PAD.left + PLOT_W + 8} y={y(last.prefill_util ?? 0) + 3.5} fill={SERIES.prefill} className="text-[10px] font-medium">
-          prefill pool
-        </text>
-        <text x={PAD.left + PLOT_W + 8} y={y(last.decode_util ?? 0) + 3.5} fill={SERIES.decode} className="text-[10px] font-medium">
-          decode pool
-        </text>
-
-        {/* crosshair */}
-        {hovered && (
-          <g>
-            <line
-              x1={x(hovered.t_ms)}
-              x2={x(hovered.t_ms)}
-              y1={PAD.top}
-              y2={PAD.top + PLOT_H}
-              className={GRID_CLASS}
-              strokeWidth={1}
-            />
-            <circle cx={x(hovered.t_ms)} cy={y(hovered.prefill_util ?? 0)} r={4} fill={SERIES.prefill} stroke="white" strokeWidth={2} />
-            <circle cx={x(hovered.t_ms)} cy={y(hovered.decode_util ?? 0)} r={4} fill={SERIES.decode} stroke="white" strokeWidth={2} />
-          </g>
-        )}
+              <rect x={PAD.left} y={rowY(index) - ROW_H / 2} width={plotW} height={ROW_H} fill="transparent" />
+              <text x={PAD.left - 12} y={rowY(index) + 4} textAnchor="end" className={`${AXIS_TEXT_CLASS} text-[11px] font-medium`}>
+                {label(w.id)}
+              </text>
+              {/* 2px gap between the two fills so the boundary stays legible */}
+              <rect x={x(w.startMs)} y={rowY(index) - 7} width={prefillW} height={14} rx={4} fill={SERIES.prefill} />
+              <rect x={x(w.firstTokenMs) + 2} y={rowY(index) - 7} width={Math.max(decodeW - 2, 1)} height={14} rx={4} fill={SERIES.decode} />
+              <text x={x(w.endMs) + 6} y={rowY(index) + 4} className={`${AXIS_TEXT_CLASS} text-[9px] tabular-nums`}>
+                {w.outputTokens.toLocaleString()} tok
+              </text>
+            </g>
+          );
+        })}
       </svg>
 
-      <figcaption className="mt-1 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[11px] text-[#001F3F]/55 dark:text-white/50">
+      <figcaption className="mt-1 text-[11px] leading-relaxed text-[#001F3F]/55 dark:text-white/50">
         {hovered ? (
-          <>
-            <span className="tabular-nums">{formatMs(hovered.t_ms)}</span>
-            <span className="tabular-nums" style={{ color: SERIES.prefill }}>
-              prefill {percent(hovered.prefill_util ?? 0)}
-            </span>
-            <span className="tabular-nums" style={{ color: SERIES.decode }}>
-              decode {percent(hovered.decode_util ?? 0)}
-            </span>
-            <span className="tabular-nums">queue {hovered.queue_depth ?? 0}</span>
-          </>
+          (() => {
+            const w = timeline.windows.find((item) => item.id === hovered)!;
+            return (
+              <span className="tabular-nums">
+                {label(w.id)} · read for {formatMs(w.firstTokenMs - w.startMs)}, then wrote{' '}
+                {w.outputTokens.toLocaleString()} tokens over {formatMs(w.endMs - w.firstTokenMs)}
+              </span>
+            );
+          })()
         ) : (
           <span>
-            {run.mode === 'disaggregated'
-              ? 'Both pools run at once — different devices, so neither waits for the other.'
-              : 'Decode is pinned near zero until the prefill releases the device. Same silicon, so it waits.'}
-            {' '}First {formatMs(windowMs)} of a {formatMs(fullDurationMs)} response.
+            Two requests issued together. Each bar is one request: reading its prompt, then writing its answer —
+            derived from the recorded time-to-first-token and every inter-token gap, so it is measured timing rather
+            than a sampled average. It shows <em>which phase each request was in</em>, not how busy the GPUs were.
+            Both modes share one time axis, so the toggle compares runs rather than two differently-stretched
+            pictures. This set finished in {formatMs(timeline.durationMs)}.
           </span>
         )}
       </figcaption>

@@ -114,47 +114,89 @@ const Writeup = ({ run }: { run: CaptureRun }) => {
         the PD split.
       </P>
 
-      <H>What the interconnect actually costs</H>
+      <H>I was wrong about the interconnect</H>
       <P>
-        The box above says the link sets the floor. The number behind that: on this rig a KV transfer
-        crosses <Code>{run.rig.interconnect ?? 'PCIe'}</Code>, and the whole point of measuring the cold
-        path was to isolate what that hop costs when there is no contention to hide it. At one request
-        in flight the transfer is the <em>only</em> difference between the two modes, which makes the
-        cold-path gap a direct read on the interconnect rather than on the scheduler.
+        Before measuring anything I argued that the link between the pools sets the floor on what
+        disaggregation can win — that these GPUs talk over PCIe, that every KV transfer pays for it,
+        and that the numbers here would therefore be a floor rather than a ceiling.
       </P>
       <P>
-        That is also the honest scope of every "disaggregation is faster" claim on this page: it holds
-        above some load, on this link. Move the same split onto NVLink-connected devices and the
-        crossover point drops, because the thing being amortized got cheaper. The measurements here
-        are a floor.
+        Both halves were wrong. The rig reports <Code>NV18</Code> — eighteen NVLink connections
+        between the two cards, plus ten InfiniBand devices. And the engine's own counters put KV
+        transfer at <Strong>0.75ms per request</Strong>, with bootstrap at another 0.73ms. Moving the
+        cache is free at this scale. Whatever cost disaggregation 5.7 seconds of time-to-first-token,
+        it was not the wire.
+      </P>
+      <P>
+        Leaving that here rather than quietly deleting it, because the shape of the mistake is the
+        useful part: it is an argument that sounds right, follows from real systems knowledge, and
+        would have survived indefinitely on a page that never measured anything. The counter that
+        refuted it took one line to read.
       </P>
 
-      <H>The warm floor is the real design question</H>
+      <H>What it actually was: the split costs parallelism</H>
       <P>
-        Given that waking needs an accelerator to come back to, the interesting question is not how to
-        avoid a warm floor but how small it can be. That is what the wake-time measurements are for:
-        the floor has to be large enough to cover the gap between "a request arrived" and "an engine
-        can answer it", so every second shaved off the restore path is a second of capacity you no
-        longer have to pay to keep idle.
+        The colocated baseline runs both H100s on every request at tensor-parallel 2. The
+        disaggregated configuration runs one card for prefill and one for decode, each at
+        tensor-parallel 1. <Strong>Splitting a two-GPU box halves the compute available to any single
+        request</Strong> in exchange for isolating the phases from each other.
       </P>
       <P>
-        Which is why the snapshot mechanism matters more than it first appears, and why the distinction
-        between them is not pedantic. Releasing memory occupation is fast but keeps the process — and
-        therefore the pod, and therefore the bill — alive; it shrinks the floor's latency, not its cost.
-        A checkpoint that frees the machine entirely is the one that changes the economics, and it is
-        also the one most likely to be blocked by the container it has to run in.
+        That trade only pays when phase contention is what hurts — which needs enough concurrency
+        that a long prefill is genuinely blocking somebody's decode, and enough GPUs that each pool
+        still has real parallelism after the split. Eight concurrent requests on two H100s is not
+        that. There was nothing to isolate, so the split bought nothing and cost half the machine.
+      </P>
+      <P>
+        Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short
+        burst costs ~120ms extra, a {prefixTokens}-token prefix costs ~5.7s — and prefill is chunked
+        at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times
+        over. I did not profile it further, so that is where the explanation stops rather than where
+        the speculation starts.
+      </P>
+
+      <H>Scale-to-zero costs 800 seconds</H>
+      <P>
+        Cold start, measured end to end: <Strong>474 seconds</Strong> to provision a machine and pull
+        a 21GB image, <Strong>200 seconds</Strong> to fetch 61GB of weights, <Strong>124 seconds</Strong>{' '}
+        to load sixteen shards and capture CUDA graphs. Thirteen minutes from nothing to first token.
+      </P>
+      <P>
+        The proportions are what matter. <Strong>The part a snapshot can address is the smallest
+        one.</Strong> Restoring a checkpointed process replaces the 124 seconds and does nothing
+        about the 674 spent getting the image and the weights onto the machine. "Wake in seconds" is
+        only true once you are already paying to keep both resident — which is a warm floor, the
+        exact thing scale-to-zero is supposed to avoid.
+      </P>
+      <P>
+        The half that does work is worth having. With <Code>--enable-memory-saver</Code>, releasing
+        the accelerator took <Strong>~64ms</Strong> and resuming took <Strong>~127ms</Strong>, moving
+        70GB of GPU memory each way, serving again about 105ms later. But the process stayed alive
+        the whole time, so the pod stayed alive, so the bill kept running. It frees the accelerator,
+        not the rental. That makes a warm floor cheaper to hold, which given a 13-minute cold start
+        is genuinely useful — and it is not scale-to-zero, and calling it that would be the kind of
+        claim this page exists to avoid.
       </P>
 
       <H>What I would want to measure next</H>
       <P>
-        Three things this does not yet answer. <Strong>One:</Strong> the same split over NVLink instead
-        of PCIe, to separate the disaggregation win from the interconnect penalty — the numbers here
-        are a floor, not a ceiling. <Strong>Two:</Strong> prefix caching over a hybrid
-        attention model, where part of the state is a recurrent checkpoint rather than a KV block, and
-        the reuse rules stop being a simple tree. <Strong>Three:</Strong> what the prefill:decode ratio
-        should be under a realistic mixture of agent traffic rather than three hand-picked shapes,
-        because the ratio is the actual product decision and everything above is only evidence for how
-        to choose it.
+        <Strong>One:</Strong> the same comparison at a size where the technique should win — enough
+        GPUs that each pool keeps real tensor parallelism after the split, and enough concurrency that
+        phase contention is actually the bottleneck. That is the experiment that would tell me whether
+        13× is a property of this configuration or of my implementation, and it is the obvious next
+        thing to run.
+      </P>
+      <P>
+        <Strong>Two:</Strong> where the remaining seconds go. KV transfer is ruled out and tensor
+        parallelism explains about 2×; the rest is orchestration around chunked prefill and wants a
+        profiler rather than another chart.
+      </P>
+      <P>
+        <Strong>Three:</Strong> prefix caching over a hybrid attention model, where part of the state
+        is a recurrent checkpoint rather than a KV block and the reuse rules stop being a simple tree.
+        And <Strong>four:</Strong> what the prefill:decode ratio should be under a realistic mixture of
+        agent traffic rather than three hand-picked shapes — that ratio is the actual product decision,
+        and everything above is only evidence for how to choose it.
       </P>
     </div>
   );
