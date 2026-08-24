@@ -22,6 +22,8 @@ interface WorkbenchProps {
   promptEnabled?: boolean;
   promptPlaceholder?: string;
   promptNote?: string;
+  /** Outcome of the last prompt, shown under the box. */
+  promptResult?: string | null;
 }
 
 const SPEEDS = [1, 2, 4, 8];
@@ -55,6 +57,7 @@ const Workbench = ({
   promptEnabled = false,
   promptPlaceholder = 'Ask for a change — "make the robot pink", "add a reset button"',
   promptNote,
+  promptResult,
 }: WorkbenchProps) => {
   const [selected, setSelected] = useState('frontend/style.css');
   const [pane, setPane] = useState<'code' | 'preview'>('code');
@@ -117,7 +120,10 @@ const Workbench = ({
           onSubmit={(event) => {
             event.preventDefault();
             const text = draft.trim();
-            if (text && onSubmitPrompt) onSubmitPrompt(text);
+            if (text && onSubmitPrompt) {
+              onSubmitPrompt(text);
+              setDraft('');
+            }
           }}
           className="mb-2 flex flex-wrap items-center gap-2"
         >
@@ -139,8 +145,18 @@ const Workbench = ({
           >
             Send
           </button>
-          {promptNote && (
-            <span className="w-full text-[10px] text-[#001F3F]/45 dark:text-white/40">{promptNote}</span>
+          {promptResult ? (
+            <span
+              className={`w-full text-[10px] ${
+                promptResult.startsWith('out of scope')
+                  ? 'text-[#C2670A] dark:text-[#C87A16]'
+                  : 'text-[#001F3F]/55 dark:text-white/50'
+              }`}
+            >
+              {promptResult}
+            </span>
+          ) : (
+            promptNote && <span className="w-full text-[10px] text-[#001F3F]/45 dark:text-white/40">{promptNote}</span>
           )}
         </form>
 

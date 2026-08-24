@@ -39,6 +39,16 @@ export interface StreamState {
 const OPEN = /<edit\s+path\s*=\s*["']([^"']+)["']\s*>/i;
 const CLOSE = /<\/edit>/i;
 
+/**
+ * Tags from the context wrapper we supply ourselves.
+ *
+ * Found by asking the real 30B: after two otherwise perfect edits it echoed
+ * `</project_context>`, copied from the framing it was shown. Refusing valid
+ * work over that would be this parser's fault rather than the model's, so these
+ * are stripped before the prose check. Anything else still fails.
+ */
+const CONTEXT_TAG = /<\/?(project_context|file_tree|file)\b[^>]*>/gi;
+
 const normalise = (raw: string): string =>
   raw.trim().replace(/^\/+/, '').replace(/^docscribe\//, '');
 
@@ -60,7 +70,7 @@ export const parseStream = (accumulated: string, allowedPaths: Set<string>): Str
 
     // Anything before an opening tag that is not whitespace means the model is
     // editorialising. A response that is partly an edit is not partly trusted.
-    const before = rest.slice(0, open.index);
+    const before = rest.slice(0, open.index).replace(CONTEXT_TAG, '');
     if (before.trim()) {
       return { edits: [], outOfScope: true, reason: 'prose before an edit block', activePath: null };
     }
@@ -105,7 +115,7 @@ export const parseStream = (accumulated: string, allowedPaths: Set<string>): Str
   }
 
   // Trailing prose after the final block breaks the contract too.
-  if (rest.trim()) {
+  if (rest.replace(CONTEXT_TAG, '').trim()) {
     return { edits: [], outOfScope: true, reason: 'prose after the edit blocks', activePath: null };
   }
 

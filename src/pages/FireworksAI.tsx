@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
@@ -61,6 +62,7 @@ const FireworksAI = () => {
   const project = useFireworksProject();
   const live = useFireworksLive();
   const quota = useFireworksQuota();
+  const [promptResult, setPromptResult] = useState<string | null>(null);
 
   if (loading || project.loading) {
     return (
@@ -211,7 +213,18 @@ const FireworksAI = () => {
             resetProject={project.resetProject}
             promptEnabled={promptState.enabled}
             promptNote={promptState.note}
-            onSubmitPrompt={(prompt) => void live.submitPrompt(prompt, project, quota)}
+            promptResult={promptResult}
+            onSubmitPrompt={async (prompt) => {
+              setPromptResult(null);
+              const outcome = await live.submitPrompt(prompt, project, quota);
+              setPromptResult(
+                outcome.kind === 'applied'
+                  ? `Applied to ${outcome.paths.join(', ')}.`
+                  : outcome.kind === 'out_of_scope'
+                    ? 'out of scope — this engine only edits the project above.'
+                    : outcome.message,
+              );
+            }}
           />
         </Section>
 
