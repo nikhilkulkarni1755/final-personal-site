@@ -17,6 +17,11 @@ interface WorkbenchProps {
   cacheableFraction: number;
   applyEdit: (path: string, text: string) => void;
   resetProject: () => void;
+  /** Free-text prompt handler. Absent when no engine is reachable. */
+  onSubmitPrompt?: (prompt: string) => void;
+  promptEnabled?: boolean;
+  promptPlaceholder?: string;
+  promptNote?: string;
 }
 
 const SPEEDS = [1, 2, 4, 8];
@@ -46,9 +51,14 @@ const Workbench = ({
   cacheableFraction,
   applyEdit,
   resetProject,
+  onSubmitPrompt,
+  promptEnabled = false,
+  promptPlaceholder = 'Ask for a change — "make the robot pink", "add a reset button"',
+  promptNote,
 }: WorkbenchProps) => {
   const [selected, setSelected] = useState('frontend/style.css');
   const [pane, setPane] = useState<'code' | 'preview'>('code');
+  const [draft, setDraft] = useState('');
 
   const onStream = useCallback((path: string, text: string) => applyEdit(path, text), [applyEdit]);
   const replay = useFireworksReplay({ onStream });
@@ -70,6 +80,13 @@ const Workbench = ({
 
   const file = fileMap.get(selected);
   const isDirty = dirtyPaths.has(selected);
+
+  // A changed file used to switch permanently to the diff view, which also made
+  // it uneditable -- so a visitor's first hand edit locked them out of a second.
+  // The diff is a toggle now, on by default while a replay is landing (that is
+  // when seeing the change matters) and off otherwise.
+  const [diffPref, setDiffPref] = useState<boolean | null>(null);
+  const showDiff = isDirty && (diffPref ?? replay.isPlaying);
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#001F3F]/10 bg-white dark:border-white/10 dark:bg-[#001F3F]">
@@ -95,6 +112,37 @@ const Workbench = ({
             );
           })}
         </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = draft.trim();
+            if (text && onSubmitPrompt) onSubmitPrompt(text);
+          }}
+          className="mb-2 flex flex-wrap items-center gap-2"
+        >
+          <input
+            type="text"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={promptPlaceholder}
+            disabled={!promptEnabled}
+            className="min-w-64 flex-1 rounded-lg border border-[#001F3F]/15 bg-white px-3 py-1.5 text-[12px]
+                       text-[#001F3F] placeholder:text-[#001F3F]/35 disabled:opacity-50
+                       dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
+          />
+          <button
+            type="submit"
+            disabled={!promptEnabled || !draft.trim()}
+            className="rounded-lg bg-[#001F3F] px-3 py-1.5 text-[12px] font-semibold text-white
+                       transition-opacity disabled:opacity-40 dark:bg-white dark:text-[#001F3F]"
+          >
+            Send
+          </button>
+          {promptNote && (
+            <span className="w-full text-[10px] text-[#001F3F]/45 dark:text-white/40">{promptNote}</span>
+          )}
+        </form>
 
         <div className="flex flex-wrap items-center gap-3 text-[11px]">
           {replay.isPlaying ? (
@@ -202,6 +250,20 @@ const Workbench = ({
           <div className="flex items-center gap-2 border-b border-[#001F3F]/10 px-3 py-1.5 dark:border-white/10">
             <span className="truncate font-mono text-[11px] text-[#001F3F]/70 dark:text-white/65">{selected}</span>
             {isDirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F4A340]" />}
+            {isDirty && (
+              <button
+                type="button"
+                onClick={() => setDiffPref(!showDiff)}
+                className="rounded px-1.5 py-0.5 text-[10px] text-[#001F3F]/55 hover:bg-[#001F3F]/[0.06] dark:text-white/50 dark:hover:bg-white/[0.08]"
+              >
+                {showDiff ? 'show file' : 'show diff'}
+              </button>
+            )}
+            {!replay.isPlaying && !showDiff && (
+              <span className="hidden text-[10px] text-[#001F3F]/35 sm:inline dark:text-white/30">
+                editable — try changing a colour
+              </span>
+            )}
             <div className="ml-auto flex gap-1 lg:hidden">
               {(['code', 'preview'] as const).map((value) => (
                 <button
@@ -224,8 +286,11 @@ const Workbench = ({
               <CodeViewer
                 text={file.text}
                 language={file.language}
-                compareTo={isDirty ? canonicalText(selected) : undefined}
+                compareTo={showDiff ? canonicalText(selected) : undefined}
                 followTail={replay.isPlaying}
+                // Not editable mid-stream: the model is writing this file, and two
+                // writers on one buffer is a race the visitor would lose.
+                onEdit={replay.isPlaying ? undefined : (text) => applyEdit(selected, text)}
               />
             )}
           </div>

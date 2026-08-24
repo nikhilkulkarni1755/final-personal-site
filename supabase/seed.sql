@@ -11,6 +11,14 @@ INSERT INTO pages (slug, title, type, metadata) VALUES
     ('/apps', 'Apps', 'apps', '{"description": "Showcase of personal apps and projects"}')
 ON CONFLICT (slug) DO NOTHING;
 
+-- The spearfishing pages. RLS denies anon INSERT on `pages`, so
+-- ensurePageExists throws for any slug that is not seeded here and the page
+-- records no views at all -- silently, because the error is only logged.
+INSERT INTO pages (slug, title, type, metadata) VALUES
+  ('/spearfishing/fireworks-ai', 'Fireworks AI - Disaggregated Inference', 'project', '{}'::jsonb),
+  ('/spearfishing/voice-agent', 'Drug Marketplace - Voice Agent', 'project', '{}'::jsonb)
+ON CONFLICT (slug) DO NOTHING;
+
 -- Optional: Add some sample data for testing (remove in production)
 -- Uncomment below if you want to test with sample data
 

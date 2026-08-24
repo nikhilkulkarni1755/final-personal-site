@@ -3,6 +3,7 @@ import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
 import { useFireworksProject } from '../hooks/useFireworksProject';
 import { useFireworksLive } from '../hooks/useFireworksLive';
+import { useFireworksQuota } from '../hooks/useFireworksQuota';
 import CacheCliffChart from '../components/fireworks/CacheCliffChart';
 import LiveRunPanel from '../components/fireworks/LiveRunPanel';
 import PoolUtilizationChart from '../components/fireworks/PoolUtilizationChart';
@@ -59,6 +60,7 @@ const FireworksAI = () => {
   const { active, activePair, mode, setMode, canCompare, loading, error } = useFireworksCaptures();
   const project = useFireworksProject();
   const live = useFireworksLive();
+  const quota = useFireworksQuota();
 
   if (loading || project.loading) {
     return (
@@ -85,6 +87,35 @@ const FireworksAI = () => {
   }
 
   const prefixTokens = active.prefix.approx_tokens.toLocaleString();
+
+  // What the free-text box can offer right now. Kept in one place because the
+  // answer depends on three independent things -- whether a gateway exists at
+  // all, whether an engine is warm, and how many prompts this visitor has left
+  // -- and scattering that logic across the UI is how the states drift apart.
+  const promptState = (() => {
+    if (!live.available) {
+      return {
+        enabled: false,
+        note: 'Free-text editing needs a live engine. The example prompts above replay real recorded runs.',
+      };
+    }
+    if (quota.unavailable) {
+      return { enabled: false, note: 'Prompt quota is unavailable right now, so free text is closed.' };
+    }
+    if (quota.remaining <= 0) {
+      return { enabled: false, note: `You have used all ${quota.limit} prompts. The examples above still work.` };
+    }
+    if (live.state === 'starting') {
+      return { enabled: false, note: live.message || 'Waking a GPU — this takes a few minutes from cold.' };
+    }
+    if (live.state !== 'ready') {
+      return {
+        enabled: true,
+        note: `${quota.remaining} of ${quota.limit} prompts left. The engine is asleep, so the first one has to wake it.`,
+      };
+    }
+    return { enabled: true, note: `${quota.remaining} of ${quota.limit} prompts left. Engine is warm.` };
+  })();
 
   // Both hero panels share the slower run's duration, so flipping the mode
   // toggle compares two runs rather than two differently-stretched pictures.
@@ -178,6 +209,9 @@ const FireworksAI = () => {
             cacheableFraction={project.cacheableFraction}
             applyEdit={project.applyEdit}
             resetProject={project.resetProject}
+            promptEnabled={promptState.enabled}
+            promptNote={promptState.note}
+            onSubmitPrompt={(prompt) => void live.submitPrompt(prompt, project, quota)}
           />
         </Section>
 

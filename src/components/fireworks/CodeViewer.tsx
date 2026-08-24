@@ -11,6 +11,8 @@ interface CodeViewerProps {
   /** Keep the newest change scrolled into view while a response streams. */
   followTail?: boolean;
   emptyMessage?: string;
+  /** When set, the file can be typed into. Edits go to the same working copy the model writes to. */
+  onEdit?: (text: string) => void;
 }
 
 const renderTokens = (tokens: Token[]) =>
@@ -23,15 +25,25 @@ const renderTokens = (tokens: Token[]) =>
 const GUTTER = 'select-none text-right pr-3 tabular-nums text-[11px] text-[#001F3F]/30 dark:text-white/25';
 
 /**
- * CodeViewer - read-only code display with an optional line diff.
+ * CodeViewer - code display with an optional line diff, and optional editing.
  *
- * Deliberately dependency-free: visitors never type into this pane, they type
- * prompts and the model rewrites the file, so an editor would be dead weight in
- * the portfolio's bundle. See highlight.ts for the reasoning.
+ * Editing is a transparent <textarea> sitting exactly on top of the highlighted
+ * output, sharing its font metrics and scroll offset. The visitor sees syntax
+ * colours and types into an invisible layer above them. That is the whole trick,
+ * and it is why this stays dependency-free rather than pulling in an editor.
+ *
+ * Hand edits and model edits both write the same working copy, so the divergence
+ * header covers them identically -- and breaking the cached prefix by hand, then
+ * watching the reusable fraction fall from 85% to 3%, teaches the point better
+ * than reading it does.
+ *
+ * The diff view is never editable: it renders two versions interleaved, so there
+ * is no single text for a caret to live in.
  */
-const CodeViewer = ({ text, language, compareTo, followTail, emptyMessage }: CodeViewerProps) => {
+const CodeViewer = ({ text, language, compareTo, followTail, emptyMessage, onEdit }: CodeViewerProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const tailRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const isDiff = compareTo !== undefined && compareTo !== text;
 
@@ -65,8 +77,27 @@ const CodeViewer = ({ text, language, compareTo, followTail, emptyMessage }: Cod
     );
   }
 
+  // Typing is only possible over the plain view; see the note above.
+  const editable = Boolean(onEdit) && !isDiff;
+
   return (
-    <div ref={scrollRef} className="h-full overflow-auto font-mono text-[12px] leading-[1.65]">
+    <div ref={scrollRef} className="relative h-full overflow-auto font-mono text-[12px] leading-[1.65]">
+      {editable && (
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={(event) => onEdit!(event.target.value)}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          autoCorrect="off"
+          aria-label="Edit this file"
+          className="absolute inset-0 z-10 h-full w-full resize-none overflow-hidden border-0 bg-transparent
+                     py-0 pl-[52px] pr-1 font-mono text-[12px] leading-[1.65] text-transparent caret-[#001F3F]
+                     outline-none dark:caret-white"
+          style={{ WebkitTextFillColor: 'transparent' }}
+        />
+      )}
       {isDiff && stats && (
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-[#001F3F]/10 bg-white/95 px-3 py-1.5 text-[11px] backdrop-blur dark:border-white/10 dark:bg-[#001F3F]/95">
           <span className="font-sans text-[#0F7B5A] dark:text-[#7FD8AE]">+{stats.added}</span>
