@@ -16,6 +16,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://nikhilkulkarni1755.com/interesting-finds</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://nikhilkulkarni1755.com/blog/linkedin-agent</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
