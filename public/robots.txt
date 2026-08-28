@@ -1,4 +1,70 @@
+# nikhilkulkarni1755.com — crawler policy
+#
+# Search, answer-engine (GEO/AEO), and AI-assistant crawlers are welcome, training
+# included — this is a hiring site, and neither search visibility nor training-corpus
+# inclusion has a downside for it. Bulk scrapers with no search/answer product behind
+# them stay blocked. See decision D0 in agent-ready-coord/DECISIONS.md.
+#
+# User-agent tokens below are vendor-documented (agent-ready-coord/research/R1-standards.md
+# section 7) — Anthropic, OpenAI, Perplexity, Google, Apple, Meta docs, fetched 2026-08-28.
+#
+# Note: as of this commit, Cloudflare's dashboard-level "Block AI bots" and "Managed
+# robots.txt" settings still 403 / prepend a Disallow block ahead of this file at the
+# edge (see D0, R1 section 6). This file is the correct origin policy; the matching
+# dashboard change is Nikhil's action item, tracked separately.
+
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
+
+# Anthropic — Claude
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+# OpenAI
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google — training/grounding opt-in; does not affect Search indexing or ranking
+User-agent: Google-Extended
+Allow: /
+
+# Apple — training opt-in; does not affect Siri/Spotlight indexing
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta — user-triggered agent fetches (an agent acting for someone right now)
+User-agent: meta-externalfetcher
+Allow: /
+
+# Bulk scrapers with no search/answer product behind them
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+# Meta — bulk training/indexing crawl, distinct from meta-externalfetcher above
+User-agent: meta-externalagent
+Disallow: /
 
 Sitemap: https://nikhilkulkarni1755.com/sitemap.xml
