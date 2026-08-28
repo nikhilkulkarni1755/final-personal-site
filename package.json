@@ -33,7 +33,11 @@
     "run:prove": "bash finds/run/prove-daily.sh",
     "score:prove-pipeline": "bash finds/score/prove-pipeline.sh",
     "score:run": "node finds/score/run.ts",
-    "verify:daily": "node finds/verify/daily.ts"
+    "verify:daily": "node finds/verify/daily.ts",
+    "publish:test": "node --test finds/publish/snapshot.test.ts",
+    "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
+    "publish:prove": "bash finds/publish/prove-publish.sh",
+    "publish:find": "node finds/publish/cli.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
