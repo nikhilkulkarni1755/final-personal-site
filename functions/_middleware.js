@@ -71,7 +71,20 @@ const BLOG_SLUGS = new Set(blogs.map((post) => post.slug));
 function isKnownRoute(pathname) {
   if (STATIC_ROUTES.has(pathname)) return true;
   const blogSlug = pathname.match(/^\/blog\/([^/]+)$/);
-  return blogSlug ? BLOG_SLUGS.has(blogSlug[1]) : false;
+  if (blogSlug) return BLOG_SLUGS.has(blogSlug[1]);
+  // /interesting-finds/:slug (src/pages/FindDetail.tsx). Unlike blog slugs,
+  // these live in Supabase's finds_published table, populated at runtime by
+  // a separate initiative — D38 (agent-ready-coord/DECISIONS.md) forbids
+  // this lane from querying it, so there is no real enumeration to check a
+  // slug against here. Any single path segment under /interesting-finds/ is
+  // accepted and falls through to the SPA; a bogus slug gets 200 with the
+  // app shell instead of a 404. That is a deliberate, accepted trade, not an
+  // oversight: 404ing every real find to preserve a 404 on fake ones is
+  // strictly worse. Do NOT "fix" this by adding a Supabase read — that is
+  // the one thing D38 rules out. Still 404s past one segment, since no real
+  // route goes deeper than /interesting-finds/<slug>.
+  if (/^\/interesting-finds\/[^/]+$/.test(pathname)) return true;
+  return false;
 }
 
 const NOT_FOUND_BODY = `# 404 Not Found
