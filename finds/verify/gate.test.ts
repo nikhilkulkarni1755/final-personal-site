@@ -43,14 +43,10 @@ describe('nothing is fetched without an ALLOW', () => {
     assert.equal(outcome.decision.allowed, false);
     assert.equal(outcome.decision.reason_code, 'url_out_of_scope');
     assert.equal(outcome.decision.precedence_rule, 'P1');
-    // W4 itself sent nothing. The single request the origin saw is W1's own
-    // robots.txt probe, which the gate makes BEFORE applying P1. Reported to
-    // the coordinator as a bug: R2 §3.1 short-circuits on the first DENY and
-    // P1 precedes P4, so a URL failing the private-address check should
-    // produce no request at all -- as written, a candidate URL pointing at a
-    // loopback or cloud-metadata address gets a real HTTP request out of the
-    // pipeline before being denied. Tighten this to `[]` once W1 fixes it.
-    assert.deepEqual(requests, ['/robots.txt'], 'W4 must add no request of its own to a DENY');
+    // FIXED (was the SSRF bug: W1's gate fetched /robots.txt BEFORE applying
+    // P1). access.ts now takes robots.txt as a thunk that P0/P1/P2 must all
+    // pass before it is ever invoked, so a P1 denial leaves zero bytes.
+    assert.deepEqual(requests, [], 'zero bytes may leave the process for a URL P1 denies');
   });
 
   it('sends zero bytes to a domain on the manual denylist (P0)', async () => {

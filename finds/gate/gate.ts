@@ -217,10 +217,43 @@ function robotsProvenance(origin: string, outcome: RobotsOutcome, decision: Awai
   };
 }
 
+/** Provenance for a URL denied by P0/P1/P2, before robots.txt was ever
+ * fetched. Distinguishing this from "fetched and found absent" is the whole
+ * point of the SSRF fix: this record is proof no request left the process. */
+function robotsProvenanceNotAttempted(origin: string): RobotsProvenance {
+  const robotsUrl = new URL('/robots.txt', origin).toString();
+  return {
+    source_url: robotsUrl,
+    final_url: robotsUrl,
+    redirect_hops: 0,
+    http_status: null,
+    content_type: null,
+    byte_length: null,
+    truncated: false,
+    sha256: null,
+    fetched_at: null, // never fetched -- see the doc comment on RobotsProvenance.fetched_at
+    matched_group_token: null,
+    group_selection_basis: 'NOT_ATTEMPTED',
+    ai_tokens_disallowed: [],
+    crawl_delay_seconds: null,
+    sitemaps: [],
+    content_signal: null,
+    content_usage: null,
+  };
+}
+
 /** Full permission + use-rights check for one URL. This is the only
  * function anything outside finds/gate/** should call to decide whether it
  * may fetch a page. `candidateId` is optional (null for standalone/CLI use)
- * -- W4 must supply it before persisting, since the DB column is NOT NULL. */
+ * -- W4 must supply it before persisting, since the DB column is NOT NULL.
+ *
+ * SECURITY: robots.txt is fetched lazily, inside access.ts's decideAccess,
+ * only after P0 (denylist) and P1 (URL scope -- private/loopback/CGNAT
+ * addresses) have both passed. A candidate URL is attacker-controlled input
+ * (anyone can submit a launch pointing at 127.0.0.1 or a cloud metadata
+ * address); fetching robots.txt before that check is answered would leak a
+ * real request carrying our UA to a target the operator does not control.
+ * Do not reintroduce an eager `getRobotsOutcome(authority)` call here. */
 export async function checkPage(url: string, opts: { candidateId?: string | null; runState?: RunState } = {}): Promise<GateVerdict> {
   const cached = verdictCache.get(url);
   if (cached) return cached;
@@ -228,12 +261,21 @@ export async function checkPage(url: string, opts: { candidateId?: string | null
   const parsed = new URL(url);
   const authority = parsed.origin;
   const runState = opts.runState ?? createRunState();
-  const robotsOutcome = await getRobotsOutcome(authority);
-  const decision = await decideAccess(url, authority, robotsOutcome, runState);
+
+  let robotsOutcome: RobotsOutcome | null = null;
+  const decision = await decideAccess(
+    url,
+    authority,
+    async () => {
+      robotsOutcome = await getRobotsOutcome(authority);
+      return robotsOutcome;
+    },
+    runState,
+  );
   const decidedAt = new Date();
 
-  const robots = robotsProvenance(authority, robotsOutcome, decision);
-  const evidence: EvidenceEntry[] = [robotsEvidenceEntry(authority, robotsOutcome)];
+  const robots = robotsOutcome ? robotsProvenance(authority, robotsOutcome, decision) : robotsProvenanceNotAttempted(authority);
+  const evidence: EvidenceEntry[] = robotsOutcome ? [robotsEvidenceEntry(authority, robotsOutcome)] : [];
 
   let useRights: GateVerdict['use_rights'] = null;
   let crawlBudget: CrawlBudget | null = null;
@@ -345,13 +387,19 @@ export interface SiteCheckResult {
 export async function checkSite(originUrl: string, opts: { candidateId?: string | null } = {}): Promise<SiteCheckResult> {
   const origin = new URL(originUrl).origin;
   const runState = createRunState();
-  const robotsOutcome = await getRobotsOutcome(origin);
 
+  // No eager robots.txt fetch here (that was the same SSRF bug checkPage
+  // had): let checkPage decide the homepage first, which only reaches
+  // robots.txt itself after P0/P1/P2 pass.
   const homepage = await checkPage(origin + '/', { ...opts, runState });
   if (!homepage.allowed) {
     return { origin, allowed: [], disallowed: [homepage], truncated: false };
   }
 
+  // Safe now: homepage.allowed can only be true if checkPage's P4-P7 logic
+  // ran, which means the thunk fired and robotsCache is populated. The
+  // getRobotsOutcome() fallback is defensive, not the expected path.
+  const robotsOutcome = robotsCache.get(origin) ?? (await getRobotsOutcome(origin));
   const sitemaps = robotsOutcome.kind === 'parsed' && robotsOutcome.sitemaps.length > 0
     ? robotsOutcome.sitemaps
     : [new URL('/sitemap.xml', origin).toString()];

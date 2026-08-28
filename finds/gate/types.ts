@@ -111,7 +111,9 @@ export interface RobotsProvenance {
   byte_length: number | null;
   truncated: boolean;
   sha256: string | null;
-  fetched_at: string;
+  /** Null only when group_selection_basis is NOT_ATTEMPTED -- robots.txt was
+   * never fetched because P0/P1/P2 denied the URL first (SSRF fix). */
+  fetched_at: string | null;
   matched_group_token: string | null;
   group_selection_basis: GroupSelectionBasis;
   ai_tokens_disallowed: string[];
