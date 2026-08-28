@@ -24,11 +24,11 @@
  * source data the way a prose-authored count can.
  */
 
-import projectsData from './projects.json';
-import blogsData from './blogs.json';
-import appsData from './apps.json';
-import socialData from './social.json';
-import weaveData from './weave-data.json';
+import projectsData from './projects.json' with { type: 'json' };
+import blogsData from './blogs.json' with { type: 'json' };
+import appsData from './apps.json' with { type: 'json' };
+import socialData from './social.json' with { type: 'json' };
+import weaveData from './weave-data.json' with { type: 'json' };
 
 export const SITE_URL = 'https://nikhilkulkarni1755.com';
 export const SITE_NAME = 'Nikhil Kulkarni';
