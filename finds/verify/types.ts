@@ -99,6 +99,11 @@ export interface GateDecision {
    */
   use_rights: GateUseRights | null;
   crawl_budget: GateCrawlBudget;
+  /**
+   * Sitemap: directives the gate already read out of robots.txt (R2 §5.1
+   * step 2). Passed through so W4 does not fetch robots.txt a second time.
+   */
+  sitemaps: string[];
   /** Which gate produced this, for the audit trail. */
   gate_version: string;
   decided_at: string;

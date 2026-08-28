@@ -13,8 +13,18 @@
 
 import type { EvidencePageRole } from './types.ts';
 
-const BLOCK_ELEMENTS = /<\/?(p|div|section|article|header|footer|li|tr|h[1-6]|br)\b[^>]*>/gi;
+/**
+ * Every tag separates two runs of text EXCEPT the phrase-level ones, which
+ * routinely wrap part of a word (`<b>Graph</b>QL`) and would be split by a
+ * space. Layout wrappers -- span and a especially -- are separators: without
+ * that, two adjacent cells come out of an <li> as "Vault fileYour device",
+ * which is what a real launch page produced on the first field run.
+ */
+const INLINE_ELEMENTS = /<\/?(b|i|em|strong|code|kbd|sup|sub|u|s|mark|abbr|q|cite|var|time)\b[^>]*>/gi;
 const STRIPPED_ELEMENTS = /<(script|style|noscript|svg|template)\b[^>]*>[\s\S]*?<\/\1>/gi;
+/** Site chrome. Repeated on every page, describes nothing, and its unpunctuated
+ * link runs masquerade as sentences. */
+const CHROME_ELEMENTS = /<(nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi;
 
 const ENTITIES: Record<string, string> = {
   amp: '&',
@@ -46,7 +56,7 @@ export function decodeEntities(input: string): string {
 /** Tags out, entities decoded, whitespace collapsed. Block tags become spaces. */
 export function toText(html: string): string {
   return decodeEntities(
-    html.replace(STRIPPED_ELEMENTS, ' ').replace(BLOCK_ELEMENTS, ' ').replace(/<[^>]*>/g, ''),
+    html.replace(STRIPPED_ELEMENTS, ' ').replace(INLINE_ELEMENTS, '').replace(/<[^>]*>/g, ' '),
   )
     .replace(/\s+/g, ' ')
     .trim();
@@ -78,7 +88,7 @@ function firstMatch(html: string, pattern: RegExp): string | null {
 }
 
 export function parsePage(html: string): ParsedPage {
-  const body = html.replace(STRIPPED_ELEMENTS, ' ');
+  const body = html.replace(STRIPPED_ELEMENTS, ' ').replace(CHROME_ELEMENTS, ' ');
 
   const headings: Heading[] = [];
   for (const match of body.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)) {

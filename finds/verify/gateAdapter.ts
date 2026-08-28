@@ -80,13 +80,14 @@ interface RubricVerdict {
   deciding_signal?: GateDecidingSignal;
   use_rights?: GateDecision['use_rights'];
   crawl_budget?: Partial<GateCrawlBudget>;
+  robots?: { sitemaps?: string[] };
   gate_version?: string;
 }
 
 /** W1's pre-rubric shape (finds/gate/types.ts, `AuditRecord`). */
 interface AuditRecord {
   verdict: { allowed: boolean; reason: string; source: string; matchedRule?: string };
-  site?: { crawlDelayMs?: number };
+  site?: { crawlDelayMs?: number; sitemaps?: string[] };
 }
 
 function isRubricVerdict(v: unknown): v is RubricVerdict {
@@ -125,6 +126,7 @@ export async function decide(url: string): Promise<GateDecision> {
       deciding_signal: raw.deciding_signal ?? null,
       use_rights: raw.use_rights ?? null,
       crawl_budget: clampBudget(raw.crawl_budget),
+      sitemaps: raw.robots?.sitemaps ?? [],
       gate_version: raw.gate_version ?? 'unspecified',
       decided_at,
     };
@@ -140,6 +142,7 @@ export async function decide(url: string): Promise<GateDecision> {
       deciding_signal: null,
       use_rights: null,
       crawl_budget: clampBudget({ delay_ms: raw.site?.crawlDelayMs }),
+      sitemaps: raw.site?.sitemaps ?? [],
       gate_version: 'pre-rubric gate (no reason_code, no use_rights)',
       decided_at,
     };
