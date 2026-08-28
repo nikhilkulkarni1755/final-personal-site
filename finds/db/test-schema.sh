@@ -51,6 +51,20 @@ for table in finds_sources finds_source_health finds_candidates \
 done
 echo "anon is denied on every private table"
 
+# PostgREST exposes every function in the schema as a callable endpoint, and
+# finds_write_verdict writes. Only the service role may execute it.
+for role in anon authenticated; do
+    if [ "$(psql -tAc "SELECT has_function_privilege('$role', 'finds_write_verdict(uuid,uuid,text,jsonb)', 'EXECUTE');")" = "t" ]; then
+        echo "FAIL: $role can execute finds_write_verdict" >&2
+        exit 1
+    fi
+done
+if [ "$(psql -tAc "SELECT has_function_privilege('service_role', 'finds_write_verdict(uuid,uuid,text,jsonb)', 'EXECUTE');")" != "t" ]; then
+    echo "FAIL: service_role cannot execute finds_write_verdict" >&2
+    exit 1
+fi
+echo "finds_write_verdict is service-role only"
+
 # ...and finds_published is the one table it CAN read.
 psql -c "SET ROLE anon; SELECT 1 FROM finds_published LIMIT 1;" >/dev/null
 echo "anon can read finds_published"

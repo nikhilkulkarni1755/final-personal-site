@@ -617,3 +617,51 @@ export type NewCrawlEvidence = Pick<
       | 'remote_ip'
     >
   >;
+
+/* ========================================================================== */
+/* finds_write_verdict -- the D7/D17 transaction bridge                        */
+/* ========================================================================== */
+
+/**
+ * One citation as the RPC payload carries it. `stance` may be omitted and the
+ * column default ('supports') applies.
+ */
+export interface WriteVerdictCitation {
+  evidence_id: string;
+  stance?: CitationStance;
+}
+
+/** One verdict as the RPC payload carries it. `citations` must be non-empty. */
+export interface WriteVerdictPayload {
+  criterion: Criterion;
+  score: VerdictScore;
+  rationale: string;
+  scored_by: string;
+  citations: WriteVerdictCitation[];
+}
+
+/**
+ * Arguments for `supabase.rpc('finds_write_verdict', args)`.
+ *
+ * Why this exists rather than two inserts: D7's citation check is a
+ * DEFERRABLE INITIALLY DEFERRED constraint trigger that fires at COMMIT, and
+ * PostgREST gives one transaction per HTTP request (D17). Inserting the verdict
+ * and then its citations commits the verdict alone, the trigger fires against
+ * it uncited, and the transaction aborts -- correctly. One function call is one
+ * transaction, so it can satisfy the constraint that two calls cannot.
+ *
+ * Every guarantee still holds at COMMIT: the deferred trigger runs, and
+ * `candidate_id` for each citation is taken from `p_candidate_id` rather than
+ * from the payload, so the composite FK still makes citing another product's
+ * evidence impossible.
+ *
+ * Service role only -- EXECUTE is revoked from anon and authenticated, because
+ * PostgREST exposes every function as an endpoint and this one writes.
+ */
+export interface WriteVerdictArgs {
+  p_candidate_id: string;
+  p_evidence_run_id: string;
+  /** Required. A defaulted version would stamp a rubric onto scores it did not produce. */
+  p_rubric_version: string;
+  p_verdicts: WriteVerdictPayload[];
+}
