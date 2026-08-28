@@ -6,6 +6,46 @@
 
 import blogs from '../src/data/blogs.json';
 
+// W4's Supabase edge functions (agent-ready-coord/lanes/W4.md). The project
+// ref is already public — it ships in the client bundle as VITE_SUPABASE_URL
+// (src/lib/supabase.ts) — so hardcoding it here isn't a credential.
+const MCP_UPSTREAM = 'https://couqjixnoxrefzlyqucq.supabase.co/functions/v1/mcp';
+const API_UPSTREAM = 'https://couqjixnoxrefzlyqucq.supabase.co/functions/v1/site-api';
+
+// /mcp (+ anything under it) and /api/* are reverse-proxied onto W4's
+// functions so the MCP server card can advertise nikhilkulkarni1755.com
+// instead of a supabase.co URL. Method, body, and headers all go through
+// unchanged in both directions — Streamable HTTP needs POST/GET/DELETE, and
+// MCP-Protocol-Version / Mcp-Session-Id / Accept have to survive the hop.
+// Origin is forwarded as the client sent it (never invented here), which is
+// what the MCP server's Origin allowlist expects: absent is fine, and a
+// present-but-unrecognised one is the case it's meant to reject.
+function proxyTarget(pathname) {
+  if (pathname === '/mcp' || pathname.startsWith('/mcp/')) {
+    return MCP_UPSTREAM + pathname.slice('/mcp'.length);
+  }
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
+    return API_UPSTREAM + pathname.slice('/api'.length);
+  }
+  return null;
+}
+
+async function proxy(request, target, search) {
+  const headers = new Headers(request.headers);
+  headers.delete('host');
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+  const upstream = await fetch(target + search, {
+    method: request.method,
+    headers,
+    body: hasBody ? await request.arrayBuffer() : undefined,
+  });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: upstream.headers,
+  });
+}
+
 // Extensionless paths the client-side router (src/App.tsx) actually renders,
 // with a short title for each — reused below both for 404 knowledge and for
 // the ?mode=agent page list.
@@ -112,6 +152,13 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const { pathname } = url;
+
+  // Must run before the known-route check below: /mcp and /api have no dot
+  // in their last segment, so without this they'd hit that check and 404.
+  const target = proxyTarget(pathname);
+  if (target) {
+    return proxy(request, target, url.search);
+  }
 
   if (pathname === '/' && url.searchParams.get('mode') === 'agent') {
     return agentModeView();
