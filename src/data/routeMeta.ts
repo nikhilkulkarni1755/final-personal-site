@@ -127,9 +127,11 @@ export interface RouteMeta {
    * There is no entry for /spearfishing/voice-agent in this map at all
    * (D4), so it never gets this field and W1's injector must emit no
    * <link rel="alternate"> tag for it, the same as it already does for
-   * canonical.
+   * canonical. Optional (not just always-present-but-empty) because a route
+   * can exist here before its markdown mirror does — see /interesting-finds,
+   * where W2's twin hasn't landed yet; do not fabricate the path, omit it.
    */
-  markdownAlternate: string;
+  markdownAlternate?: string;
   og: OpenGraph;
   twitter: TwitterCard;
   jsonLd: JsonLd;
@@ -156,6 +158,8 @@ function meta(path: string, opts: {
   description: string;
   type?: OpenGraph['type'];
   image?: string;
+  /** False only for a route whose markdown mirror doesn't exist yet (W2 lands it in parallel). */
+  hasMarkdownMirror?: boolean;
 }): Pick<RouteMeta, 'title' | 'description' | 'canonical' | 'markdownAlternate' | 'og' | 'twitter'> {
   const canonical = `${SITE_URL}${path}`;
   // W2's path contract: homepage -> /index.md, everything else -> <path>.md.
@@ -165,7 +169,7 @@ function meta(path: string, opts: {
     title: opts.title,
     description: opts.description,
     canonical,
-    markdownAlternate,
+    ...((opts.hasMarkdownMirror ?? true) ? { markdownAlternate } : {}),
     og: {
       title: opts.title,
       description: opts.description,
@@ -502,6 +506,41 @@ export const routeMeta: Record<string, RouteMeta> = {
         mainEntityOfPage: `${SITE_URL}/take-homes/weave`,
         datePublished: weaveGeneratedDate,
         keywords: ['Engineering Analytics', 'PostHog', 'Take-Home'],
+        author: personRef,
+        inLanguage: 'en-US',
+      },
+    ),
+  },
+
+  '/interesting-finds': {
+    // Page-level metadata only. The page itself injects its own runtime
+    // ItemList (src/pages/InterestingFinds.tsx, @id .../interesting-finds#list)
+    // with numberOfItems/itemListElement reflecting what actually loaded — a
+    // build-time count here would be fabricated, the exact thing this
+    // initiative refuses to ship. Do not add an ItemList in this file. W1's
+    // prerender pass strips any pre-existing JSON-LD before injecting this
+    // block, so this CollectionPage node is what a crawler sees in the
+    // static snapshot; the runtime ItemList only exists after client
+    // hydration re-runs in a live browser. Its markdown mirror has not
+    // landed yet (W2, in parallel) — hasMarkdownMirror: false so this route
+    // advertises no alternate rather than one that 404s; flip it on once
+    // /interesting-finds.md exists.
+    ...meta('/interesting-finds', {
+      title: 'Interesting Finds — Nikhil Kulkarni',
+      description:
+        'Product launches Nikhil Kulkarni found genuinely interesting: checked against four criteria — a verified claim, a rare problem solved, no gated access, and agent/MCP friendliness — before earning a spot.',
+      hasMarkdownMirror: false,
+    }),
+    jsonLd: graph(
+      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Interesting Finds', path: '/interesting-finds' }]),
+      {
+        '@type': 'CollectionPage',
+        '@id': `${SITE_URL}/interesting-finds#page`,
+        name: 'Interesting Finds',
+        description:
+          'Product launches Nikhil Kulkarni found genuinely interesting: checked against four criteria — a verified claim, a rare problem solved, no gated access, and agent/MCP friendliness — before earning a spot.',
+        url: `${SITE_URL}/interesting-finds`,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
         author: personRef,
         inLanguage: 'en-US',
       },
