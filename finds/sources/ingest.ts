@@ -49,3 +49,23 @@ export async function upsertSighting(
   );
   return (rowCount ?? 0) > 0;
 }
+
+/**
+ * Which of `externalIds` already have a sighting for this source. Exists for
+ * sources where fetching one item's full record costs a separate expensive
+ * request (Peerlist's per-project detail-page hop, rate-limited by
+ * Cloudflare) -- callers use this to skip re-resolving what is already
+ * stored instead of discovering that via a failed insert.
+ */
+export async function getSeenExternalIds(
+  pool: Pool,
+  sourceId: string,
+  externalIds: string[],
+): Promise<Set<string>> {
+  if (externalIds.length === 0) return new Set();
+  const { rows } = await pool.query<{ external_id: string }>(
+    `SELECT external_id FROM finds_candidate_sightings WHERE source_id = $1 AND external_id = ANY($2)`,
+    [sourceId, externalIds],
+  );
+  return new Set(rows.map((row) => row.external_id));
+}
