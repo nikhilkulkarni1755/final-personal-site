@@ -1,31 +1,31 @@
-import { Pool } from 'pg';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// The one place ingest code touches a Postgres connection string.
+// The one place ingest code touches a Supabase credential.
 //
-// D0: the pipeline runs as a GitHub Actions cron against Supabase Postgres.
-// A cron job is a backend batch process, not a browser client, so it talks
-// directly to Postgres (bypassing RLS as the service role / a role with
-// equivalent rights) rather than through PostgREST with the anon key that
-// src/lib/supabase.ts uses. That also lets the exact same code run against
-// the throwaway cluster finds/db/test-schema.sh spins up for local testing,
-// which has no PostgREST in front of it at all.
+// D17 (coordinator): every lane that needs privileged DB access reads
+// SUPABASE_URL (falling back to VITE_SUPABASE_URL, the same value the
+// browser client in src/lib/supabase.ts uses) and SUPABASE_SERVICE_ROLE_KEY.
+// The service-role key bypasses RLS -- it must never carry a VITE_ prefix,
+// or Vite would bundle a full RLS bypass into the site the browser loads.
+// This module never reads a VITE_-prefixed name for the key, only for the
+// URL fallback.
 //
 // D6 pattern, matching finds/email/transport.ts: an absent credential is a
 // loud, explicit failure, never a silent no-op.
 
-let pool: Pool | null = null;
+let client: SupabaseClient | null = null;
 
-export function getPool(): Pool {
-  if (pool) return pool;
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
+export function getSupabaseClient(): SupabaseClient {
+  if (client) return client;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) {
     throw new Error(
-      'Cannot reach Postgres: DATABASE_URL is not set. ' +
-        'This is a hard stop, not a skip -- set it to a Postgres connection ' +
-        'string (the Supabase project connection string, or a local test ' +
-        'cluster from finds/db/test-schema.sh) and re-run.',
+      'Cannot reach Supabase: SUPABASE_URL (or VITE_SUPABASE_URL) and/or ' +
+        'SUPABASE_SERVICE_ROLE_KEY are not set. This is a hard stop, not a ' +
+        'skip -- set both and re-run.',
     );
   }
-  pool = new Pool({ connectionString });
-  return pool;
+  client = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  return client;
 }

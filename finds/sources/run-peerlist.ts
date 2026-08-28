@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
-import type { Pool } from 'pg';
-import { getPool } from './db.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from './db.ts';
 import { ensureSource, recordFailure, recordSuccess } from './health.ts';
 import { getSeenExternalIds, upsertCandidate, upsertSighting } from './ingest.ts';
 import {
@@ -14,7 +14,8 @@ import {
 } from './peerlist.ts';
 import type { FetchedLaunch } from './connector.ts';
 
-// Daily Peerlist ingest. Usage: DATABASE_URL=... node finds/sources/run-peerlist.ts
+// Daily Peerlist ingest. Usage:
+//   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-peerlist.ts
 //
 // Engineering constraint that shapes this file (R1 sec.1.3, measured live):
 // Cloudflare allows roughly 12 API calls per browser context before it
@@ -39,13 +40,13 @@ const DETAIL_HOP_LIMIT = Number(process.env.PEERLIST_DETAIL_HOP_LIMIT ?? 8);
 const PACE_MS = 900;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function persist(pool: Pool, sourceId: string, launch: FetchedLaunch): Promise<boolean> {
-  const candidateId = await upsertCandidate(pool, {
+async function persist(client: SupabaseClient, sourceId: string, launch: FetchedLaunch): Promise<boolean> {
+  const candidateId = await upsertCandidate(client, {
     product_url: launch.productUrl,
     name: launch.name,
     tagline: launch.tagline,
   });
-  return upsertSighting(pool, {
+  return upsertSighting(client, {
     candidate_id: candidateId,
     source_id: sourceId,
     external_id: launch.externalId,
@@ -57,8 +58,8 @@ async function persist(pool: Pool, sourceId: string, launch: FetchedLaunch): Pro
   });
 }
 
-const pool = getPool();
-const sourceId = await ensureSource(pool, {
+const client = getSupabaseClient();
+const sourceId = await ensureSource(client, {
   slug: 'peerlist',
   displayName: 'Peerlist Launchpad',
   homepageUrl: 'https://peerlist.io',
@@ -75,7 +76,7 @@ try {
 
   const featured = await fetchPeerlistFeaturedToday(page);
   if (featured) {
-    const isNew = await persist(pool, sourceId, featured);
+    const isNew = await persist(client, sourceId, featured);
     if (isNew) {
       newSightings += 1;
       console.log(`[peerlist] + (featured today) ${featured.name} -- ${featured.productUrl} (${featured.sourceUrl})`);
@@ -90,7 +91,7 @@ try {
   console.log(`[peerlist] week ${year}-W${week}: ${listing.length} launch(es) listed`);
 
   const candidates = listing.filter((item) => item.id !== featured?.externalId);
-  const seen = await getSeenExternalIds(pool, sourceId, candidates.map((item) => item.id));
+  const seen = await getSeenExternalIds(client, sourceId, candidates.map((item) => item.id));
   const unresolved = candidates.filter((item) => !seen.has(item.id));
   console.log(`[peerlist] ${unresolved.length} not yet resolved (${candidates.length - unresolved.length} already have a sighting)`);
 
@@ -107,7 +108,7 @@ try {
       console.log(`[peerlist] skip ${item.title} -- no product URL on its detail page`);
       continue;
     }
-    const isNew = await persist(pool, sourceId, launch);
+    const isNew = await persist(client, sourceId, launch);
     if (isNew) {
       newSightings += 1;
       console.log(`[peerlist] + ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
@@ -122,13 +123,12 @@ try {
   }
 
   console.log(`[peerlist] ${newSightings} new sighting(s) this run`);
-  await recordSuccess(pool, sourceId);
+  await recordSuccess(client, sourceId);
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
-  await recordFailure(pool, sourceId, message);
+  await recordFailure(client, sourceId, message);
   console.error(`[peerlist] FAILED: ${message}`);
   process.exitCode = 1;
 } finally {
   await browser.close();
-  await pool.end();
 }

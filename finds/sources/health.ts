@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SourceDefinition } from './connector.ts';
 
 // The D3 write path: every pull attempt records its own outcome in
@@ -7,35 +7,43 @@ import type { SourceDefinition } from './connector.ts';
 // READY note). Status itself is read from finds_source_health, computed
 // there -- this module only ever writes the raw columns, never the status.
 
+function fail(action: string, message: string): never {
+  throw new Error(`finds_sources ${action} failed: ${message}`);
+}
+
 /**
  * Registers a source if it does not exist yet, or refreshes its display
  * fields if it does. finds_sources ships with no seed rows (D6); a connector
  * registers itself the first time it runs, against a credential that
  * actually exists (or none, for an anonymous source).
  */
-export async function ensureSource(pool: Pool, def: SourceDefinition): Promise<string> {
-  const { rows } = await pool.query<{ id: string }>(
-    `INSERT INTO finds_sources (slug, display_name, homepage_url, auth_kind, staleness_budget_hours)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (slug) DO UPDATE
-       SET display_name = EXCLUDED.display_name,
-           homepage_url = EXCLUDED.homepage_url
-     RETURNING id`,
-    [def.slug, def.displayName, def.homepageUrl, def.authKind, def.stalenessBudgetHours ?? 36],
-  );
-  return rows[0].id;
+export async function ensureSource(client: SupabaseClient, def: SourceDefinition): Promise<string> {
+  const { data, error } = await client
+    .from('finds_sources')
+    .upsert(
+      {
+        slug: def.slug,
+        display_name: def.displayName,
+        homepage_url: def.homepageUrl,
+        auth_kind: def.authKind,
+        staleness_budget_hours: def.stalenessBudgetHours ?? 36,
+      },
+      { onConflict: 'slug' },
+    )
+    .select('id')
+    .single();
+  if (error) fail('upsert', error.message);
+  return (data as { id: string }).id;
 }
 
 /** Call once a pull completes and returned a usable response. */
-export async function recordSuccess(pool: Pool, sourceId: string): Promise<void> {
-  await pool.query(
-    `UPDATE finds_sources
-        SET last_attempt_at = NOW(),
-            last_success_at = NOW(),
-            consecutive_failures = 0
-      WHERE id = $1`,
-    [sourceId],
-  );
+export async function recordSuccess(client: SupabaseClient, sourceId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await client
+    .from('finds_sources')
+    .update({ last_attempt_at: now, last_success_at: now, consecutive_failures: 0 })
+    .eq('id', sourceId);
+  if (error) fail('recordSuccess', error.message);
 }
 
 /**
@@ -43,14 +51,23 @@ export async function recordSuccess(pool: Pool, sourceId: string): Promise<void>
  * credential (finds_sources.last_error COMMENT). `last_error`/`last_error_at`
  * are set together: a CHECK constraint enforces the pair.
  */
-export async function recordFailure(pool: Pool, sourceId: string, message: string): Promise<void> {
-  await pool.query(
-    `UPDATE finds_sources
-        SET last_attempt_at = NOW(),
-            last_error = $2,
-            last_error_at = NOW(),
-            consecutive_failures = consecutive_failures + 1
-      WHERE id = $1`,
-    [sourceId, message],
-  );
+export async function recordFailure(client: SupabaseClient, sourceId: string, message: string): Promise<void> {
+  const { data: current, error: selectError } = await client
+    .from('finds_sources')
+    .select('consecutive_failures')
+    .eq('id', sourceId)
+    .single();
+  if (selectError) fail('recordFailure (read)', selectError.message);
+
+  const now = new Date().toISOString();
+  const { error } = await client
+    .from('finds_sources')
+    .update({
+      last_attempt_at: now,
+      last_error: message,
+      last_error_at: now,
+      consecutive_failures: (current as { consecutive_failures: number }).consecutive_failures + 1,
+    })
+    .eq('id', sourceId);
+  if (error) fail('recordFailure (write)', error.message);
 }

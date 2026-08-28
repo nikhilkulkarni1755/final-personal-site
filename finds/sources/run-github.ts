@@ -1,9 +1,10 @@
-import { getPool } from './db.ts';
+import { getSupabaseClient } from './db.ts';
 import { ensureSource, recordFailure, recordSuccess } from './health.ts';
 import { upsertCandidate, upsertSighting } from './ingest.ts';
 import { fetchNewGithubRepos } from './github.ts';
 
-// Daily GitHub ingest. Usage: GITHUB_TOKEN=... DATABASE_URL=... node finds/sources/run-github.ts
+// Daily GitHub ingest. Usage:
+//   GITHUB_TOKEN=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-github.ts
 //
 // `created:>=` is day-granular (GitHub has no time-of-day filter), so the
 // window is "yesterday and today" -- a day of overlap against a missed cron
@@ -12,8 +13,8 @@ import { fetchNewGithubRepos } from './github.ts';
 
 const GITHUB_LOOKBACK_DAYS = Number(process.env.GITHUB_LOOKBACK_DAYS ?? 1);
 
-const pool = getPool();
-const sourceId = await ensureSource(pool, {
+const client = getSupabaseClient();
+const sourceId = await ensureSource(client, {
   slug: 'github',
   displayName: 'GitHub',
   homepageUrl: 'https://github.com',
@@ -27,12 +28,12 @@ try {
 
   let newSightings = 0;
   for (const launch of launches) {
-    const candidateId = await upsertCandidate(pool, {
+    const candidateId = await upsertCandidate(client, {
       product_url: launch.productUrl,
       name: launch.name,
       tagline: launch.tagline,
     });
-    const isNew = await upsertSighting(pool, {
+    const isNew = await upsertSighting(client, {
       candidate_id: candidateId,
       source_id: sourceId,
       external_id: launch.externalId,
@@ -49,12 +50,10 @@ try {
   }
 
   console.log(`[github] ${newSightings} new sighting(s), ${launches.length - newSightings} already seen`);
-  await recordSuccess(pool, sourceId);
+  await recordSuccess(client, sourceId);
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
-  await recordFailure(pool, sourceId, message);
+  await recordFailure(client, sourceId, message);
   console.error(`[github] FAILED: ${message}`);
   process.exitCode = 1;
-} finally {
-  await pool.end();
 }
