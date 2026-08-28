@@ -10,11 +10,13 @@
 import { preview } from 'vite';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
+const ROUTE_META = join(ROOT, 'src/data/routeMeta.ts');
 
 /**
  * `expect` is the app-ready signal: a snapshot is only written once every one of
@@ -41,6 +43,46 @@ const ROUTES = [
 
 /** Minimum characters of rendered text before a route counts as rendered at all. */
 const MIN_TEXT = 400;
+
+/**
+ * Per-route <title>/description/JSON-LD, owned by src/data/routeMeta.ts.
+ * Contract: a `routeMeta` (or default) export keyed by the route path, each entry
+ * `{ title: string, description: string, jsonLd?: object | object[] }`.
+ * The file is optional — until it exists every snapshot just keeps the site-wide
+ * title and description already in index.html, and the build still passes.
+ */
+async function loadRouteMeta() {
+  if (!existsSync(ROUTE_META)) {
+    console.log('src/data/routeMeta.ts not present — snapshots keep the site-wide meta');
+    return null;
+  }
+  const mod = await import(pathToFileURL(ROUTE_META).href);
+  return mod.routeMeta ?? mod.default ?? null;
+}
+
+const escapeAttr = (s) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Rewrite the head of a captured page with that route's metadata. */
+function injectMeta(html, meta) {
+  if (!meta) return html;
+  let out = html;
+  if (meta.title) {
+    out = out.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeAttr(meta.title)}</title>`);
+  }
+  if (meta.description) {
+    out = out.replace(
+      /<meta\s+name="description"\s+content="[\s\S]*?"\s*\/?>/,
+      `<meta name="description" content="${escapeAttr(meta.description)}">`
+    );
+  }
+  if (meta.jsonLd) {
+    // </script> inside a JSON string would close the tag early.
+    const json = JSON.stringify(meta.jsonLd).replace(/<\//g, '<\\/');
+    out = out.replace('</head>', `<script type="application/ld+json">${json}</script></head>`);
+  }
+  return out;
+}
 
 async function waitForContent(page, expected) {
   await page.waitForFunction(
@@ -81,6 +123,7 @@ async function waitForStableDom(page) {
 }
 
 async function main() {
+  const routeMeta = await loadRouteMeta();
   const server = await preview({
     root: ROOT,
     preview: { port: 4180, strictPort: true, host: '127.0.0.1' },
@@ -109,13 +152,19 @@ async function main() {
         await waitForStableDom(page);
         await waitForContent(page, route.expect);
 
-        const html = await page.evaluate(
+        const captured = await page.evaluate(
           () => '<!DOCTYPE html>\n' + document.documentElement.outerHTML
         );
+        const meta = routeMeta?.[route.path];
+        if (routeMeta && !meta) console.warn(`  no routeMeta entry for ${route.path}`);
+        const html = injectMeta(captured, meta);
+
         const out = join(DIST, route.path === '/' ? '' : route.path, 'index.html');
         await mkdir(dirname(out), { recursive: true });
         await writeFile(out, html, 'utf8');
-        console.log(`prerendered ${route.path.padEnd(34)} ${html.length} bytes`);
+        console.log(
+          `prerendered ${route.path.padEnd(34)} ${html.length} bytes${meta ? ' +meta' : ''}`
+        );
       } catch (err) {
         failures.push(`${route.path}: ${err.message.split('\n')[0]}`);
         console.error(`FAILED     ${route.path} — ${err.message.split('\n')[0]}`);
