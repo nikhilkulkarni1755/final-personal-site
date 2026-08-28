@@ -58,6 +58,7 @@ const SocialLinksModal = ({ isOpen, onClose }: SocialLinksModalProps) => {
               { to: '/projects', label: 'Projects' },
               { to: '/blog', label: 'Blog' },
               { to: '/apps', label: 'Apps' },
+              { to: '/interesting-finds', label: 'Interesting Finds' },
               { to: '/about', label: 'About' },
             ].map((link) => (
               <Link
