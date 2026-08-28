@@ -153,3 +153,22 @@ export async function markPublished(db: SupabaseClient, candidateId: string): Pr
   fail(`marking candidate ${candidateId} as published`, error);
 }
 
+/**
+ * Take a find off the public page.
+ *
+ * `published_at = NULL` is the whole mechanism -- the RLS policy is
+ * `USING (published_at IS NOT NULL AND published_at <= NOW())`, so clearing it
+ * makes the row invisible to anon immediately, with no status column and no
+ * second code path. The row STAYS, because the citations and the date he
+ * approved it are the record of what was once public; deleting it would erase
+ * the evidence of a claim we had made.
+ */
+export async function unpublishBySlug(db: SupabaseClient, slug: string): Promise<void> {
+  const { data, error } = await db
+    .from('finds_published')
+    .update({ published_at: null })
+    .eq('slug', slug)
+    .select('slug');
+  fail(`unpublishing ${slug}`, error);
+  if ((data ?? []).length === 0) throw new Error(`No published find with slug ${JSON.stringify(slug)}.`);
+}

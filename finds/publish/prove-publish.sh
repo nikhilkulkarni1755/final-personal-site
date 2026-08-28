@@ -10,8 +10,8 @@
 #     its real CHECKs;
 #   * `published_at` IS the visibility switch: the same row is invisible to
 #     anon while it is drafted, invisible while it is scheduled, visible once
-#     the timestamp passes -- with RLS on and the anon role really set, which
-#     is exactly what W7's useFinds gets;
+#     the timestamp passes, and invisible again after an unpublish -- with RLS
+#     on and the anon role really set, which is exactly what W7's useFinds gets;
 #   * the DECISIONS D23 case is refused: a tenant on a shared host whose
 #     evidence includes a page the host wrote never reaches the table at all.
 #
@@ -241,9 +241,17 @@ command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
    SELECT jsonb_pretty(citations) FROM finds_published;"
 echo "PASS  the site can read it"
 
+echo
+echo "=== 5. unpublish: published_at = NULL, the row stays ==="
+SLUG=$(q "SELECT slug FROM finds_published LIMIT 1;")
+psql -c "UPDATE finds_published SET published_at = NULL WHERE slug = \$w11\$$SLUG\$w11\$;" >/dev/null
+echo "  anon rows: $(anon_sees)   rows still on file: $(q 'SELECT count(*) FROM finds_published;')"
+test "$(anon_sees)" = "0"
+test "$(q 'SELECT count(*) FROM finds_published;')" = "1"
+echo "PASS  a takedown hides the find without erasing what was claimed"
 
 echo
-echo "=== 5. the citations that survived, and why ==="
+echo "=== 6. the citations that survived, and why ==="
 command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
   "SELECT j->>'criterion' AS criterion, j->>'url' AS url, j->>'stance' AS stance,
           coalesce(j->>'quote', '(no quote -- the page refuses a public excerpt)') AS quote

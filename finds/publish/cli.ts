@@ -1,8 +1,9 @@
 /**
  * The only way a find reaches nikhilkulkarni1755.com.
  *
- *   node finds/publish/cli.ts publish --candidate <uuid> --approval <file.json>
- *                                     [--slug <segment>] [--at <iso> | --draft]
+ *   node finds/publish/cli.ts publish   --candidate <uuid> --approval <file.json>
+ *                                       [--slug <segment>] [--at <iso> | --draft]
+ *   node finds/publish/cli.ts unpublish --slug <segment>
  *
  * IT IS NEVER SCHEDULED. Nothing in finds/run/** imports this file and nothing
  * should: the daily workflow ingests, verifies, scores and mails, and stops
@@ -25,7 +26,7 @@
 import { readFile } from 'node:fs/promises';
 
 import type { FindApproval } from './approval.ts';
-import { getSupabaseClient, insertPublished, loadPublishSource, markPublished, takenSlugs } from './db.ts';
+import { getSupabaseClient, insertPublished, loadPublishSource, markPublished, takenSlugs, unpublishBySlug } from './db.ts';
 import { buildSnapshot } from './snapshot.ts';
 
 function flag(name: string): string | undefined {
@@ -40,7 +41,12 @@ function die(message: string): never {
 
 const command = process.argv[2];
 
-if (command === 'publish') {
+if (command === 'unpublish') {
+  const slug = flag('slug');
+  if (!slug) die('usage: node finds/publish/cli.ts unpublish --slug <segment>');
+  await unpublishBySlug(getSupabaseClient(), slug);
+  console.log(`unpublished ${slug} -- anon can no longer read it. The row and its citations stay.`);
+} else if (command === 'publish') {
   const candidateId = flag('candidate');
   const approvalPath = flag('approval');
   if (!candidateId || !approvalPath) {
@@ -75,5 +81,5 @@ if (command === 'publish') {
       : `published /interesting-finds/${result.row.slug} at ${publishedAt}`,
   );
 } else {
-  die('usage: node finds/publish/cli.ts publish --candidate <uuid> --approval <file.json>');
+  die('usage: node finds/publish/cli.ts publish|unpublish ...');
 }
