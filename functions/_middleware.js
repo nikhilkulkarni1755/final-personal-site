@@ -58,6 +58,7 @@ const STATIC_ROUTES = new Map([
   ['/blog', 'Blog'],
   ['/apps', 'Apps'],
   ['/about', 'About'],
+  ['/bot', 'Crawler disclosure: InterestingFindsBot'],
   ['/interesting-finds', 'Interesting finds'],
   ['/privacy-policy', 'Privacy policy'],
   ['/spearfishing/voice-agent', 'Live demo: voice-driven marketplace agent'],
