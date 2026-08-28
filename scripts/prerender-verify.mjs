@@ -28,11 +28,6 @@ if (!routeMeta) console.log('src/data/routeMeta.ts not present — checking stru
 
 const all = (html, re) => [...html.matchAll(re)];
 const failures = [];
-const pendingAlternate = [];
-
-/** W2's path contract: every route's twin is the route with .md appended, homepage excepted. */
-const twinFor = (path) => (path === '/' ? '/index.md' : `${path}.md`);
-const ALTERNATE = /<link rel="alternate" type="text\/markdown" href="([^"]*)">/g;
 
 for (const { path } of ROUTES) {
   const file = join(DIST, path === '/' ? 'index.html' : `${path}.html`);
@@ -45,7 +40,9 @@ for (const { path } of ROUTES) {
   // Duplicates are the failure mode that shipped, so they are checked either way.
   // Requiring exactly one only makes sense once routeMeta supplies the values.
   const canonicals = all(html, /<link rel="canonical" href="([^"]*)">/g);
-  const blocks = all(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g);
+  // Matches a block with attributes too (the finds page tags its own with an id),
+  // so a runtime-injected script that survived into the file is actually counted.
+  const blocks = all(html, /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g);
   const alternates = all(html, ALTERNATE);
   if (canonicals.length > 1) bad(`${canonicals.length} canonical tags, expected at most 1`);
   if (blocks.length > 1) bad(`${blocks.length} JSON-LD blocks, expected at most 1`);

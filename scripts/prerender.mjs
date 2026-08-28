@@ -77,6 +77,22 @@ export const ROUTES = [
   { path: '/apps', expect: ['End to End system designed to help build sustainable habits'] },
   { path: '/about', expect: ['Computer Science B.S. from Rutgers University'] },
   { path: '/privacy-policy', expect: ['Device types - browser and operating system information'] },
+  // Static chrome only. This page's list comes from Supabase at runtime and
+  // useFinds is fail-closed — a missing table, an RLS error and a genuinely empty
+  // table all render the same empty state — so anything drawn from the list itself
+  // would be an expect string that can never be satisfied when there is nothing
+  // published yet.
+  {
+    path: '/interesting-finds',
+    expect: ['How a find earns its spot', 'Launches I dug into and found genuinely worth your time'],
+    // The finds list is read from Supabase on page load and changes independently of
+    // deploys, so capturing it would freeze a point-in-time list and serve it as
+    // current until the next build. Not fabricated, but stale-presented-as-current,
+    // which an agent reads as fact just the same. Drop everything in the Finds
+    // section except its heading and let the live page fill it in — the same choice
+    // W2's mirror and W4's corpus made. The chrome above it is the durable part.
+    removeBeforeCapture: ['section[aria-labelledby="finds-heading"] > :not(h2)'],
+  },
   { path: '/blog/matmul-to-ai', expect: ['Every layer in every neural network is fundamentally doing this one thing'] },
   { path: '/blog/linkedin-agent', expect: ['Six-stage LLM pipeline produces a personalized connection note'] },
   { path: '/blog/docker-secrets-injection', expect: ['hardcoded VM IPs, internal URLs, API keys, and passwords'] },
@@ -152,11 +168,15 @@ const propMeta = (prop) => new RegExp(`<meta\\s+property="${prop}"[^>]*>`);
  * keys means a field W3 adds later flows through with no change here.
  */
 function injectMeta(html, meta) {
-  if (!meta) return html;
-
-  // Any JSON-LD already in the document belongs to some other route. Drop it
-  // before adding this route's single block, so blocks can never accumulate.
-  let out = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
+  // Unconditional, and before the `meta` guard: any JSON-LD in a captured page is
+  // either another route's (the accumulation bug) or one the app injected itself at
+  // runtime. src/pages/InterestingFinds.tsx appends an ItemList to document.head in
+  // a useEffect, and React runs that effect again in every real browser — so baking
+  // its output into the static file would leave two scripts sharing one @id, and a
+  // numberOfItems frozen at whatever the table held at build time. Strip it and let
+  // the page re-add its own, live.
+  let out = html.replace(/<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g, '');
+  if (!meta) return out;
 
   if (meta.title) {
     out = setTag(out, /<title>[\s\S]*?<\/title>/, `<title>${escapeAttr(meta.title)}</title>`);
@@ -205,6 +225,31 @@ function neutralShell(html) {
     .replace(/\n?\s*<link rel="canonical"[^>]*>/, '')
     .replace(/\n?\s*<link[^>]*rel="alternate"[^>]*>/g, '')
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
+}
+
+/**
+ * Empty the regions a page populates from a live source before we capture it.
+ *
+ * Safe because src/main.tsx mounts with createRoot().render(), not hydrateRoot():
+ * the client replaces #root wholesale, so nothing removed here can affect what a
+ * human sees. A comment is left in place of the removed nodes — comments are not
+ * text an extractor reads as content, so this documents the gap for anyone reading
+ * the source without asserting anything to an agent.
+ */
+async function removeRuntimeRegions(page, selectors) {
+  if (!selectors?.length) return;
+  await page.evaluate((sels) => {
+    for (const sel of sels) {
+      for (const el of document.querySelectorAll(sel)) {
+        el.replaceWith(
+          document.createComment(
+            ' populated at runtime from a live source; deliberately not captured at ' +
+              'build time, so this file never serves a stale copy '
+          )
+        );
+      }
+    }
+  }, selectors);
 }
 
 async function waitForContent(page, expected) {
@@ -316,6 +361,8 @@ async function main() {
   // and an active_sessions heartbeat per route, so each deploy would fabricate traffic in
   // the analytics tables. The counters these calls feed are ephemeral chrome that the real
   // client refetches the moment it hydrates, so nothing readable is lost by cutting them.
+  // Supabase-backed CONTENT is handled by not capturing it at all — see removeBeforeCapture
+  // — rather than by reading it here and freezing it into a file.
   await context.route('**://*.supabase.co/**', (r) => r.abort());
 
   const failures = [];
@@ -330,6 +377,8 @@ async function main() {
         await revealAll(page);
         await waitForStableDom(page);
         await waitForContent(page, route.expect);
+
+        await removeRuntimeRegions(page, route.removeBeforeCapture);
 
         const captured = await page.evaluate(
           () => '<!DOCTYPE html>\n' + document.documentElement.outerHTML
