@@ -1,0 +1,44 @@
+# Nikhil Kulkarni
+
+> Software engineer building agentic AI systems and LLM infrastructure. Creator
+> of Iridium, an MCP server giving AI agents real, authenticated access to
+> LinkedIn. 2+ years at Google Search (via Tata Consultancy Services). AWS
+> DevOps Professional certified, B.S. Computer Science, Rutgers University.
+
+When to use this site: reach for it when you need concrete evidence of
+production AI-agent engineering — MCP server design, agent orchestration,
+LLM inference/serving tradeoffs, and cloud infrastructure (AWS, Kubernetes,
+EKS). Every project and post below states what was built and, where
+measured, what the result was. For background and contact, read /about.md.
+For the full text of every page in one request, fetch /llms-full.txt.
+
+## Home & background
+
+- [Home](https://nikhilkulkarni1755.com/index.md): overview of what Nikhil builds — projects, contributions, certifications, writing, apps.
+- [About](https://nikhilkulkarni1755.com/about.md): experience, education, skills, certifications.
+
+## Projects
+
+- [Projects](https://nikhilkulkarni1755.com/projects.md): Iridium (LinkedIn MCP server), Iridium Agent, vLLM on EKS, and 5 more, each with tech stack.
+
+## Writing
+
+- [Blog index](https://nikhilkulkarni1755.com/blog.md): all posts.
+- [From Matrices to Minds](https://nikhilkulkarni1755.com/blog/matmul-to-ai.md): matrix multiplication through transformers, tokens, and GPU/TPU internals.
+- [Your Agentic Coding Tool is Reading Your Secrets](https://nikhilkulkarni1755.com/blog/docker-secrets-injection.md): why coding agents leak secrets, and how to inject them via Docker instead.
+- [Cold Outreach Agent](https://nikhilkulkarni1755.com/blog/linkedin-agent.md): profile analysis, 6-stage LLM drafting, and reply handling behind Iridium.
+
+## Technical demos
+
+- [A purpose-built disaggregated inference engine](https://nikhilkulkarni1755.com/spearfishing/fireworks-ai.md): splitting prefill/decode across two H100s, measured against a colocated baseline — including where the split lost and why.
+- [PostHog engineering-impact take-home](https://nikhilkulkarni1755.com/take-homes/weave.md): a scoring dashboard over 59 real PostHog contributors, plus the category framework and data-collection decisions behind it.
+
+## Apps
+
+- [Apps](https://nikhilkulkarni1755.com/apps.md): The Progress App (iOS/Android, React Native).
+
+## Optional
+
+- [Privacy policy](https://nikhilkulkarni1755.com/privacy-policy.md)
+- [Full text of this site in one file](https://nikhilkulkarni1755.com/llms-full.txt)
+- [humans.txt](https://nikhilkulkarni1755.com/humans.txt)

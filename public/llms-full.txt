@@ -1,0 +1,1485 @@
+# Nikhil Kulkarni — full site text
+
+> Every page on https://nikhilkulkarni1755.com that isn't excluded (see /spearfishing/voice-agent's exclusion note below), concatenated as plain markdown for a single-round-trip fetch. Generated from the real page source, not hand-copied — see /llms.txt for a shorter index with descriptions.
+
+---
+
+Source: https://nikhilkulkarni1755.com/
+
+# Building AI-Powered Agents in Production
+
+Creator of Iridium — a live MCP server giving AI agents real access to LinkedIn. Contributor to vLLM and SGLang. Impacted millions at Google Search (via Tata Consultancy Services), AWS DevOps Professional certified.
+
+[View Resume](https://drive.google.com/file/d/1lEbvJPA_pyGYIsArTv9l0f1p0aD72H49/view)
+
+## Featured Projects
+
+### The Progress App
+
+iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!
+
+React Native Firebase Websockets
+
+### Iridium
+
+Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
+
+MCP Agent Orchestration Human-in-the-Loop
+            +6 [Connect to Claude](https://iridiumhqmcp.com) Watch Demo
+
+### Iridium Agent
+
+Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
+
+Cloudflare Agents MCP Client Durable Objects
+            +3
+
+### vLLM on EKS
+
+Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
+
+vLLM LLM Inference EKS
+            +3
+
+### Linkedin Agent
+
+Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
+
+LangGraph LangChain Linkedin API
+            +1
+
+### Skim Research Papers Agent
+
+RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
+
+Pinecone AWS Lambda AWS S3
+            +1
+
+### Multi Tenant Kubernetes
+
+Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
+
+Kubernetes Docker Prometheus
+            +3
+
+### Terminal Tweet
+
+Tweet from the Terminal, create a server or just tweet with the CLI
+
+Uvicorn OAuth 2.0 (PKCE) X API
+
+### The Progress App
+
+iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!
+
+React Native Firebase Websockets
+
+### Iridium
+
+Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
+
+MCP Agent Orchestration Human-in-the-Loop
+            +6 [Connect to Claude](https://iridiumhqmcp.com) Watch Demo
+
+### Iridium Agent
+
+Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
+
+Cloudflare Agents MCP Client Durable Objects
+            +3
+
+### vLLM on EKS
+
+Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
+
+vLLM LLM Inference EKS
+            +3
+
+### Linkedin Agent
+
+Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
+
+LangGraph LangChain Linkedin API
+            +1
+
+### Skim Research Papers Agent
+
+RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
+
+Pinecone AWS Lambda AWS S3
+            +1
+
+### Multi Tenant Kubernetes
+
+Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
+
+Kubernetes Docker Prometheus
+            +3
+
+### Terminal Tweet
+
+Tweet from the Terminal, create a server or just tweet with the CLI
+
+Uvicorn OAuth 2.0 (PKCE) X API
+
+## Open Source Contributions
+
+## Certifications
+
+## Latest Articles
+
+### Cold Outreach Agent
+
+Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
+
+Profile Analysis LLM Pipeline Claude Sonnet
+            +2 2026-04-23 • 12 min Read Article
+
+### Your Agentic Coding Tool is Reading Your Secrets
+
+Why your coding agent should never see your secrets — and how Docker makes that possible.
+
+Docker Security LLM Agents
+            +2 2026-05-20 • 3 min Read Article
+
+### From Matrices to Minds
+
+How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
+
+Linear Algebra Neural Networks Transformers
+            +1 2026-03-05 • 25 min Read Article
+
+### Cold Outreach Agent
+
+Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
+
+Profile Analysis LLM Pipeline Claude Sonnet
+            +2 2026-04-23 • 12 min Read Article
+
+### Your Agentic Coding Tool is Reading Your Secrets
+
+Why your coding agent should never see your secrets — and how Docker makes that possible.
+
+Docker Security LLM Agents
+            +2 2026-05-20 • 3 min Read Article
+
+### From Matrices to Minds
+
+How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
+
+Linear Algebra Neural Networks Transformers
+            +1 2026-03-05 • 25 min Read Article
+
+## Apps for You
+
+### The Progress App
+
+Build Difficult Habits with Like Minded People
+
+- • In App Purchases, Websockets for amazing service
+- • End to End system designed to help build sustainable habits
+
+React Native Firebase In App Purchases
+            +2 [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392)
+
+### The Progress App
+
+Build Difficult Habits with Like Minded People
+
+- • In App Purchases, Websockets for amazing service
+- • End to End system designed to help build sustainable habits
+
+React Native Firebase In App Purchases
+            +2 [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392) 🤖
+
+### AI/ML Engineering
+
+Building intelligent systems with AWS Bedrock, LangChain, and custom ML models
+
+☁️
+
+### Cloud Architecture
+
+Designing scalable solutions on AWS with serverless and containerized deployments
+
+💻
+
+### Full-Stack Development
+
+Creating modern web applications with React, TypeScript, and Node.js
+
+viewing now
+      Views Likes Comments
+
+---
+
+Source: https://nikhilkulkarni1755.com/about
+
+# About Me
+
+Software engineer building scalable Agentic AI Systems and Platforms
+
+I'm an AI Engineer building reproducible, scalable AI systems with 2+ years of experience at Google Search via Tata Consultancy Services, where I delivered 200+ production code changes. I hold a Computer Science B.S. from Rutgers University and am AWS DevOps Professional certified.
+
+I specialize in bridging Cloud infrastructure (Lambda, EKS, Bedrock) with Agentic AI systems (LangChain, RAG, Vector DBs, finetuning) to deliver production-ready AI platforms. I've also published an iOS app to the App Store, demonstrating full-stack development capabilities.
+
+## Experience
+
+### Software Engineer
+
+Google (via Tata Consultancy Services)
+
+June 2021 – December 2023
+
+San Jose, CA
+
+- • To solve stakeholder analytics, built TensorFlow and MySQL chatbot with NLP and 500+ training dataset connecting to near real-time secure backend data, delivering precise insights and real-time data access to stakeholders.
+- • To facilitate data annotators, built Google Voice Command Classifier with React, Redux, and Cloud SQL. Implemented pagination and state management functionality, enabling 10,000+ voice commands to be classified.
+- • To modernize Google Search, completed 10+ Google Search Frontend Migration Projects with Typescript, HTML/CSS and Visual Regression Testing. Worked as technical liaison between client stakeholders and mgmt, delivering consistent UI/UX migrations, 200+ production code changes and 700+ code reviews.
+
+## Education
+
+### Bachelor of Science in Computer Science
+
+Rutgers University
+
+Class of 2021
+
+## Skills
+
+### AI/ML
+
+AWS Bedrock LangChain PyTorch TensorFlow Pinecone
+
+### Cloud & DevOps
+
+AWS Lambda SageMaker CloudFormation Docker Kubernetes
+
+### Frontend
+
+React TypeScript Next.js TailwindCSS Vite
+
+### Backend
+
+Node.js Python FastAPI Express PostgreSQL
+
+## Certifications
+
+- ✓ AWS DevOps Professional
+- ✓ AWS Developer Associate
+- ✓ AWS Cloud Practitioner
+- ✓ Deeplearning.AI Finetuning Large Language Models
+- ✓ MongoDB Building RAG Apps
+
+## Personal Interests
+
+Outside of AI dev, I enjoy running (multiple 10Ks), playing Quadball with Silicon Valley Vipers, and reading Classic Fiction / Tech Documentation.
+
+---
+
+Source: https://nikhilkulkarni1755.com/projects
+
+# Projects
+
+A collection of my recent work in AI/ML, cloud infrastructure, and full-stack development
+
+Feature Demo Live Demo @ WorkOS Demo Night
+
+### Iridium
+
+Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
+
+MCP Agent Orchestration Human-in-the-Loop Tool-Calling Design OAuth Multi-Tenant FastAPI PostgreSQL Evals [Connect to Claude](https://iridiumhqmcp.com)
+
+### Iridium Agent
+
+Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
+
+Cloudflare Agents MCP Client Durable Objects Workers AI OAuth TypeScript [View on GitHub](https://github.com/nikhilkulkarni1755/iridium-agent)
+
+### vLLM on EKS
+
+Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
+
+vLLM LLM Inference EKS Multi-Tenant Observability Terraform [View on GitHub](https://github.com/nikhilkulkarni1755/vllm-eks-deployment)
+
+### Linkedin Agent
+
+Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
+
+LangGraph LangChain Linkedin API LMStudio [View on GitHub](https://github.com/nikhilkulkarni1755/linkedin-agent)
+
+### Skim Research Papers Agent
+
+RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
+
+Pinecone AWS Lambda AWS S3 Qwen LLM [View on GitHub](https://github.com/MacAndPC/chat-app)
+
+### Multi Tenant Kubernetes
+
+Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
+
+Kubernetes Docker Prometheus Grafana Terraform AWS [View on GitHub](https://github.com/nikhilkulkarni1755/multi-tenant-k8)
+
+### Terminal Tweet
+
+Tweet from the Terminal, create a server or just tweet with the CLI
+
+Uvicorn OAuth 2.0 (PKCE) X API [View on GitHub](https://github.com/nikhilkulkarni1755/twitter-oauth2)
+
+### The Progress App
+
+iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!
+
+React Native Firebase Websockets [View on GitHub](https://github.com/nikhilkulkarni1755/the-progress-app)
+
+---
+
+Source: https://nikhilkulkarni1755.com/blog
+
+# Blog
+
+Thoughts on software engineering, AI/ML, and building products
+
+[### Your Agentic Coding Tool is Reading Your Secrets Why your coding agent should never see your secrets — and how Docker makes that possible. 3 min read Docker Security LLM Agents Vibe Coding DevOps](/blog/docker-secrets-injection) [### From Matrices to Minds How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence. 25 min read Linear Algebra Neural Networks Transformers GPUs](/blog/matmul-to-ai) [### Cold Outreach Agent Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate. 12 min read Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI](/blog/linkedin-agent) viewing now
+      Views Likes Comments
+
+---
+
+Source: https://nikhilkulkarni1755.com/blog/docker-secrets-injection
+
+# Your Agentic Coding Tool is *Reading* Your Secrets
+
+[Back to Blog](/blog)
+            Agentic AI Engineering
+
+Why your coding agent should never see your secrets — and how Docker makes that possible.
+
+Author: Nikhil Kulkarni
+
+May 20, 2026 3 min read Docker Security LLM Agents Vibe Coding DevOps [01 · The Problem](#s1) [02 · The Fix](#s2) [03 · Caveats](#s3)
+
+Every session with an agentic coding tool — Claude Code, Cursor, Copilot, all of them — is systematically insecure in a way most developers haven't thought through.
+
+When these tools explore your codebase, every file they read gets sent to the provider's servers as context. That includes your `.env` file, hardcoded VM IPs, internal URLs, API keys, and passwords.
+
+Section 01
+
+## The Problem
+
+They do this silently inside large toolcalls using standard shell commands like `cat`, `grep -r`, `find`, and `printenv` — completely normal parts of how coding agents navigate a project. Some of this data can be rotated if it leaks: a new API key takes thirty seconds. But some of it can't — your server IP, your personal information, your internal infrastructure. These live in your codebase because your application needs them. There's no reason they need to be stored on a third-party AI provider's servers indefinitely.
+
+secret exposure — two scenarios
+      
+            ✗ hardcoded / grepped
+          
+            $ grep -r "password" .
+          
+            $ cat .env
+          
+            DB_PASS=s3cr3t! 
+            API_KEY=sk-abc123 
+            VM_IP=192.168.1.1
+          ↑ sent to LLM servers stored forever
+            ✓ injected
+          
+            docker run \   --env-file secrets.env
+          
+            ssh ${VM_IP} 
+            curl -H "key: ${API_KEY}" 
+            psql ${DB_URL}
+          ⟳ LLM sees names only values stay local unsafe path safe path Agent runs grep -r to find credentials in the codebase… click to pause Section 02
+
+## The Fix
+
+The solution is simpler than it sounds, and you don't need anything beyond Docker Desktop or OrbStack. Run your coding agent inside a Docker container and inject all sensitive values as environment variables at container launch via `--env-file` — a file that lives entirely outside your codebase. The codebase the agent works on is completely clean: no real secrets, no hardcoded values, nothing to find and transmit. The agent still has full access to do everything it needs — SSH into a server, authenticate with an API, connect to a database — because the values exist as process-level environment variables, not as files on disk.
+
+docker run — --env-file
+
+```
+# secrets.env lives outside the repo, never committed
+docker run \
+  --env-file /path/outside/repo/secrets.env \
+  --mount type=bind,source=$(pwd),target=/workspace \
+  my-agent-image
+
+# Agent references names, never values:
+#   ssh ${VM_IP}                        ← not  ssh 192.168.1.1
+#   curl -H "Authorization: ${API_KEY}" ← not  curl -H "Authorization: sk-abc123"
+#   psql ${DB_URL}                      ← not  psql postgresql://user:pass@host/db
+```
+
+injection flow — secrets never in the repo
+    
+        secrets.envoutside repo →
+        docker run--env-file →
+        containerprocess env vars ↓
+        ${API_KEY}
+      
+        ${DB_URL}
+      
+        ${VM_IP}
+      ↓
+        agent ✓sees names only →
+        LLM promptno real values →
+        Anthropic / OpenAIharmless log
+      bind mount keeps host files in sync — edits persist, nothing is copied
+
+Critically, the container uses a bind mount, meaning the agent edits the exact same files on your host machine in real time: your `PLAN.md` gets updated, your code changes persist, your `CLAUDE.md` and memory files are all live and valid across sessions. Nothing is lost, nothing is copied — the container and your local machine share the same filesystem.
+
+Corporations already do a higher-level version of this: secrets are injected at runtime from vaults like AWS Secrets Manager or HashiCorp Vault, scoped per service, never stored as files anywhere. For vibecoders, the Docker `--env-file` approach is the right level of this same thoughtfulness.
+
+Section 03
+
+## Caveats
+
+This setup is not a silver bullet, and knowing where it breaks is as important as knowing how it works. The biggest surface-level gap: direct commands like `printenv`, `env`, and `set` dump everything injected into the process. Block these explicitly in `.claude/settings.json` using Claude Code's native permissions system:
+
+.claude/settings.json
+
+```
+{
+  "permissions": [
+    { "type": "deny", "tool": "Bash(printenv*)" },
+    { "type": "deny", "tool": "Bash(env*)" },
+    { "type": "deny", "tool": "Bash(set*)" }
+  ]
+}
+```
+
+You can reinforce this with a rule in `CLAUDE.md` instructing the agent never to print environment variable values — but the `settings.json` block is the enforceable one. The deeper gap is harder to close: if the agent writes or runs a script that logs its own environment to stdout — a Python script with `print(os.environ.items())`, a Node script with `console.log(process.env)` — that output comes back as a tool result, lands in the model's context, and reaches Anthropic's servers anyway. The Docker boundary doesn't help here.
+
+⚠ Warning — **The deny rules reduce the risk for direct shell commands, but can't intercept subprocess stdout.** This approach meaningfully shrinks the attack surface; it doesn't eliminate it entirely.
+
+For a tighter boundary, Claude Code's native sensitive config and PreToolUse hooks (see: *nopeek*) can scrub matched patterns before they ever reach the model — worth researching if you need the next level. The second caveat is simpler: don't run your agent in auto-accept mode as a habit. Confirmation prompts exist for a reason. Treat them as a feature.
+
+The extra hour of setup is the difference between your infrastructure living on someone else's servers forever and it never being there at all.
+
+viewing now
+      Views Likes Comments [Back to Blog](/blog)
+
+---
+
+Source: https://nikhilkulkarni1755.com/blog/linkedin-agent
+
+# *Cold* Outreach Agent
+
+[Back to Blog](/blog)
+            Engineering Case Study
+
+Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
+
+Author: Nikhil Kulkarni
+
+April 23, 2026 12 min read Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI [01 · Pipeline](#s1) [02 · Tech Stack](#s2) [03 · LLM Pipeline](#s3) [04 · Reply Handling](#s4) [05 · Scheduling](#s5) [06 · Problems](#s6) [07 · Results](#s7) [08 · What's Next](#s8)
+
+Cold outreach doesn't work when it reads like cold outreach. Templates get ignored. Mass personalization tools produce messages that feel AI-generated because they are.
+
+I needed a system that generates LinkedIn connection notes indistinguishable from ones I'd write by hand — but at 10x the throughput. Each message had to reference something specific the recipient actually did, match their communication style, and pass my own review before sending.
+
+The alternative was 30-45 minutes per person researching, writing, and scheduling. At that rate, reaching 100 people takes a month. This system does the same quality in minutes per person, with me as the final quality gate.
+
+Section 01
+
+## Pipeline
+
+Interactive · 9-Stage Pipeline ▶ Animate 01 · Search Keyword query → headline-tier scoring 02 · Enrich Full profile → re-score with complete data 03 · Generate 6-stage LLM pipeline, best-of-N 04 · Review Interactive CLI · approve / edit / rewrite 05 · Schedule Activity-pattern timing in local TZ 06 · Send Connection invites via LinkedIn API 07 · Reply Handling Webhook → LLM draft → approval → DM Click Animate to walk through the nine pipeline stages.
+
+**Input:** A search query (e.g., "Engineering Manager agentic AI") and a target location. **Output:** Personalized LinkedIn connection notes, reviewed and scheduled, with reply handling via an approval workflow.
+
+system topology
+
+```
+LinkedIn API → Search → Enrich → Generate → Review → Schedule → Send
+                                 ↓                              ↓
+                                 Claude/GPT-4                   LinkedIn API
+                                 (6-stage pipeline)             (connection invites)
+
+LinkedIn Webhook
+    ↓
+Background Worker
+(reply drafting, approval polling, DM sending)
+```
+
+Seven stages:
+
+Section 02
+
+## Tech Stack
+
+Layer Technology LLM Anthropic Claude Sonnet (primary), OpenAI GPT-4o (fallback) LinkedIn Third-party API for search, profiles, posts, connection invites, DMs, webhooks Scheduling Background worker with SQLite queue, polls every 60s Reply handling Webhook → worker → LLM draft → notification → approval poll → DM API Database PostgreSQL with SQLAlchemy ORM, JSONB for raw profiles Language Python. No framework. stdlib where possible. Section 03
+
+## The LLM Pipeline
+
+This is where most of the complexity lives. Each connection note goes through six stages. If quality checks fail, the pipeline retries up to three times with feedback from previous failures.
+
+Stage 1Profile Intel Stage 2Angle Score Stage 3Style Examples Stage 4Constrained Gen Stage 5LLM Detection Stage 6Time Check ✓ Sendor retry → S4
+
+**Stage 1 — Profile Intelligence Extraction.** LLM reads the full profile and outputs structured JSON: what they're working on, their career trajectory, overlaps with my background, their communication style, and one "resonance anchor" — a concrete detail about their work that becomes the highlight of the message.
+
+**Stage 2 — Angle Generation and Scoring.** LLM generates 4-5 outreach angles, each scored on specificity (would this apply to 100 other people?), relevance (is there a natural reason to reach out?), and warmth (would this make them respond?). Highest-scoring angle wins.
+
+**Stage 3 — Style Example Retrieval.** The pipeline picks 2-3 reference messages from a curated set I've written. Selected by angle similarity to give the generator concrete examples of my voice.
+
+**Stage 4 — Constrained Generation.** Structural template enforces a 2-sentence format for the 300-character LinkedIn limit: what I built plus one specific thing about them, then the ask. No greeting (LinkedIn frames it), no sign-off (your name shows automatically), no links, no emojis. A banned-phrases list blocks 27+ anti-patterns including "I'd love to connect", "swap notes", "resonated with me", "impressive", "caught my eye."
+
+**Stage 5 — LLM Detection Check.** A separate LLM call scores the draft 1-10 on how AI-generated it reads. Checks for formulaic structure, AI tells, unnaturally smooth transitions. Threshold: score < 7 to pass.
+
+**Stage 6 — Respect-Their-Time Check.** The LLM role-plays as the recipient and evaluates: Would you read this? Is the ask clear? Did the sender earn the right to ask? Messages with filler or unclear asks fail.
+
+◆ Insight — **Retry logic:** If either check fails, the specific failure feeds back into Stage 4 as additional constraints. Up to 3 attempts. If none pass cleanly, the system picks the best-scoring attempt. Section 04
+
+## Reply Handling
+
+When someone replies, the system drafts a contextual response, gets my approval, and sends it — without me opening LinkedIn.
+
+A webhook fires when any LinkedIn message arrives. The handler:
+
+Interactive · Reply Approval Flow ▶ Animate LinkedIn reply recipient replies on connection ↓ Webhook receiver incoming message · filter + dedupe ↓ LLM draft v— Claude Sonnet · ≤ 500 chars ↓ Gmail notification thread + draft + commands My email reply (a / e / w)
+                  aapprove
+                  eedit
+                  wrewrite w is recursive — keeps cycling LLM Draft → Notification until I send a or e.
+              ↺ rewrite loop LinkedIn DM send send approved reply ↓ message sent confirmation email back to me Click Animate to watch a LinkedIn reply land, get drafted, and approved over email. notification
+
+```
+[Name] @ [Company] replied on LinkedIn.
+
+CONVERSATION:
+[full thread with timestamps]
+
+DRAFTED REPLY:
+[LLM-generated response]
+
+---
+  a — send drafted reply as-is
+  e, [your text] — send your version instead
+  w, [feedback] — rewrite with AI and notify again
+```
+
+`w` is recursive — I can keep refining. The system only sends a DM on `a` or `e`. I manage LinkedIn conversations entirely from my phone.
+
+Section 05
+
+## Activity-Pattern Scheduling
+
+Every person's LinkedIn posts and comments have timestamps. The pipeline converts these to the recipient's local timezone and builds a histogram of activity by hour.
+
+If >= 30% of activity falls between 5-10 PM local, they're scheduled for evening. Everyone else defaults to 9:30 AM local with jitter. Sends are restricted to weekdays. Requires a minimum of 5 data points before trusting the evening signal; below that, defaults to morning.
+
+Section 06
+
+## Problems Encountered
+
+⚡ Lesson — **LLM detection scores consistently at 8/10.** Cold outreach is structurally formulaic (compliment → credential → ask) regardless of who wrote it. The detection stage was calibrated against long-form writing, not short messages. Mitigated with best-of-N selection: three attempts give enough variance that the cleanest version surfaces. ⚡ Lesson — **API hangs on dense profiles.** Some profiles with extensive work histories caused the API to stall for 60+ seconds. Added explicit timeouts so failures surface cleanly instead of blocking the batch. ⚡ Lesson — **Tone calibration across seniority levels.** Early drafts used peer-level language with VP/Director-level recipients. The prompt now detects recipient persona (builder, enterprise leader, IC, researcher) and adjusts — reaching up to senior leaders should sound curious and humble, not like cosplaying as equals. ⚡ Lesson — **Bolding the wrong thing.** Initial messages bolded the sender's credentials. Reversed the rule: the highlight must be about the recipient's work — something they'll recognize and care about. ⚡ Lesson — **SQLite concurrent access.** The background scheduler held a database connection while HTTP endpoints tried to write. Fixed by adding timeouts to all connections so writers wait for the lock instead of failing. ⚡ Lesson — **Prompt iteration from verbose to minimal.** Three rounds: (1) Mode A/B with technical depth vs. trajectory approaches — too formulaic. (2) Five-angle analysis — still too abstract. (3) Final 2-sentence format with hard structural rules. This is what ships. Section 07
+
+## Results
+
+Section 08
+
+## What's Next
+
+viewing now
+      Views Likes Comments [Back to Blog](/blog)
+
+---
+
+Source: https://nikhilkulkarni1755.com/blog/matmul-to-ai
+
+# From *Matrices* to Minds
+
+[Back to Blog](/blog)
+            Complete Technical Deep-Dive
+
+How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
+
+Author: Nikhil Kulkarni, Claude Code
+
+March 5, 2026 25 min read Linear Algebra Neural Networks Transformers GPUs [01 · Matrix Basics](#s1) [02 · Matrix Multiplication](#s2) [03 · Neurons & Layers](#s3) [04 · CNNs](#s4) [05 · RNNs & LSTMs](#s5) [06 · Transformers](#s6) [07 · Tokens & Embeddings](#s7) [08 · GPUs & TPUs](#s8) [09 · The Full Stack](#s9) Chapter 01
+
+## What is a Matrix?
+
+A matrix is just a rectangular grid of numbers — nothing more. But when you learn to multiply them, you unlock the fundamental operation behind every neural network ever built.
+
+Imagine you have a 3×3 grid of numbers. Each position is called an **element**. The grid has **rows** (horizontal) and **columns** (vertical). We describe a matrix by its shape: rows × columns.
+
+#### A 3×2 Matrix · "Shape is (3, 2)"
+
+2 5 −1 3 4 0 3 rows · 2 columns
+
+Notation: A[i][j]
+
+Row index **i** goes top→bottom Column index **j** goes left→right So A[0][1] = **5** And A[2][0] = **4**
+
+### Why do we need matrices?
+
+Matrices are a compact way to represent **linear transformations** — functions that rotate, scale, stretch, or project data. Instead of writing 100 separate equations, you write one matrix operation.
+
+💡 Key Insight — In deep learning, a matrix row is often a **data sample** and columns are **features**. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there. Chapter 02
+
+## Matrix Multiplication
+
+This is *the* operation. Every layer in every neural network is fundamentally doing this one thing.
+
+### The Rule
+
+To multiply matrix **A** (shape m×k) by matrix **B** (shape k×n), the **inner dimensions must match**. The result is shape m×n.
+
+shape rule
+
+```
+A      ×      B      =      C
+(m × k)    (k × n)       (m × n)
+
+↑               ↑
+  These must match!
+```
+
+Each element C[i][j] is computed as the **dot product** of row i of A with column j of B:
+
+dot product
+
+```
+C[i][j] = Σ  A[i][k] × B[k][j]
+             k
+
+= A[i][0]·B[0][j] + A[i][1]·B[1][j] + A[i][2]·B[2][j] + ...
+```
+
+### Step-by-step Example
+
+Interactive · 2×3 times 3×2 ▶ Animate A (2×3) × B (3×2) = C (2×2) ? ? ? ? Click Animate to see each dot product computed step by step.
+
+### FLOP Count — Why this matters for AI
+
+Multiplying an (m×k) matrix by a (k×n) matrix requires **m × k × n multiplications and additions** — called FLOPs (Floating Point Operations). For a single transformer layer with hidden size 4096:
+
+example
+
+```
+Weight matrix shape:     (4096 × 4096)
+  Batch of 512 tokens:     (512 × 4096)
+
+FLOPs per layer:         512 × 4096 × 4096 ≈ 8.6 Billion
+  Layers in GPT-3:         96
+
+Total FLOPs per forward pass: ~830 Billion
+```
+
+💡 Key Insight — Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel. Chapter 03
+
+## From Matrix Multiplication to Neural Networks
+
+A neural network is, at its core, a sequence of matrix multiplications separated by non-linear functions.
+
+### The Single Neuron
+
+One neuron takes a vector of inputs **x**, multiplies by a weight vector **w**, adds a bias **b**, then applies an activation function **f**:
+
+neuron
+
+```
+output = f( w₁x₁ + w₂x₂ + w₃x₃ + b )
+         = f( w·x + b )
+         = f( dot_product(w, x) + b )
+```
+
+### A Full Layer = One Matrix Multiply
+
+A layer with **n** neurons, each looking at **m** inputs, is just one matrix multiply:
+
+linear layer
+
+```
+Inputs:   x  shape (batch_size, m)    — B samples, m features each
+  Weights:  W  shape (m, n)             — m inputs → n outputs
+  Bias:     b  shape (n,)
+
+Output = f( x @ W + b )              — shape (batch_size, n)
+
+"@" = matrix multiply
+  f   = activation (ReLU, sigmoid, etc.)
+```
+
+Input Layerx — raw features ▼ Linear: y = xW + bone matrix multiply ▼ Activation: f(y)ReLU, GELU, sigmoid... ▼ Linear: z = yW₂ + b₂another matrix multiply ▼ Output Layerpredictions / logits
+
+### Activation Functions — The Non-Linearity
+
+Without activation functions, stacking linear layers would still be linear (you can always combine two matrix multiplies into one). Activations are what let networks learn **curved decision boundaries**.
+
+activations
+
+```
+ReLU(x)    = max(0, x)           ← most common in CNNs/MLPs
+  GELU(x)    ≈ x·Φ(x)             ← used in GPT, BERT
+  Sigmoid(x) = 1 / (1 + e⁻ˣ)     ← outputs 0→1, for gates
+  Tanh(x)    = (eˣ - e⁻ˣ)/(eˣ+e⁻ˣ)  ← outputs -1→1, for RNNs
+  Softmax(x) = eˣⁱ / Σeˣʲ         ← for probability distributions
+```
+
+### Backpropagation — Learning via Chain Rule
+
+Networks learn by computing the gradient of the loss with respect to every weight, then nudging weights in the direction that reduces loss. This uses the **chain rule of calculus** applied backward through the network — hence "backprop".
+
+gradient descent
+
+```
+Forward:  x → [W₁] → [ReLU] → [W₂] → [softmax] → loss L
+
+Backward: ∂L/∂W₁ = ∂L/∂y₂ · ∂y₂/∂y₁ · ∂y₁/∂W₁   (chain rule)
+
+Update:   W₁ ← W₁ - α·∂L/∂W₁     (α = learning rate)
+
+This backward pass is ALSO mostly matrix multiplications!
+```
+
+⚡ Important — Both the **forward pass** (inference) and the **backward pass** (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible. Chapter 04
+
+## Convolutional Neural Networks (CNNs)
+
+CNNs handle spatial data like images. They replace big matrix multiplies with sliding *filters* — but it's still matrix multiplication under the hood.
+
+### The Convolution Operation
+
+Instead of connecting every input pixel to every neuron (which would be enormous), a CNN uses a small **kernel/filter** (e.g., 3×3) that slides across the image, computing a dot product at each position:
+
+convolution
+
+```
+Input image:     H × W × C    (height × width × channels)
+  Filter/Kernel:   K × K × C    (usually 3×3 or 5×5)
+
+For each position (i,j) in the output:
+    output[i][j] = sum( input[i:i+K, j:j+K] ⊙ kernel )
+                                ↑
+                        element-wise multiply, then sum
+                        = dot product of two vectors!
+```
+
+#### 3×3 Convolution — Edge Detection
+
+Input Patch 0 255 255 0 255 255 0 0 0 ⊙ Sobel Kernel -1 0 +1 -2 0 +2 -1 0 +1 = Output 1020 Strong edge detected!
+
+### Convolution is Matrix Multiplication (im2col)
+
+Modern frameworks convert convolution into a matrix multiply using **im2col**: each filter application becomes a column, and you batch all of them into one big matrix multiply that GPUs love.
+
+im2col trick
+
+```
+1. Reshape input patches → matrix of shape (N·H'·W', K²·C)
+  2. Reshape filters       → matrix of shape (K²·C, F)
+  3. One matrix multiply   → output of shape (N·H'·W', F)
+  4. Reshape back          → (N, H', W', F)
+
+This is why convolution training is fast: it's all GEMM!
+```
+
+### Typical CNN Architecture
+
+Input Image (224×224×3)3 channels: R, G, B ▼ Conv Layer (64 filters, 3×3)extracts local features ▼ BatchNorm + ReLUnormalize + non-linearity ▼ MaxPool (2×2)downsample: 112×112 ▼ More Conv Blocks...deeper features emerge ▼ Global Average Poolspatial → vector ▼ Fully Connected + Softmaxfinal matrix multiply → classes Chapter 05
+
+## Recurrent Neural Networks (RNNs & LSTMs)
+
+CNNs handle space. RNNs handle *time* — sequences of data where the order matters, like text, audio, or sensor readings.
+
+### The Core Idea: Hidden State
+
+An RNN processes one token at a time, maintaining a **hidden state** h that acts as "memory" of everything seen so far. At each step:
+
+rnn step
+
+```
+hₜ = tanh( Wₕₕ · hₜ₋₁  +  Wₓₕ · xₜ  +  b )
+              ↑ previous     ↑ current
+              hidden          input
+
+yₜ = Wₕ_out · hₜ                  ← output at step t
+
+Still just matrix multiplications!
+```
+
+### The Vanishing Gradient Problem
+
+RNNs struggle with **long-range dependencies**. Gradients flowing backward through many time steps get multiplied by the same weight matrix repeatedly — they either **vanish** (→ 0) or **explode** (→ ∞).
+
+### LSTM: Gated Memory
+
+LSTMs (Long Short-Term Memory) add explicit **gates** to control what gets remembered, forgotten, or output. All gates are... matrix multiplications:
+
+lstm gates
+
+```
+fₜ = σ( Wf · [hₜ₋₁, xₜ] + bf )   ← Forget gate: what to erase
+  iₜ = σ( Wi · [hₜ₋₁, xₜ] + bi )   ← Input gate:  what to write
+  g̃ₜ = tanh(Wg · [hₜ₋₁, xₜ] + bg)  ← Candidate memory
+  oₜ = σ( Wo · [hₜ₋₁, xₜ] + bo )   ← Output gate: what to read
+
+Cell:  cₜ = fₜ ⊙ cₜ₋₁ + iₜ ⊙ g̃ₜ  ← Update cell state
+  Hidden: hₜ = oₜ ⊙ tanh(cₜ)        ← New hidden state
+
+⊙ = element-wise multiply
+  σ = sigmoid (outputs between 0 and 1 = "gate open/closed")
+```
+
+⚡ Important — The **fundamental problem** with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve. Chapter 06
+
+## Transformers & Attention
+
+The 2017 paper "Attention Is All You Need" discarded recurrence entirely. Instead, every position attends to every other position — simultaneously, in parallel — using one elegant matrix operation.
+
+### Self-Attention: The Core Mechanism
+
+For each token, we compute three vectors by multiplying its embedding by three learned weight matrices:
+
+qkv projections
+
+```
+Q = X · Wq    (Queries — "what am I looking for?")
+  K = X · Wk    (Keys    — "what do I contain?")
+  V = X · Wv    (Values  — "what do I output if you look at me?")
+
+X shape:  (seq_len, d_model)       e.g., (512, 768)
+  W shapes: (d_model, d_k)           e.g., (768, 64)
+```
+
+Then attention scores are computed, scaled, softmaxed, and used to weight the values:
+
+attention formula
+
+```
+Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V
+                                ↑         ↑      ↑
+                          dot product  scale   weighted
+                          of all pairs         sum of V
+
+Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
+  After softmax: each row sums to 1 (probability distribution)
+  Final output:  (seq_len, d_k)      ← rich, context-aware vectors
+```
+
+Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The cat sat on the mat
+          Each cell = attention weight from row-token → col-token. Darker = stronger attention.
+
+### Multi-Head Attention
+
+Instead of one attention pass, Transformers run **h heads** in parallel — each learning a different type of relationship (e.g., one head learns syntax, another learns coreference):
+
+multi-head
+
+```
+head_i = Attention(X·Wq_i, X·Wk_i, X·Wv_i)
+
+MultiHead(X) = Concat(head_1, ..., head_h) · Wo
+
+If d_model=768, h=12:  each head d_k = 768/12 = 64
+
+Total params per attention layer ≈ 4 × d_model²
+  For d_model=768: ≈ 2.4 million params per layer
+```
+
+### The Full Transformer Block
+
+Input Embeddingstoken embeddings + positional encoding ▼ Multi-Head Self-AttentionQ·Kᵀ/√d · V — parallel matrix ops ▼ Add & LayerNormresidual connection ▼ Feed-Forward Network2 linear layers: 4× expand then contract ▼ Add & LayerNormresidual connection ▼ → Repeat N times (e.g., 96 layers in GPT-3)
+
+### Why Transformers Beat RNNs
+
+Property RNN/LSTM Transformer Parallelism Sequential — can't parallelize across tokens Fully parallel — all tokens computed at once Long-range context Degrades with distance (vanishing gradients) O(1) path between any two positions Memory Fixed-size hidden state bottleneck Explicit attention over all positions Compute O(n) time per layer O(n²) attention but massively parallel Scaling Stops improving past ~1B params Power-law scaling — bigger = better Chapter 07
+
+## Tokens & Embeddings
+
+Before any matrix can multiply, raw text must become numbers. The tokenization pipeline is the bridge between human language and matrix operations.
+
+### What is a Token?
+
+Tokens are the atomic units a model sees. They are **not** words — they are subword pieces chosen to minimize vocabulary size while handling any input. Using **Byte-Pair Encoding (BPE)**:
+
+tokenization
+
+```
+"ChatGPT is amazing!"
+  → ["Chat", "G", "PT", " is", " amaz", "ing", "!"]
+  → [  9890,  38,  2898,  374,  16682,   278,   0  ]
+                          ↑
+                    token IDs (integers)
+```
+
+### Embeddings — From ID to Vector
+
+Each token ID is looked up in an **embedding matrix** — a learned table mapping every token to a dense vector. This lookup is itself a matrix multiply (one-hot vector times embedding matrix):
+
+embedding lookup
+
+```
+Vocabulary size:  50,257 tokens  (GPT-2)
+  Embedding dim:    768            (GPT-2 small)
+
+Embedding matrix E:  shape (50257, 768)
+  Token ID = 9890:     → E[9890]  = vector of 768 floats
+
+Full sequence of 512 tokens → matrix (512, 768)
+  This is X — the input to the first Transformer block.
+```
+
+### Positional Encoding
+
+Attention is **permutation-invariant** — it doesn't know that token 0 comes before token 1. Positional encodings inject this order information:
+
+sinusoidal (original)
+
+```
+PE[pos, 2i]   = sin( pos / 10000^(2i/d_model) )
+  PE[pos, 2i+1] = cos( pos / 10000^(2i/d_model) )
+
+Input to transformer = token_embedding + positional_embedding
+
+Modern LLMs use RoPE (Rotary Position Embedding) instead —
+  it applies rotation matrices directly inside attention,
+  allowing better extrapolation to longer sequences.
+```
+
+### From Token to Output Probability
+
+token IDs[9890, 38, ...] embedding lookup(vocab, d_model) + pos encoding N × Transformer blocksattention + FFN final LayerNorm lm_head · Wᵀ(d_model → vocab) softmax→ probabilities sample next token 💡 Key Insight — The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer. Chapter 08
+
+## GPUs & TPUs: The Hardware Behind the Math
+
+Matrix multiplication is embarrassingly parallel. GPUs and TPUs are purpose-built to exploit this — they're not fast computers, they're fast matrix multipliers.
+
+### CPU vs GPU Architecture
+
+Property CPU (e.g. Intel Xeon) GPU (e.g. NVIDIA H100) Core count 8–128 complex cores 14,592 CUDA cores Design goal Low latency, serial tasks High throughput, parallel tasks Cache Large L1/L2/L3 cache hierarchy Small cache, high bandwidth HBM memory Memory bandwidth ~100 GB/s 3.35 TB/s (H100 SXM) FP16 FLOPS ~1–2 TFLOPS 989 TFLOPS (tensor cores) Ideal workload OS, databases, branchy code Matrix multiplies, convolutions
+
+### Tensor Cores — The Secret Weapon
+
+NVIDIA's Tensor Cores (introduced in Volta, 2017) execute a **4×4 matrix multiply-accumulate (MMA)** in a single clock cycle at mixed precision (FP16 inputs, FP32 accumulation). GPUs have thousands of these:
+
+tensor core mma
+
+```
+D = A × B + C
+
+A, B: (4×4) FP16 matrices
+  C, D: (4×4) FP32 accumulator
+
+This is a "WMMA" (Warp Matrix Multiply-Accumulate)
+  One tensor core does this in 1 clock cycle.
+  H100 has 528 tensor cores × 2GHz × 16 ops/cycle
+  = ~989 TFLOPS in FP16
+```
+
+### CUDA Thread Hierarchy
+
+GPUs organize computation in a hierarchy. Understanding this explains how a single matrix multiply maps to hardware:
+
+cuda hierarchy
+
+```
+Thread  → executes one FMA (fused multiply-add) operation
+  Warp    → 32 threads that execute in lockstep (SIMT)
+  Block   → many warps; share fast Shared Memory (~100 KB)
+  Grid    → all blocks executing the same kernel
+
+For a matrix multiply (GEMM):
+  • Each thread block computes a TILE of the output matrix
+  • Tile is loaded into shared memory (fast!)
+  • Inner loop multiplies the tile
+  • Result written back to global GPU memory (HBM)
+```
+
+GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
+          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+          ↕ GPU idle — data sits in HBM (off-chip memory)
+
+### Memory Hierarchy & Bandwidth
+
+The biggest bottleneck in LLM inference isn't compute — it's **memory bandwidth**. Reading weights from HBM (high-bandwidth memory) into compute units is the bottleneck:
+
+memory bandwidth math
+
+```
+Llama-3 70B model:    70 billion params × 2 bytes (FP16)
+                      = 140 GB just to store weights
+
+H100 HBM bandwidth:   3.35 TB/s
+
+Time to read all weights once:  140 GB / 3.35 TB/s ≈ 42ms
+
+At 1 token/step, this is your latency floor for 1 token.
+  → This is why batching matters: same weight read, more tokens!
+```
+
+### TPUs — Google's Dedicated Matrix Engine
+
+Google's **Tensor Processing Units** take specialization further. They're built entirely around matrix multiplication, sacrificing general-purpose computation for raw GEMM performance:
+
+tpu architecture
+
+```
+Core component: Systolic Array
+  ┌──────────────────────────────────────────────┐
+  │  Matrix data flows through a grid of 256×256 │
+  │  multiply-accumulate (MAC) units in a wave.  │
+  │  Each MAC unit receives partial results from  │
+  │  its neighbor and passes its own along.       │
+  │                                              │
+  │  TPU v4:  275 TFLOPS (BF16) per chip         │
+  │  TPU v4 Pod: 4096 chips → ~1 ExaFLOP!        │
+  └──────────────────────────────────────────────┘
+
+Key advantages over GPU:
+  • On-chip HBM closer to compute → less latency
+  • Deterministic execution (no warp divergence)
+  • Custom network topology (ICI) for pod scaling
+  • 4x more energy-efficient for Transformer workloads
+```
+
+TPU — Push Model (Systolic Array) ▶ Run
+                ↓ partial sums exit bottom edge
+              ACC
+            ↓
+          
+          Unified Buffer (On-Chip SRAM) — 24 MB
+          Systolic array idle — weights pre-loaded into MAC units
+
+### GPU vs TPU — The Architectural Difference
+
+The fundamental difference is the data flow model. GPUs **pull** data from memory into independent compute blocks. TPUs **push** data through a grid of interconnected units in a wave. Run both side by side to see the contrast:
+
+GPU vs TPU — Side by Side GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
+          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+          ↕ GPU idle — data sits in HBM (off-chip memory) TPU — Push Model (Systolic Array) ▶ Run
+                ↓ partial sums exit bottom edge
+              ACC
+            ↓
+          
+          Unified Buffer (On-Chip SRAM) — 24 MB
+          Systolic array idle — weights pre-loaded into MAC units
+
+### Precision Formats
+
+Not all numbers are equal in AI training. Lower precision = fewer bits = faster multiply + less memory:
+
+Format Bits Range Use Case FP64 (double) 64 ±1.8×10³⁰⁸ Scientific computing FP32 (single) 32 ±3.4×10³⁸ Gradient accumulation, master weights BF16 16 same as FP32 Training (same range, less precision) FP16 16 ±65,504 Inference, tensor core compute INT8 8 -128 to 127 Quantized inference (2× speed) INT4 / NF4 4 16 values QLoRA, edge deployment (4× speed)
+
+### Parallelism Strategies for Giant Models
+
+distributed training
+
+```
+Data Parallelism    — split BATCH across GPUs; same model everywhere
+                        GPUs sync gradients after each step (AllReduce)
+
+Tensor Parallelism  — split WEIGHT MATRICES across GPUs
+                        e.g., row 1–2048 on GPU0, row 2049–4096 on GPU1
+                        requires AllReduce within every layer
+
+Pipeline Parallelism — split LAYERS across GPUs
+                        GPU0 runs layers 1–24, GPU1 runs 25–48...
+                        uses micro-batching to keep GPUs busy
+
+Expert Parallelism  — each GPU handles different MoE experts
+                        only activates a subset of params per token
+
+GPT-3 used: 8-way tensor × 8-way pipeline × data parallelism
+              running on 1024 A100 GPUs
+```
+
+Chapter 09
+
+## The Full Stack: Putting it All Together
+
+Every token you generate traces through this entire stack — from characters in a text box to numbers in a matrix to probability distributions sampled into words.
+
+### One Forward Pass, Top to Bottom
+
+**"Paris is the capital of"** Raw text input ↓ BPE Tokenizer → [9521, 318, 262, 3139, 286]5 token IDs ↓ Embedding matrix lookup + positional encoding→ X of shape (5, 4096) ↓ 32 × Transformer BlockEach: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm ↓ LM head: (5, 4096) × (4096, 32000) → logits (5, 32000) ↓ Softmax → probabilities → sample last position→ token 3681 = "France"
+
+### The Numbers Behind "Thinking"
+
+gpt-4 class model estimates
+
+```
+Parameters:          ~1 Trillion
+  Layers:              ~128 transformer blocks
+  d_model:             ~12,288
+  Attention heads:     ~96
+  Context window:      128,000 tokens
+
+Per-token inference:
+    Matrix ops:        ~2T FLOPs
+    Memory reads:      ~2 TB from HBM
+    Time on H100:      ~15ms per token
+
+Training compute:    ~10²⁵ FLOPs
+  Training time:       ~3 months on ~30,000 H100s
+  Training cost:       ~$100 million
+```
+
+### The Architecture Zoo
+
+Model Family Architecture Key Innovation Primary Use ResNet, VGG CNN Skip connections, deep convolutions Image classification LSTM, GRU RNN Gated memory cells Sequential data, NLP (legacy) BERT Encoder Transformer Bidirectional attention, MLM Classification, embedding GPT family Decoder Transformer Causal attention, RLHF Text generation T5, BART Encoder-Decoder Seq2seq with cross-attention Translation, summarization ViT Vision Transformer Image patches as tokens Image understanding Mixtral, GPT-4 MoE Transformer Sparse expert routing Efficient LLM at scale Mamba, RWKV State Space Models Linear complexity attention alternatives Long context, efficiency 💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
+      Views Likes Comments [Back to Blog](/blog)
+
+---
+
+Source: https://nikhilkulkarni1755.com/apps
+
+# Apps
+
+Mobile and web applications I've built to solve real-world problems
+
+### The Progress App
+
+Build Difficult Habits with Like Minded People
+
+#### Key Features:
+
+- •In App Purchases, Websockets for amazing service
+- •End to End system designed to help build sustainable habits
+
+React Native Firebase In App Purchases Websockets Node.js [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392) viewing now
+      Views Likes Comments
+
+---
+
+Source: https://nikhilkulkarni1755.com/privacy-policy
+
+# Privacy Policy
+
+Last Updated: December 21 2025
+
+## Overview
+
+This is a personal portfolio website owned and operated by Nikhil Kulkarni, demonstrating backend development capabilities. This privacy policy explains how I collect and handle information when you visit my site.
+
+## Information I Collect
+
+I automatically collect basic technical information when you visit this site:
+
+- • IP addresses - for basic analytics and security monitoring
+- • Device types - browser and operating system information
+- • Page visits - which pages you view and when
+
+This information is collected automatically through standard web server logs and helps me understand site usage patterns and demonstrate analytics capabilities.
+
+## How I Use Your Information
+
+I use this information solely for:
+
+- • Site performance monitoring
+- • Basic visitor analytics
+- • Demonstrating backend development skills
+- • Security and abuse prevention
+
+I do not:
+
+- • Sell your information to anyone
+- • Share your data with third parties (except my hosting provider)
+- • Track you across other websites
+- • Build detailed user profiles
+
+## Data Storage
+
+All collected data is stored securely using Supabase, a cloud database service.
+
+Data is retained indefinitely to support ongoing analytics and site improvement, unless you request deletion.
+
+## Your Rights
+
+### For everyone:
+
+- • You can request deletion of your data by emailing me your public IP address
+- • You can ask what information I have collected about your visits
+
+### For EU visitors:
+
+- • You have rights under GDPR including access, deletion, and portability of your data
+
+### For California residents:
+
+- • You have rights under CCPA to know about and delete your personal information
+- • I do not sell personal information
+
+## Contact Me
+
+For any privacy-related questions or to request data deletion, contact me at:
+
+Email: nikhilkulkarni1755@gmail.com
+
+Please include your public IP address if requesting data deletion.
+
+## Updates
+
+I may update this privacy policy occasionally. Any changes will be posted on this page with a new "Last Updated" date.
+
+This website is governed by the laws of California, United States.
+
+viewing now
+      Views Likes Comments
+
+---
+
+Source: https://nikhilkulkarni1755.com/spearfishing/fireworks-ai
+
+# A purpose-built disaggregated inference engine
+
+Inference systems
+
+Serving a coding agent is two jobs with opposite shapes. Reading a -token project is compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and measured it against a colocated baseline on the same hardware.
+
+**Disaggregation lost, on almost every axis.** Everything below is that measurement — what it did, why the obvious explanation turned out to be wrong, and what it says about when the technique is actually the right call.
+
+· ×  ·  ·
+
+What the split does
+
+## Two pools, doing less than one
+
+A long prefill and a long decode, issued together, measured in both modes on the same two H100s. The split gives each phase its own device and its own scheduler — and on this rig it made everything slower. The toggle above switches between the two real runs.
+
+Two requests issued together. Each bar is one request: reading its prompt, then writing its answer —
+            derived from the recorded time-to-first-token and every inter-token gap, so it is measured timing rather
+            than a sampled average. It shows *which phase each request was in*, not how busy the GPUs were.
+            Both modes share one time axis, so the toggle compares runs rather than two differently-stretched
+            pictures. This set finished in .
+
+Try it
+
+## The project is also the prompt
+
+This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Pick a prompt and watch the patch land at its real recorded speed.
+
+Send
+          1×
+              2×
+              4×
+              8×
+               reset project
+
+docscribe/
+
+files · lines
+
+frontend/style.css code preview
+
+Prefix caching
+
+## Pay for the project once
+
+Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values. This is the one thing that worked exactly as intended — and note how much smaller the win looks on hardware fast enough to make the prefill cheap anyway.
+
+Same project, three different questions. The first pays for the whole prefix; the rest reuse it.
+
+## What the measurement actually said
+
+- **Disaggregation lost.** Time to first token on a -token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.
+- **It was not the interconnect, which is what I expected.** The engine's own counters put KV transfer at **0.75ms per request** across NVLink. The cache moved essentially for free. Every argument that begins "the link between the pools is the floor" is wrong here, and I had written one before measuring.
+- **Two GPUs is the wrong size for this technique.** Each disaggregated worker runs at tensor-parallel 1; the colocated baseline runs both cards on every request at tensor-parallel 2. Splitting a two-GPU box gives up half the parallelism per request to buy isolation that nothing at this scale needed. That accounts for roughly 2× of a 13× gap; the rest is orchestration around chunked prefill, which I did not profile and will not guess at.
+- **Sparsity buys math, not memory.** Each worker held **59GB** of the same weights — the arithmetic that makes two GPUs the minimum. A 30.5B model with 3.3B active still has to hold all of it resident.
+
+### Run it live
+
+Everything above replays measurements recorded against a real engine. This wakes that engine again and reruns the same harness, so the numbers are checkable rather than merely claimed. It is gated because it spends money: two H100s, torn down automatically after ten minutes.
+
+The argument
+
+## Why any of this is the right shape
+
+The charts are evidence. This is what they are evidence for — and where the reasoning stops.
+
+### Purpose-built means the workload picks the ratio
+
+"Disaggregated" is not a configuration you switch on and benefit from. Splitting prefill from decode buys you two schedulers you can tune independently, and that is only worth the KV transfer if the two halves of your traffic actually want different things. So the design question is not *whether* to split — it is what your token shape says the split should be.
+
+A coding agent has an unusually lopsided shape. Every turn carries the whole project: **tokens of context** against an instruction of maybe twenty, and an answer of a few hundred to a few thousand. Two things follow. Prefill dominates the arithmetic, so a naive prefill:decode ratio of 1:1 leaves the decode pool idling. And the context is *the same every turn*, which means most of that prefill should never happen twice.
+
+That is why the cache result matters more than the split result here. On this workload the radix tree turns a -token prefill into a lookup, and the second request's time-to-first-token falls off a cliff. A purpose-built engine for coding agents is one that treats the shared prefix as the primary object and sizes the prefill pool for cache *misses*, not for the raw token count.
+
+### Serialization order is a caching decision
+
+A radix tree matches on a token sequence, so a cache hit ends at the first byte that differs. Which means the order you serialize a project in quietly decides what an edit costs.
+
+This project is sent in sorted path order. Edit `frontend/style.css`, sorted near the end, and **about 85% of the prefix still matches**. Edit `backend/agent.py`, sorted near the front, and roughly **97% is invalidated** — the same size change, an order of magnitude apart in what it costs to serve. You can watch this happen in the workbench above: the header reports how much of the prefix survives whatever you have edited.
+
+The useful consequence is that a coding agent should not order context alphabetically. It should order it by *how likely each file is to change* — stable dependencies first, the file currently being worked on last — so that the common case invalidates the smallest possible suffix. That is a cheap change to a context builder and it is worth real money at scale.
+
+### The arithmetic that decides your topology
+
+This demo was originally specified for a single 96GB card. That is not possible, and the reason is worth stating plainly: **each PD worker holds a full copy of the weights.** Prefill and decode are different phases of the same model, not different models. Two workers means two copies.
+
+At 61GB of BF16 weights that is 122GB before a single token of KV cache, so a single 80GB device cannot host both roles no matter how the flags are set. The original target — an 80B model at FP8, about 80GB per copy — needed 160GB against a 96GB card. This is a memory-arithmetic problem wearing a configuration problem's clothes, and it is the first thing to check before designing anything else.
+
+### Sparsity buys arithmetic, not capacity
+
+The model here holds 30.5B parameters and activates about 3.3B per token. That ratio is what makes MoE attractive for decode: you are memory-bandwidth-bound, reading weights to produce one token at a time, and a sparse model reads far less per token.
+
+The advantage is not symmetric across the two phases. During prefill many tokens flow through at once and collectively activate most of the experts anyway, so the sparsity win shrinks exactly where the arithmetic is heaviest — which means a sparse model changes the prefill:decode ratio you should be provisioning for. Decode gets cheaper per token; prefill largely does not.
+
+Where this goes next is expert placement. Experts are independent, so they can live on different devices — which turns "how do I split prefill from decode" into "how do I keep one device from becoming the hot spot when the router develops a preference". That is a load balancing problem with a learned, drifting distribution, and it is a more interesting one than the PD split.
+
+### I was wrong about the interconnect
+
+Before measuring anything I argued that the link between the pools sets the floor on what disaggregation can win — that these GPUs talk over PCIe, that every KV transfer pays for it, and that the numbers here would therefore be a floor rather than a ceiling.
+
+Both halves were wrong. The rig reports `NV18` — eighteen NVLink connections between the two cards, plus ten InfiniBand devices. And the engine's own counters put KV transfer at **0.75ms per request**, with bootstrap at another 0.73ms. Moving the cache is free at this scale. Whatever cost disaggregation 5.7 seconds of time-to-first-token, it was not the wire.
+
+Leaving that here rather than quietly deleting it, because the shape of the mistake is the useful part: it is an argument that sounds right, follows from real systems knowledge, and would have survived indefinitely on a page that never measured anything. The counter that refuted it took one line to read.
+
+### What it actually was: the split costs parallelism
+
+The colocated baseline runs both H100s on every request at tensor-parallel 2. The disaggregated configuration runs one card for prefill and one for decode, each at tensor-parallel 1. **Splitting a two-GPU box halves the compute available to any single request** in exchange for isolating the phases from each other.
+
+That trade only pays when phase contention is what hurts — which needs enough concurrency that a long prefill is genuinely blocking somebody's decode, and enough GPUs that each pool still has real parallelism after the split. Eight concurrent requests on two H100s is not that. There was nothing to isolate, so the split bought nothing and cost half the machine.
+
+Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short burst costs ~120ms extra, a -token prefix costs ~5.7s — and prefill is chunked at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times over. I did not profile it further, so that is where the explanation stops rather than where the speculation starts.
+
+### Scale-to-zero costs 800 seconds
+
+Cold start, measured end to end: **474 seconds** to provision a machine and pull a 21GB image, **200 seconds** to fetch 61GB of weights, **124 seconds** to load sixteen shards and capture CUDA graphs. Thirteen minutes from nothing to first token.
+
+The proportions are what matter. **The part a snapshot can address is the smallest one.** Restoring a checkpointed process replaces the 124 seconds and does nothing about the 674 spent getting the image and the weights onto the machine. "Wake in seconds" is only true once you are already paying to keep both resident — which is a warm floor, the exact thing scale-to-zero is supposed to avoid.
+
+The half that does work is worth having. With `--enable-memory-saver`, releasing the accelerator took **~64ms** and resuming took **~127ms**, moving 70GB of GPU memory each way, serving again about 105ms later. But the process stayed alive the whole time, so the pod stayed alive, so the bill kept running. It frees the accelerator, not the rental. That makes a warm floor cheaper to hold, which given a 13-minute cold start is genuinely useful — and it is not scale-to-zero, and calling it that would be the kind of claim this page exists to avoid.
+
+### What I would want to measure next
+
+**One:** the same comparison at a size where the technique should win — enough GPUs that each pool keeps real tensor parallelism after the split, and enough concurrency that phase contention is actually the bottleneck. That is the experiment that would tell me whether 13× is a property of this configuration or of my implementation, and it is the obvious next thing to run.
+
+**Two:** where the remaining seconds go. KV transfer is ruled out and tensor parallelism explains about 2×; the rest is orchestration around chunked prefill and wants a profiler rather than another chart.
+
+**Three:** prefix caching over a hybrid attention model, where part of the state is a recurrent checkpoint rather than a KV block and the reuse rules stop being a simple tree. And **four:** what the prefill:decode ratio should be under a realistic mixture of agent traffic rather than three hand-picked shapes — that ratio is the actual product decision, and everything above is only evidence for how to choose it.
+
+---
+
+Source: https://nikhilkulkarni1755.com/take-homes/weave
+
+# PostHog Engineering Impact — take-home
+
+[back](/) PH PostHog Engineering Impact take-home posthog/posthog 90-day window Feature Owners Feature Owners Engineers who own subsystems end-to-end with depth and continuity Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score
+
+Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.
+
+Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) ▾ expand Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score
+
+Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.
+
+Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) ▾ expand Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score
+
+Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.
+
+Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) ▾ expand Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score
+
+Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.
+
+Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) ▾ expand Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score
+
+Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.
+
+Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) ▾ expand
+          Scores are normalized within each bucket. See data decisions 59 engineers · PostHog/posthog
+
+## Engineering Impact Categories
+
+Before writing scoring logic, I mapped 7 distinct engineering impact archetypes. The dashboard implements 3 — the ones with the strongest GitHub signal.
+
+1. Feature Owners (depth)
+
+Own a subsystem end-to-end. Large PRs, concentrated in specific directories, long commit history in same files.
+
+signal: PR size × complexity × ownership continuity 2. Reviewers / Gatekeepers
+
+Unblock the team. High review volume, fast turnaround, substantive comments (not just approvals).
+
+signal: reviews given × comment depth × others' PRs they touched that shipped 3. Cross-cutting Contributors
+
+Work across many features simultaneously. Touch infra, frontend, backend in the same week.
+
+signal: directory diversity × PR frequency × files changed across subsystems 4. Bug Fixers / Reliability
+
+Keep the product stable. Small targeted PRs, issue-linked commits, fast cycle time.
+
+signal: issues closed × fix speed × recurrence rate 5. Community Managers
+
+PostHog is open source — a unique bucket. Triage external PRs, respond to issues, review community contributions.
+
+signal: external PR reviews + issue responses + community PR merges 6. Force Multipliers / Mentors
+
+Their reviews make other engineers better. Impact flows through review quality.
+
+signal: comment quality (length/substance), junior PRs they reviewed that shipped cleanly 7. Infrastructure / Platform
+
+Enable everyone else. CI/CD, tooling, build system. Low visibility but high leverage.
+
+signal: files changed in .github/, Makefile, infra dirs × downstream PRs unblocked
+
+## Future TODOs
+
+Two high-priority improvements I'd tackle given more time.
+
+1. Keep data fresh via cron
+
+Set up a daily/weekly cron job that re-runs fetch.py, writes results to a small DB, and exposes an API endpoint. The frontend fetches from that instead of a static data.json — so rankings always reflect the last N days automatically.
+
+2. Implement more engineering categories
+
+The 7-category framework covers far more than the current 3. Adding cross-cutting contributors, bug fixers, and community managers would give a fuller picture — especially relevant for PostHog given its open-source model.
+
+## Data Fetch — Issues & Decisions
+
+Four concrete issues hit during data collection — each with a decision and reasoning.
+
+Issue 1 Fetching all PRs before date-filtering Problem
+
+Initial paginate() downloaded the entire PR history before applying the 90-day filter — 6421 PRs from a repo with 37k+ total commits.
+
+Decision
+
+Added a cutoff parameter to paginate() that stops at the API level as soon as an item older than the cutoff is encountered.
+
+Why
+
+Early termination cuts both total API calls and runtime proportionally. For this repo, the difference is between minutes and hours.
+
+Issue 2 6419 PRs in 90 days = hours of runtime Problem
+
+Even with early termination, ~6400 non-bot PRs in 90 days. At 0.05s sleep: 6419 × 3 × 0.05s ≈ 16 min in sleep alone, total ~5+ hours.
+
+Decision
+
+Added MAX_PRS = 300 and reduced SLEEP from 0.05s → 0.02s. Cap applies when base is master and PR count exceeds 300, taking the most recent 300.
+
+Why
+
+300 PRs is sufficient to identify the top 5. 0.02s sleep keeps us under GitHub's 5000 req/hr limit. Trade-off: engineers active earlier in the window but not in the most recent 300 will be under-represented.
+
+Issue 3 Transient HTTP 500 from GitHub API Problem
+
+During the first run, one PR's /files endpoint returned HTTP 500.
+
+Decision
+
+No code change needed — existing retry logic (3 attempts with backoff) handled it automatically.
+
+Why
+
+500s from GitHub are transient. If a PR's detail fetch ultimately fails, that PR contributes no file/review data but is still counted — graceful degradation.
+
+Issue 4 PRs not filtered to main branch Problem
+
+Initial API call fetched PRs targeting any base branch — feature branches, release branches, etc. This inflated PR counts with work that never lands in production.
+
+Decision
+
+Added &base=master to the pulls API call. BASE_BRANCH exposed as a constant for easy adjustment.
+
+Why
+
+Engineering impact should be measured by work that lands in the main codebase. Filtering to master ensures metrics reflect production-bound work only.
+
+Final Parameters WINDOW_DAYS 90 Assignment spec MAX_PRS 300 Runtime constraint — sufficient for top-5 ranking SLEEP_BETWEEN_CALLS 0.02s Safe under 5000 req/hr; keeps runtime ~10 min BASE_BRANCH master Only PRs targeting PostHog's main branch MIN_PRS_THRESHOLD 3 Exclude engineers with too little signal Retries per call 3 Handle transient GitHub 500s/429s
+
+---
+
+## Excluded
+
+/spearfishing/voice-agent is intentionally not included here or in /llms.txt: its product data comes from a live database, and the code ships a hardcoded mock-data fallback (visibly labeled "Demo Mode") when that database is empty. Publishing that fallback in a static file an agent reads as fact would mean shipping fabricated content, so the page is left out entirely rather than mirrored inaccurately.
