@@ -1,0 +1,11 @@
+# Manual denylist for the permission gate (rubric §3.1 rule P0).
+# One eTLD+1 per line. `#` starts a comment. Outranks every other signal,
+# including a robots.txt that says yes. Read fresh on every check -- no
+# restart needed to add an entry.
+#
+# Add a domain here when: a site owner emails asking to be excluded, Nikhil
+# says not to touch a domain, or a ToS makes an explicit request we choose
+# to honour even though it isn't machine-readable (§1.6c). Never remove an
+# entry without the same authority that added it.
+#
+# Empty by default -- no domain has asked to be excluded yet.
