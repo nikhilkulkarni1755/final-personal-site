@@ -78,3 +78,5 @@ supabase/.branches/
 
 # Finds email dry-run output (rendered, never a committed sample digest -- D6)
 finds/email/.dry-run/
+# Finds pipeline: per-lane local runtime state (never committed)
+finds/hitl/.state/
