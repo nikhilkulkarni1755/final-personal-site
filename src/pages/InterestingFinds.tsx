@@ -21,8 +21,12 @@ const InterestingFinds = () => {
   // ItemList structured data for a curated list -- the schema.org type built
   // for exactly this shape. numberOfItems and itemListElement always reflect
   // what's actually loaded, empty list included, so this never advertises
-  // finds that don't exist. No page in this codebase manages <head> tags yet,
-  // so this is scoped to this file rather than inventing a shared mechanism.
+  // finds that don't exist. Each item's url is our own canonical
+  // /interesting-finds/<slug> page (what W3's schema declares canonical),
+  // not the outbound product_url -- the actual backlink is the <a href> in
+  // FindCard/FindDetail; this is a list of our pages, not of theirs. No page
+  // in this codebase manages <head> tags yet, so this is scoped to this
+  // file rather than inventing a shared mechanism.
   useEffect(() => {
     if (loading) return;
 
@@ -41,7 +45,7 @@ const InterestingFinds = () => {
       itemListElement: finds.map((find, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: find.product_url,
+        url: `${PAGE_URL}/${find.slug}`,
         name: find.name,
       })),
     });

@@ -8,6 +8,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Apps from './pages/Apps';
 import InterestingFinds from './pages/InterestingFinds';
+import FindDetail from './pages/FindDetail';
 import Bot from './pages/Bot';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
@@ -44,6 +45,7 @@ function AppContent() {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/apps" element={<Apps />} />
           <Route path="/interesting-finds" element={<InterestingFinds />} />
+          <Route path="/interesting-finds/:slug" element={<FindDetail />} />
           <Route path="/bot" element={<Bot />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<Privacy />} />
