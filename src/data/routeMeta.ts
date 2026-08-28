@@ -118,6 +118,18 @@ export interface RouteMeta {
   title: string;
   description: string;
   canonical: string;
+  /**
+   * Absolute URL of this route's markdown twin — the W2 path contract is
+   * `/<route>.md`, with `/index.md` for the homepage. Same shape as
+   * `canonical` and computed the same way, in the same function, precisely
+   * so a prerendered snapshot can never inherit another route's alternate
+   * (that class of bug already happened once with canonical — see C1).
+   * There is no entry for /spearfishing/voice-agent in this map at all
+   * (D4), so it never gets this field and W1's injector must emit no
+   * <link rel="alternate"> tag for it, the same as it already does for
+   * canonical.
+   */
+  markdownAlternate: string;
   og: OpenGraph;
   twitter: TwitterCard;
   jsonLd: JsonLd;
@@ -144,13 +156,16 @@ function meta(path: string, opts: {
   description: string;
   type?: OpenGraph['type'];
   image?: string;
-}): Pick<RouteMeta, 'title' | 'description' | 'canonical' | 'og' | 'twitter'> {
+}): Pick<RouteMeta, 'title' | 'description' | 'canonical' | 'markdownAlternate' | 'og' | 'twitter'> {
   const canonical = `${SITE_URL}${path}`;
+  // W2's path contract: homepage -> /index.md, everything else -> <path>.md.
+  const markdownAlternate = `${SITE_URL}${path === '/' ? '/index.md' : `${path}.md`}`;
   const image = opts.image ?? DEFAULT_OG_IMAGE;
   return {
     title: opts.title,
     description: opts.description,
     canonical,
+    markdownAlternate,
     og: {
       title: opts.title,
       description: opts.description,
