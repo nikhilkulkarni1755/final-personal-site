@@ -178,7 +178,7 @@ const person = {
   email: socialEmail,
   jobTitle: 'Software Engineer',
   description:
-    'Software engineer building AI agents in production. Creator of Iridium, an MCP server giving AI agents real access to LinkedIn. Contributor to vLLM and SGLang.',
+    'Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.',
   alumniOf: { '@type': 'CollegeOrUniversity', name: 'Rutgers University' },
   knowsAbout: [
     'AI Agents',
@@ -216,7 +216,7 @@ export const routeMeta: Record<string, RouteMeta> = {
     ...meta('/', {
       title: 'Nikhil Kulkarni — Software Engineer, AI Agents in Production',
       description:
-        'Software engineer building AI agents in production. Creator of Iridium, an MCP server giving agents real access to LinkedIn. Contributor to vLLM and SGLang.',
+        'Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.',
       type: 'profile',
     }),
     jsonLd: graph(website, person),
