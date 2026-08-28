@@ -69,4 +69,9 @@ I may update this privacy policy occasionally. Any changes will be posted on thi
 This website is governed by the laws of California, United States.
 
 viewing now
-      Views Likes Comments
+
+Views
+
+Likes
+
+Comments

@@ -25,96 +25,50 @@ React Native Firebase Websockets
 Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
 
 MCP Agent Orchestration Human-in-the-Loop
-            +6 [Connect to Claude](https://iridiumhqmcp.com) Watch Demo
+
++6
+
+[Connect to Claude](https://iridiumhqmcp.com) Watch Demo
 
 ### Iridium Agent
 
 Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
 
 Cloudflare Agents MCP Client Durable Objects
-            +3
+
++3
 
 ### vLLM on EKS
 
 Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
 
 vLLM LLM Inference EKS
-            +3
+
++3
 
 ### Linkedin Agent
 
 Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
 
 LangGraph LangChain Linkedin API
-            +1
+
++1
 
 ### Skim Research Papers Agent
 
 RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
 
 Pinecone AWS Lambda AWS S3
-            +1
+
++1
 
 ### Multi Tenant Kubernetes
 
 Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
 
 Kubernetes Docker Prometheus
-            +3
 
-### Terminal Tweet
-
-Tweet from the Terminal, create a server or just tweet with the CLI
-
-Uvicorn OAuth 2.0 (PKCE) X API
-
-### The Progress App
-
-iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!
-
-React Native Firebase Websockets
-
-### Iridium
-
-Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
-
-MCP Agent Orchestration Human-in-the-Loop
-            +6 [Connect to Claude](https://iridiumhqmcp.com) Watch Demo
-
-### Iridium Agent
-
-Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
-
-Cloudflare Agents MCP Client Durable Objects
-            +3
-
-### vLLM on EKS
-
-Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
-
-vLLM LLM Inference EKS
-            +3
-
-### Linkedin Agent
-
-Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
-
-LangGraph LangChain Linkedin API
-            +1
-
-### Skim Research Papers Agent
-
-RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
-
-Pinecone AWS Lambda AWS S3
-            +1
-
-### Multi Tenant Kubernetes
-
-Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
-
-Kubernetes Docker Prometheus
-            +3
++3
 
 ### Terminal Tweet
 
@@ -124,7 +78,41 @@ Uvicorn OAuth 2.0 (PKCE) X API
 
 ## Open Source Contributions
 
-## Certifications
+ax-platform
+
+### ax-agent-studio
+
+2 PRs merged
+
+Built integrated auth and the monitoring dashboard (+766 lines), plus a long-polling message-format fix.
+
+MCP Agents Auth Observability
+
+[View PRs](https://github.com/ax-platform/ax-agent-studio/pulls?q=is%3Apr+author%3Anikhilkulkarni1755)
+
+vllm-project
+
+### vllm
+
+1 PR merged
+
+Fixed a Plamo2 runner crash on transformers v5, where _tied_weights_keys changed from list to dict.
+
+LLM Inference GPU Serving PyTorch
+
+[View PR](https://github.com/vllm-project/vllm/pulls?q=is%3Apr+author%3Anikhilkulkarni1755)
+
+sgl-project
+
+### sglang
+
+1 PR merged
+
+Preserved request priority through batched embedding requests, so scheduling order survives batching.
+
+LLM Inference Batching Scheduling
+
+[View PR](https://github.com/sgl-project/sglang/pull/32977)
 
 ## Latest Articles
 
@@ -133,42 +121,36 @@ Uvicorn OAuth 2.0 (PKCE) X API
 Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
 
 Profile Analysis LLM Pipeline Claude Sonnet
-            +2 2026-04-23 • 12 min Read Article
+
++2
+
+2026-04-23 • 12 min
+
+[Read Article](/blog/linkedin-agent)
 
 ### Your Agentic Coding Tool is Reading Your Secrets
 
 Why your coding agent should never see your secrets — and how Docker makes that possible.
 
 Docker Security LLM Agents
-            +2 2026-05-20 • 3 min Read Article
+
++2
+
+2026-05-20 • 3 min
+
+[Read Article](/blog/docker-secrets-injection)
 
 ### From Matrices to Minds
 
 How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
 
 Linear Algebra Neural Networks Transformers
-            +1 2026-03-05 • 25 min Read Article
 
-### Cold Outreach Agent
++1
 
-Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
+2026-03-05 • 25 min
 
-Profile Analysis LLM Pipeline Claude Sonnet
-            +2 2026-04-23 • 12 min Read Article
-
-### Your Agentic Coding Tool is Reading Your Secrets
-
-Why your coding agent should never see your secrets — and how Docker makes that possible.
-
-Docker Security LLM Agents
-            +2 2026-05-20 • 3 min Read Article
-
-### From Matrices to Minds
-
-How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
-
-Linear Algebra Neural Networks Transformers
-            +1 2026-03-05 • 25 min Read Article
+[Read Article](/blog/matmul-to-ai)
 
 ## Apps for You
 
@@ -180,17 +162,12 @@ Build Difficult Habits with Like Minded People
 - • End to End system designed to help build sustainable habits
 
 React Native Firebase In App Purchases
-            +2 [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392)
 
-### The Progress App
++2
 
-Build Difficult Habits with Like Minded People
+[App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392)
 
-- • In App Purchases, Websockets for amazing service
-- • End to End system designed to help build sustainable habits
-
-React Native Firebase In App Purchases
-            +2 [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392) 🤖
+🤖
 
 ### AI/ML Engineering
 
@@ -209,7 +186,12 @@ Designing scalable solutions on AWS with serverless and containerized deployment
 Creating modern web applications with React, TypeScript, and Node.js
 
 viewing now
-      Views Likes Comments
+
+Views
+
+Likes
+
+Comments
 
 ---
 
@@ -283,55 +265,79 @@ Source: https://nikhilkulkarni1755.com/projects
 
 A collection of my recent work in AI/ML, cloud infrastructure, and full-stack development
 
-Feature Demo Live Demo @ WorkOS Demo Night
+Feature Demo
+
+Live Demo @ WorkOS Demo Night
 
 ### Iridium
 
 Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log. Built and shipped end to end.
 
-MCP Agent Orchestration Human-in-the-Loop Tool-Calling Design OAuth Multi-Tenant FastAPI PostgreSQL Evals [Connect to Claude](https://iridiumhqmcp.com)
+MCP Agent Orchestration Human-in-the-Loop Tool-Calling Design OAuth Multi-Tenant FastAPI PostgreSQL Evals
+
+[Connect to Claude](https://iridiumhqmcp.com)
 
 ### Iridium Agent
 
 Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically. That state machine is the architecture.
 
-Cloudflare Agents MCP Client Durable Objects Workers AI OAuth TypeScript [View on GitHub](https://github.com/nikhilkulkarni1755/iridium-agent)
+Cloudflare Agents MCP Client Durable Objects Workers AI OAuth TypeScript
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/iridium-agent)
 
 ### vLLM on EKS
 
 Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.
 
-vLLM LLM Inference EKS Multi-Tenant Observability Terraform [View on GitHub](https://github.com/nikhilkulkarni1755/vllm-eks-deployment)
+vLLM LLM Inference EKS Multi-Tenant Observability Terraform
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/vllm-eks-deployment)
+
+[Watch the demo on YouTube](https://www.youtube.com/watch?v=ZThxNcXJNPg)
 
 ### Linkedin Agent
 
 Agent which will find possible connections and send them cold connection requests. I enjoy building connections in the terminal!
 
-LangGraph LangChain Linkedin API LMStudio [View on GitHub](https://github.com/nikhilkulkarni1755/linkedin-agent)
+LangGraph LangChain Linkedin API LMStudio
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/linkedin-agent)
+
+[Watch the demo on YouTube](https://www.youtube.com/watch?v=XQVapr7IbKc)
 
 ### Skim Research Papers Agent
 
 RAG Agent which helps summarize 100+ page research papers. Built with AWS CICD in mind.
 
-Pinecone AWS Lambda AWS S3 Qwen LLM [View on GitHub](https://github.com/MacAndPC/chat-app)
+Pinecone AWS Lambda AWS S3 Qwen LLM
+
+[View on GitHub](https://github.com/MacAndPC/chat-app)
+
+[Watch the demo on YouTube](https://www.youtube.com/watch?v=y8u-0du76cc)
 
 ### Multi Tenant Kubernetes
 
 Kubernetes hosting system which allows each user a private secure namespace, serve a common product and host private data within namespaces.
 
-Kubernetes Docker Prometheus Grafana Terraform AWS [View on GitHub](https://github.com/nikhilkulkarni1755/multi-tenant-k8)
+Kubernetes Docker Prometheus Grafana Terraform AWS
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/multi-tenant-k8)
 
 ### Terminal Tweet
 
 Tweet from the Terminal, create a server or just tweet with the CLI
 
-Uvicorn OAuth 2.0 (PKCE) X API [View on GitHub](https://github.com/nikhilkulkarni1755/twitter-oauth2)
+Uvicorn OAuth 2.0 (PKCE) X API
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/twitter-oauth2)
 
 ### The Progress App
 
 iOS and Android application available for download which helps people connect with their friends and build difficult habits / skills!
 
-React Native Firebase Websockets [View on GitHub](https://github.com/nikhilkulkarni1755/the-progress-app)
+React Native Firebase Websockets
+
+[View on GitHub](https://github.com/nikhilkulkarni1755/the-progress-app)
 
 ---
 
@@ -341,8 +347,19 @@ Source: https://nikhilkulkarni1755.com/blog
 
 Thoughts on software engineering, AI/ML, and building products
 
-[### Your Agentic Coding Tool is Reading Your Secrets Why your coding agent should never see your secrets — and how Docker makes that possible. 3 min read Docker Security LLM Agents Vibe Coding DevOps](/blog/docker-secrets-injection) [### From Matrices to Minds How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence. 25 min read Linear Algebra Neural Networks Transformers GPUs](/blog/matmul-to-ai) [### Cold Outreach Agent Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate. 12 min read Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI](/blog/linkedin-agent) viewing now
-      Views Likes Comments
+[### Your Agentic Coding Tool is Reading Your Secrets Why your coding agent should never see your secrets — and how Docker makes that possible. 3 min read Docker Security LLM Agents Vibe Coding DevOps](/blog/docker-secrets-injection)
+
+[### From Matrices to Minds How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence. 25 min read Linear Algebra Neural Networks Transformers GPUs](/blog/matmul-to-ai)
+
+[### Cold Outreach Agent Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate. 12 min read Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI](/blog/linkedin-agent)
+
+viewing now
+
+Views
+
+Likes
+
+Comments
 
 ---
 
@@ -351,13 +368,20 @@ Source: https://nikhilkulkarni1755.com/blog/docker-secrets-injection
 # Your Agentic Coding Tool is *Reading* Your Secrets
 
 [Back to Blog](/blog)
-            Agentic AI Engineering
+
+Agentic AI Engineering
 
 Why your coding agent should never see your secrets — and how Docker makes that possible.
 
 Author: Nikhil Kulkarni
 
-May 20, 2026 3 min read Docker Security LLM Agents Vibe Coding DevOps [01 · The Problem](#s1) [02 · The Fix](#s2) [03 · Caveats](#s3)
+May 20, 2026
+
+3 min read
+
+Docker Security LLM Agents Vibe Coding DevOps
+
+[01 · The Problem](#s1) [02 · The Fix](#s2) [03 · Caveats](#s3)
 
 Every session with an agentic coding tool — Claude Code, Cursor, Copilot, all of them — is systematically insecure in a way most developers haven't thought through.
 
@@ -370,25 +394,40 @@ Section 01
 They do this silently inside large toolcalls using standard shell commands like `cat`, `grep -r`, `find`, and `printenv` — completely normal parts of how coding agents navigate a project. Some of this data can be rotated if it leaks: a new API key takes thirty seconds. But some of it can't — your server IP, your personal information, your internal infrastructure. These live in your codebase because your application needs them. There's no reason they need to be stored on a third-party AI provider's servers indefinitely.
 
 secret exposure — two scenarios
-      
-            ✗ hardcoded / grepped
-          
-            $ grep -r "password" .
-          
-            $ cat .env
-          
-            DB_PASS=s3cr3t! 
+
+✗ hardcoded / grepped
+
+$ grep -r "password" .
+
+$ cat .env
+
+DB_PASS=s3cr3t! 
             API_KEY=sk-abc123 
             VM_IP=192.168.1.1
-          ↑ sent to LLM servers stored forever
-            ✓ injected
-          
-            docker run \   --env-file secrets.env
-          
-            ssh ${VM_IP} 
+
+↑ sent to LLM servers
+
+stored forever
+
+✓ injected
+
+docker run \   --env-file secrets.env
+
+ssh ${VM_IP} 
             curl -H "key: ${API_KEY}" 
             psql ${DB_URL}
-          ⟳ LLM sees names only values stay local unsafe path safe path Agent runs grep -r to find credentials in the codebase… click to pause Section 02
+
+⟳ LLM sees names only
+
+values stay local
+
+unsafe path safe path
+
+Agent runs grep -r to find credentials in the codebase…
+
+click to pause
+
+Section 02
 
 ## The Fix
 
@@ -410,20 +449,50 @@ docker run \
 ```
 
 injection flow — secrets never in the repo
-    
-        secrets.envoutside repo →
-        docker run--env-file →
-        containerprocess env vars ↓
-        ${API_KEY}
-      
-        ${DB_URL}
-      
-        ${VM_IP}
-      ↓
-        agent ✓sees names only →
-        LLM promptno real values →
-        Anthropic / OpenAIharmless log
-      bind mount keeps host files in sync — edits persist, nothing is copied
+
+secrets.env
+
+outside repo
+
+→
+
+docker run
+
+--env-file
+
+→
+
+container
+
+process env vars
+
+↓
+
+${API_KEY}
+
+${DB_URL}
+
+${VM_IP}
+
+↓
+
+agent ✓
+
+sees names only
+
+→
+
+LLM prompt
+
+no real values
+
+→
+
+Anthropic / OpenAI
+
+harmless log
+
+bind mount keeps host files in sync — edits persist, nothing is copied
 
 Critically, the container uses a bind mount, meaning the agent edits the exact same files on your host machine in real time: your `PLAN.md` gets updated, your code changes persist, your `CLAUDE.md` and memory files are all live and valid across sessions. Nothing is lost, nothing is copied — the container and your local machine share the same filesystem.
 
@@ -456,7 +525,14 @@ For a tighter boundary, Claude Code's native sensitive config and PreToolUse hoo
 The extra hour of setup is the difference between your infrastructure living on someone else's servers forever and it never being there at all.
 
 viewing now
-      Views Likes Comments [Back to Blog](/blog)
+
+Views
+
+Likes
+
+Comments
+
+[Back to Blog](/blog)
 
 ---
 
@@ -465,13 +541,20 @@ Source: https://nikhilkulkarni1755.com/blog/linkedin-agent
 # *Cold* Outreach Agent
 
 [Back to Blog](/blog)
-            Engineering Case Study
+
+Engineering Case Study
 
 Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.
 
 Author: Nikhil Kulkarni
 
-April 23, 2026 12 min read Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI [01 · Pipeline](#s1) [02 · Tech Stack](#s2) [03 · LLM Pipeline](#s3) [04 · Reply Handling](#s4) [05 · Scheduling](#s5) [06 · Problems](#s6) [07 · Results](#s7) [08 · What's Next](#s8)
+April 23, 2026
+
+12 min read
+
+Profile Analysis LLM Pipeline Claude Sonnet PostgreSQL FastAPI
+
+[01 · Pipeline](#s1) [02 · Tech Stack](#s2) [03 · LLM Pipeline](#s3) [04 · Reply Handling](#s4) [05 · Scheduling](#s5) [06 · Problems](#s6) [07 · Results](#s7) [08 · What's Next](#s8)
 
 Cold outreach doesn't work when it reads like cold outreach. Templates get ignored. Mass personalization tools produce messages that feel AI-generated because they are.
 
@@ -483,7 +566,39 @@ Section 01
 
 ## Pipeline
 
-Interactive · 9-Stage Pipeline ▶ Animate 01 · Search Keyword query → headline-tier scoring 02 · Enrich Full profile → re-score with complete data 03 · Generate 6-stage LLM pipeline, best-of-N 04 · Review Interactive CLI · approve / edit / rewrite 05 · Schedule Activity-pattern timing in local TZ 06 · Send Connection invites via LinkedIn API 07 · Reply Handling Webhook → LLM draft → approval → DM Click Animate to walk through the nine pipeline stages.
+Interactive · 9-Stage Pipeline
+
+▶ Animate
+
+01 · Search
+
+Keyword query → headline-tier scoring
+
+02 · Enrich
+
+Full profile → re-score with complete data
+
+03 · Generate
+
+6-stage LLM pipeline, best-of-N
+
+04 · Review
+
+Interactive CLI · approve / edit / rewrite
+
+05 · Schedule
+
+Activity-pattern timing in local TZ
+
+06 · Send
+
+Connection invites via LinkedIn API
+
+07 · Reply Handling
+
+Webhook → LLM draft → approval → DM
+
+Click Animate to walk through the nine pipeline stages.
 
 **Input:** A search query (e.g., "Engineering Manager agentic AI") and a target location. **Output:** Personalized LinkedIn connection notes, reviewed and scheduled, with reply handling via an approval workflow.
 
@@ -530,7 +645,33 @@ Section 03
 
 This is where most of the complexity lives. Each connection note goes through six stages. If quality checks fail, the pipeline retries up to three times with feedback from previous failures.
 
-Stage 1Profile Intel Stage 2Angle Score Stage 3Style Examples Stage 4Constrained Gen Stage 5LLM Detection Stage 6Time Check ✓ Sendor retry → S4
+Stage 1
+
+Profile Intel
+
+Stage 2
+
+Angle Score
+
+Stage 3
+
+Style Examples
+
+Stage 4
+
+Constrained Gen
+
+Stage 5
+
+LLM Detection
+
+Stage 6
+
+Time Check
+
+✓ Send
+
+or retry → S4
 
 **Stage 1 — Profile Intelligence Extraction.** LLM reads the full profile and outputs structured JSON: what they're working on, their career trajectory, overlaps with my background, their communication style, and one "resonance anchor" — a concrete detail about their work that becomes the highlight of the message.
 
@@ -544,7 +685,9 @@ Stage 1Profile Intel Stage 2Angle Score Stage 3Style Examples Stage 4Constrained
 
 **Stage 6 — Respect-Their-Time Check.** The LLM role-plays as the recipient and evaluates: Would you read this? Is the ask clear? Did the sender earn the right to ask? Messages with filler or unclear asks fail.
 
-◆ Insight — **Retry logic:** If either check fails, the specific failure feeds back into Stage 4 as additional constraints. Up to 3 attempts. If none pass cleanly, the system picks the best-scoring attempt. Section 04
+◆ Insight — **Retry logic:** If either check fails, the specific failure feeds back into Stage 4 as additional constraints. Up to 3 attempts. If none pass cleanly, the system picks the best-scoring attempt.
+
+Section 04
 
 ## Reply Handling
 
@@ -558,11 +701,63 @@ A webhook fires when any LinkedIn message arrives. The handler:
 4. **Drafts a reply** — Claude Sonnet gets the conversation thread, contact name, and company. System prompt: acknowledge what they said, steer toward a 15-minute call, stay under 500 characters, sound like a real person.
 5. **Notifies me** with the conversation, drafted reply, and three commands:
 
-Interactive · Reply Approval Flow ▶ Animate LinkedIn reply recipient replies on connection ↓ Webhook receiver incoming message · filter + dedupe ↓ LLM draft v— Claude Sonnet · ≤ 500 chars ↓ Gmail notification thread + draft + commands My email reply (a / e / w)
-                  aapprove
-                  eedit
-                  wrewrite w is recursive — keeps cycling LLM Draft → Notification until I send a or e.
-              ↺ rewrite loop LinkedIn DM send send approved reply ↓ message sent confirmation email back to me Click Animate to watch a LinkedIn reply land, get drafted, and approved over email. notification
+Interactive · Reply Approval Flow
+
+▶ Animate
+
+LinkedIn reply
+
+recipient replies on connection
+
+↓
+
+Webhook receiver
+
+incoming message · filter + dedupe
+
+↓
+
+LLM draft v—
+
+Claude Sonnet · ≤ 500 chars
+
+↓
+
+Gmail notification
+
+thread + draft + commands
+
+My email reply (a / e / w)
+
+a
+
+approve
+
+e
+
+edit
+
+w
+
+rewrite
+
+w is recursive — keeps cycling LLM Draft → Notification until I send a or e.
+
+↺ rewrite loop
+
+LinkedIn DM send
+
+send approved reply
+
+↓
+
+message sent
+
+confirmation email back to me
+
+Click Animate to watch a LinkedIn reply land, get drafted, and approved over email.
+
+notification
 
 ```
 [Name] @ [Company] replied on LinkedIn.
@@ -597,7 +792,19 @@ Section 06
 
 ## Problems Encountered
 
-⚡ Lesson — **LLM detection scores consistently at 8/10.** Cold outreach is structurally formulaic (compliment → credential → ask) regardless of who wrote it. The detection stage was calibrated against long-form writing, not short messages. Mitigated with best-of-N selection: three attempts give enough variance that the cleanest version surfaces. ⚡ Lesson — **API hangs on dense profiles.** Some profiles with extensive work histories caused the API to stall for 60+ seconds. Added explicit timeouts so failures surface cleanly instead of blocking the batch. ⚡ Lesson — **Tone calibration across seniority levels.** Early drafts used peer-level language with VP/Director-level recipients. The prompt now detects recipient persona (builder, enterprise leader, IC, researcher) and adjusts — reaching up to senior leaders should sound curious and humble, not like cosplaying as equals. ⚡ Lesson — **Bolding the wrong thing.** Initial messages bolded the sender's credentials. Reversed the rule: the highlight must be about the recipient's work — something they'll recognize and care about. ⚡ Lesson — **SQLite concurrent access.** The background scheduler held a database connection while HTTP endpoints tried to write. Fixed by adding timeouts to all connections so writers wait for the lock instead of failing. ⚡ Lesson — **Prompt iteration from verbose to minimal.** Three rounds: (1) Mode A/B with technical depth vs. trajectory approaches — too formulaic. (2) Five-angle analysis — still too abstract. (3) Final 2-sentence format with hard structural rules. This is what ships. Section 07
+⚡ Lesson — **LLM detection scores consistently at 8/10.** Cold outreach is structurally formulaic (compliment → credential → ask) regardless of who wrote it. The detection stage was calibrated against long-form writing, not short messages. Mitigated with best-of-N selection: three attempts give enough variance that the cleanest version surfaces.
+
+⚡ Lesson — **API hangs on dense profiles.** Some profiles with extensive work histories caused the API to stall for 60+ seconds. Added explicit timeouts so failures surface cleanly instead of blocking the batch.
+
+⚡ Lesson — **Tone calibration across seniority levels.** Early drafts used peer-level language with VP/Director-level recipients. The prompt now detects recipient persona (builder, enterprise leader, IC, researcher) and adjusts — reaching up to senior leaders should sound curious and humble, not like cosplaying as equals.
+
+⚡ Lesson — **Bolding the wrong thing.** Initial messages bolded the sender's credentials. Reversed the rule: the highlight must be about the recipient's work — something they'll recognize and care about.
+
+⚡ Lesson — **SQLite concurrent access.** The background scheduler held a database connection while HTTP endpoints tried to write. Fixed by adding timeouts to all connections so writers wait for the lock instead of failing.
+
+⚡ Lesson — **Prompt iteration from verbose to minimal.** Three rounds: (1) Mode A/B with technical depth vs. trajectory approaches — too formulaic. (2) Five-angle analysis — still too abstract. (3) Final 2-sentence format with hard structural rules. This is what ships.
+
+Section 07
 
 ## Results
 
@@ -617,7 +824,14 @@ Section 08
 - **Polling fallback for webhooks.** Periodic poll of recent conversations to catch missed replies.
 
 viewing now
-      Views Likes Comments [Back to Blog](/blog)
+
+Views
+
+Likes
+
+Comments
+
+[Back to Blog](/blog)
 
 ---
 
@@ -626,13 +840,22 @@ Source: https://nikhilkulkarni1755.com/blog/matmul-to-ai
 # From *Matrices* to Minds
 
 [Back to Blog](/blog)
-            Complete Technical Deep-Dive
+
+Complete Technical Deep-Dive
 
 How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
 
 Author: Nikhil Kulkarni, Claude Code
 
-March 5, 2026 25 min read Linear Algebra Neural Networks Transformers GPUs [01 · Matrix Basics](#s1) [02 · Matrix Multiplication](#s2) [03 · Neurons & Layers](#s3) [04 · CNNs](#s4) [05 · RNNs & LSTMs](#s5) [06 · Transformers](#s6) [07 · Tokens & Embeddings](#s7) [08 · GPUs & TPUs](#s8) [09 · The Full Stack](#s9) Chapter 01
+March 5, 2026
+
+25 min read
+
+Linear Algebra Neural Networks Transformers GPUs
+
+[01 · Matrix Basics](#s1) [02 · Matrix Multiplication](#s2) [03 · Neurons & Layers](#s3) [04 · CNNs](#s4) [05 · RNNs & LSTMs](#s5) [06 · Transformers](#s6) [07 · Tokens & Embeddings](#s7) [08 · GPUs & TPUs](#s8) [09 · The Full Stack](#s9)
+
+Chapter 01
 
 ## What is a Matrix?
 
@@ -642,7 +865,19 @@ Imagine you have a 3×3 grid of numbers. Each position is called an **element**.
 
 #### A 3×2 Matrix · "Shape is (3, 2)"
 
-2 5 −1 3 4 0 3 rows · 2 columns
+2
+
+5
+
+−1
+
+3
+
+4
+
+0
+
+3 rows · 2 columns
 
 Notation: A[i][j]
 
@@ -652,7 +887,9 @@ Row index **i** goes top→bottom Column index **j** goes left→right So A[0][1
 
 Matrices are a compact way to represent **linear transformations** — functions that rotate, scale, stretch, or project data. Instead of writing 100 separate equations, you write one matrix operation.
 
-💡 Key Insight — In deep learning, a matrix row is often a **data sample** and columns are **features**. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there. Chapter 02
+💡 Key Insight — In deep learning, a matrix row is often a **data sample** and columns are **features**. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there.
+
+Chapter 02
 
 ## Matrix Multiplication
 
@@ -685,7 +922,29 @@ C[i][j] = Σ  A[i][k] × B[k][j]
 
 ### Step-by-step Example
 
-Interactive · 2×3 times 3×2 ▶ Animate A (2×3) × B (3×2) = C (2×2) ? ? ? ? Click Animate to see each dot product computed step by step.
+Interactive · 2×3 times 3×2
+
+▶ Animate
+
+A (2×3)
+
+×
+
+B (3×2)
+
+=
+
+C (2×2)
+
+?
+
+?
+
+?
+
+?
+
+Click Animate to see each dot product computed step by step.
 
 ### FLOP Count — Why this matters for AI
 
@@ -703,7 +962,9 @@ FLOPs per layer:         512 × 4096 × 4096 ≈ 8.6 Billion
 Total FLOPs per forward pass: ~830 Billion
 ```
 
-💡 Key Insight — Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel. Chapter 03
+💡 Key Insight — Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel.
+
+Chapter 03
 
 ## From Matrix Multiplication to Neural Networks
 
@@ -738,7 +999,33 @@ Output = f( x @ W + b )              — shape (batch_size, n)
   f   = activation (ReLU, sigmoid, etc.)
 ```
 
-Input Layerx — raw features ▼ Linear: y = xW + bone matrix multiply ▼ Activation: f(y)ReLU, GELU, sigmoid... ▼ Linear: z = yW₂ + b₂another matrix multiply ▼ Output Layerpredictions / logits
+Input Layer
+
+x — raw features
+
+▼
+
+Linear: y = xW + b
+
+one matrix multiply
+
+▼
+
+Activation: f(y)
+
+ReLU, GELU, sigmoid...
+
+▼
+
+Linear: z = yW₂ + b₂
+
+another matrix multiply
+
+▼
+
+Output Layer
+
+predictions / logits
 
 ### Activation Functions — The Non-Linearity
 
@@ -770,7 +1057,9 @@ Update:   W₁ ← W₁ - α·∂L/∂W₁     (α = learning rate)
 This backward pass is ALSO mostly matrix multiplications!
 ```
 
-⚡ Important — Both the **forward pass** (inference) and the **backward pass** (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible. Chapter 04
+⚡ Important — Both the **forward pass** (inference) and the **backward pass** (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible.
+
+Chapter 04
 
 ## Convolutional Neural Networks (CNNs)
 
@@ -795,7 +1084,55 @@ For each position (i,j) in the output:
 
 #### 3×3 Convolution — Edge Detection
 
-Input Patch 0 255 255 0 255 255 0 0 0 ⊙ Sobel Kernel -1 0 +1 -2 0 +2 -1 0 +1 = Output 1020 Strong edge detected!
+Input Patch
+
+0
+
+255
+
+255
+
+0
+
+255
+
+255
+
+0
+
+0
+
+0
+
+⊙
+
+Sobel Kernel
+
+-1
+
+0
+
++1
+
+-2
+
+0
+
++2
+
+-1
+
+0
+
++1
+
+=
+
+Output
+
+1020
+
+Strong edge detected!
 
 ### Convolution is Matrix Multiplication (im2col)
 
@@ -814,7 +1151,47 @@ This is why convolution training is fast: it's all GEMM!
 
 ### Typical CNN Architecture
 
-Input Image (224×224×3)3 channels: R, G, B ▼ Conv Layer (64 filters, 3×3)extracts local features ▼ BatchNorm + ReLUnormalize + non-linearity ▼ MaxPool (2×2)downsample: 112×112 ▼ More Conv Blocks...deeper features emerge ▼ Global Average Poolspatial → vector ▼ Fully Connected + Softmaxfinal matrix multiply → classes Chapter 05
+Input Image (224×224×3)
+
+3 channels: R, G, B
+
+▼
+
+Conv Layer (64 filters, 3×3)
+
+extracts local features
+
+▼
+
+BatchNorm + ReLU
+
+normalize + non-linearity
+
+▼
+
+MaxPool (2×2)
+
+downsample: 112×112
+
+▼
+
+More Conv Blocks...
+
+deeper features emerge
+
+▼
+
+Global Average Pool
+
+spatial → vector
+
+▼
+
+Fully Connected + Softmax
+
+final matrix multiply → classes
+
+Chapter 05
 
 ## Recurrent Neural Networks (RNNs & LSTMs)
 
@@ -859,7 +1236,9 @@ Cell:  cₜ = fₜ ⊙ cₜ₋₁ + iₜ ⊙ g̃ₜ  ← Update cell state
   σ = sigmoid (outputs between 0 and 1 = "gate open/closed")
 ```
 
-⚡ Important — The **fundamental problem** with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve. Chapter 06
+⚡ Important — The **fundamental problem** with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve.
+
+Chapter 06
 
 ## Transformers & Attention
 
@@ -895,8 +1274,105 @@ Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
   Final output:  (seq_len, d_k)      ← rich, context-aware vectors
 ```
 
-Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The 0.9 0.3 0.1 0.1 0.7 0.1 cat 0.4 0.8 0.5 0.1 0.2 0.3 sat 0.1 0.6 0.9 0.4 0.1 0.2 on 0.1 0.1 0.3 0.9 0.2 0.6 the 0.7 0.2 0.1 0.1 0.9 0.3 mat 0.1 0.3 0.2 0.5 0.3 0.8
-          Each cell = attention weight from row-token → col-token. Darker = stronger attention.
+Attention Heatmap — "The cat sat on the mat"
+
+The
+
+cat
+
+sat
+
+on
+
+the
+
+mat
+
+The
+
+0.9
+
+0.3
+
+0.1
+
+0.1
+
+0.7
+
+0.1
+
+cat
+
+0.4
+
+0.8
+
+0.5
+
+0.1
+
+0.2
+
+0.3
+
+sat
+
+0.1
+
+0.6
+
+0.9
+
+0.4
+
+0.1
+
+0.2
+
+on
+
+0.1
+
+0.1
+
+0.3
+
+0.9
+
+0.2
+
+0.6
+
+the
+
+0.7
+
+0.2
+
+0.1
+
+0.1
+
+0.9
+
+0.3
+
+mat
+
+0.1
+
+0.3
+
+0.2
+
+0.5
+
+0.3
+
+0.8
+
+Each cell = attention weight from row-token → col-token. Darker = stronger attention.
 
 ### Multi-Head Attention
 
@@ -917,7 +1393,37 @@ Total params per attention layer ≈ 4 × d_model²
 
 ### The Full Transformer Block
 
-Input Embeddingstoken embeddings + positional encoding ▼ Multi-Head Self-AttentionQ·Kᵀ/√d · V — parallel matrix ops ▼ Add & LayerNormresidual connection ▼ Feed-Forward Network2 linear layers: 4× expand then contract ▼ Add & LayerNormresidual connection ▼ → Repeat N times (e.g., 96 layers in GPT-3)
+Input Embeddings
+
+token embeddings + positional encoding
+
+▼
+
+Multi-Head Self-Attention
+
+Q·Kᵀ/√d · V — parallel matrix ops
+
+▼
+
+Add & LayerNorm
+
+residual connection
+
+▼
+
+Feed-Forward Network
+
+2 linear layers: 4× expand then contract
+
+▼
+
+Add & LayerNorm
+
+residual connection
+
+▼
+
+→ Repeat N times (e.g., 96 layers in GPT-3)
 
 ### Why Transformers Beat RNNs
 
@@ -985,7 +1491,35 @@ Modern LLMs use RoPE (Rotary Position Embedding) instead —
 
 ### From Token to Output Probability
 
-token IDs[9890, 38, ...] embedding lookup(vocab, d_model) + pos encoding N × Transformer blocksattention + FFN final LayerNorm lm_head · Wᵀ(d_model → vocab) softmax→ probabilities sample next token 💡 Key Insight — The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer. Chapter 08
+token IDs
+
+[9890, 38, ...]
+
+embedding lookup
+
+(vocab, d_model)
+
++ pos encoding
+
+N × Transformer blocks
+
+attention + FFN
+
+final LayerNorm
+
+lm_head · Wᵀ
+
+(d_model → vocab)
+
+softmax
+
+→ probabilities
+
+sample next token
+
+💡 Key Insight — The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer.
+
+Chapter 08
 
 ## GPUs & TPUs: The Hardware Behind the Math
 
@@ -1039,9 +1573,15 @@ For a matrix multiply (GEMM):
   • Result written back to global GPU memory (HBM)
 ```
 
-GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
-          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
-          ↕ GPU idle — data sits in HBM (off-chip memory)
+GPU — Pull Model (HBM → SRAM → Cores)
+
+▶ Run
+
+HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+
+↕
+
+GPU idle — data sits in HBM (off-chip memory)
 
 ### Memory Hierarchy & Bandwidth
 
@@ -1086,27 +1626,49 @@ Key advantages over GPU:
   • 4x more energy-efficient for Transformer workloads
 ```
 
-TPU — Push Model (Systolic Array) ▶ Run
-                ↓ partial sums exit bottom edge
-              ACC
-            ↓
-          
-          Unified Buffer (On-Chip SRAM) — 24 MB
-          Systolic array idle — weights pre-loaded into MAC units
+TPU — Push Model (Systolic Array)
+
+▶ Run
+
+↓ partial sums exit bottom edge
+
+ACC
+
+↓
+
+Unified Buffer (On-Chip SRAM) — 24 MB
+
+Systolic array idle — weights pre-loaded into MAC units
 
 ### GPU vs TPU — The Architectural Difference
 
 The fundamental difference is the data flow model. GPUs **pull** data from memory into independent compute blocks. TPUs **push** data through a grid of interconnected units in a wave. Run both side by side to see the contrast:
 
-GPU vs TPU — Side by Side GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
-          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
-          ↕ GPU idle — data sits in HBM (off-chip memory) TPU — Push Model (Systolic Array) ▶ Run
-                ↓ partial sums exit bottom edge
-              ACC
-            ↓
-          
-          Unified Buffer (On-Chip SRAM) — 24 MB
-          Systolic array idle — weights pre-loaded into MAC units
+GPU vs TPU — Side by Side
+
+GPU — Pull Model (HBM → SRAM → Cores)
+
+▶ Run
+
+HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+
+↕
+
+GPU idle — data sits in HBM (off-chip memory)
+
+TPU — Push Model (Systolic Array)
+
+▶ Run
+
+↓ partial sums exit bottom edge
+
+ACC
+
+↓
+
+Unified Buffer (On-Chip SRAM) — 24 MB
+
+Systolic array idle — weights pre-loaded into MAC units
 
 ### Precision Formats
 
@@ -1152,7 +1714,37 @@ Every token you generate traces through this entire stack — from characters in
 
 ### One Forward Pass, Top to Bottom
 
-**"Paris is the capital of"** Raw text input ↓ BPE Tokenizer → [9521, 318, 262, 3139, 286]5 token IDs ↓ Embedding matrix lookup + positional encoding→ X of shape (5, 4096) ↓ 32 × Transformer BlockEach: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm ↓ LM head: (5, 4096) × (4096, 32000) → logits (5, 32000) ↓ Softmax → probabilities → sample last position→ token 3681 = "France"
+**"Paris is the capital of"**
+
+Raw text input
+
+↓
+
+BPE Tokenizer → [9521, 318, 262, 3139, 286]
+
+5 token IDs
+
+↓
+
+Embedding matrix lookup + positional encoding
+
+→ X of shape (5, 4096)
+
+↓
+
+32 × Transformer Block
+
+Each: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm
+
+↓
+
+LM head: (5, 4096) × (4096, 32000) → logits (5, 32000)
+
+↓
+
+Softmax → probabilities → sample last position
+
+→ token 3681 = "France"
 
 ### The Numbers Behind "Thinking"
 
@@ -1188,8 +1780,19 @@ Training compute:    ~10²⁵ FLOPs
 | Mixtral, GPT-4 | MoE Transformer | Sparse expert routing | Efficient LLM at scale |
 | Mamba, RWKV | State Space Models | Linear complexity attention alternatives | Long context, efficiency |
 
-💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
-      Views Likes Comments [Back to Blog](/blog)
+💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.**
+
+🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth.
+
+viewing now
+
+Views
+
+Likes
+
+Comments
+
+[Back to Blog](/blog)
 
 ---
 
@@ -1208,8 +1811,17 @@ Build Difficult Habits with Like Minded People
 - •In App Purchases, Websockets for amazing service
 - •End to End system designed to help build sustainable habits
 
-React Native Firebase In App Purchases Websockets Node.js [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392) viewing now
-      Views Likes Comments
+React Native Firebase In App Purchases Websockets Node.js
+
+[App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392)
+
+viewing now
+
+Views
+
+Likes
+
+Comments
 
 ---
 
@@ -1286,7 +1898,12 @@ I may update this privacy policy occasionally. Any changes will be posted on thi
 This website is governed by the laws of California, United States.
 
 viewing now
-      Views Likes Comments
+
+Views
+
+Likes
+
+Comments
 
 ---
 
@@ -1296,11 +1913,11 @@ Source: https://nikhilkulkarni1755.com/spearfishing/fireworks-ai
 
 Inference systems
 
-Serving a coding agent is two jobs with opposite shapes. Reading a -token project is compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and measured it against a colocated baseline on the same hardware.
+Serving a coding agent is two jobs with opposite shapes. Reading a 21,543-token project is compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and measured it against a colocated baseline on the same hardware.
 
 **Disaggregation lost, on almost every axis.** Everything below is that measurement — what it did, why the obvious explanation turned out to be wrong, and what it says about when the technique is actually the right call.
 
-· ×  ·  ·
+Measured Rig A · 2× NVIDIA H100 80GB HBM3 · Qwen3-Coder-30B-A3B-Instruct · disaggregated
 
 What the split does
 
@@ -1312,7 +1929,7 @@ Two requests issued together. Each bar is one request: reading its prompt, then 
             derived from the recorded time-to-first-token and every inter-token gap, so it is measured timing rather
             than a sampled average. It shows *which phase each request was in*, not how busy the GPUs were.
             Both modes share one time axis, so the toggle compares runs rather than two differently-stretched
-            pictures. This set finished in .
+            pictures.
 
 Try it
 
@@ -1321,17 +1938,26 @@ Try it
 This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Pick a prompt and watch the patch land at its real recorded speed.
 
 Send
-          1×
-              2×
-              4×
-              8×
-               reset project
+
+1×
+
+2×
+
+4×
+
+8×
+
+reset project
 
 docscribe/
 
 files · lines
 
-frontend/style.css code preview
+frontend/style.css
+
+code
+
+preview
 
 Prefix caching
 
@@ -1343,7 +1969,7 @@ Same project, three different questions. The first pays for the whole prefix; th
 
 ## What the measurement actually said
 
-- **Disaggregation lost.** Time to first token on a -token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.
+- **Disaggregation lost.** Time to first token on a 21,543-token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.
 - **It was not the interconnect, which is what I expected.** The engine's own counters put KV transfer at **0.75ms per request** across NVLink. The cache moved essentially for free. Every argument that begins "the link between the pools is the floor" is wrong here, and I had written one before measuring.
 - **Two GPUs is the wrong size for this technique.** Each disaggregated worker runs at tensor-parallel 1; the colocated baseline runs both cards on every request at tensor-parallel 2. Splitting a two-GPU box gives up half the parallelism per request to buy isolation that nothing at this scale needed. That accounts for roughly 2× of a 13× gap; the rest is orchestration around chunked prefill, which I did not profile and will not guess at.
 - **Sparsity buys math, not memory.** Each worker held **59GB** of the same weights — the arithmetic that makes two GPUs the minimum. A 30.5B model with 3.3B active still has to hold all of it resident.
@@ -1362,9 +1988,9 @@ The charts are evidence. This is what they are evidence for — and where the re
 
 "Disaggregated" is not a configuration you switch on and benefit from. Splitting prefill from decode buys you two schedulers you can tune independently, and that is only worth the KV transfer if the two halves of your traffic actually want different things. So the design question is not *whether* to split — it is what your token shape says the split should be.
 
-A coding agent has an unusually lopsided shape. Every turn carries the whole project: **tokens of context** against an instruction of maybe twenty, and an answer of a few hundred to a few thousand. Two things follow. Prefill dominates the arithmetic, so a naive prefill:decode ratio of 1:1 leaves the decode pool idling. And the context is *the same every turn*, which means most of that prefill should never happen twice.
+A coding agent has an unusually lopsided shape. Every turn carries the whole project: **21,543 tokens of context** against an instruction of maybe twenty, and an answer of a few hundred to a few thousand. Two things follow. Prefill dominates the arithmetic, so a naive prefill:decode ratio of 1:1 leaves the decode pool idling. And the context is *the same every turn*, which means most of that prefill should never happen twice.
 
-That is why the cache result matters more than the split result here. On this workload the radix tree turns a -token prefill into a lookup, and the second request's time-to-first-token falls off a cliff. A purpose-built engine for coding agents is one that treats the shared prefix as the primary object and sizes the prefill pool for cache *misses*, not for the raw token count.
+That is why the cache result matters more than the split result here. On this workload the radix tree turns a 21,543-token prefill into a lookup, and the second request's time-to-first-token falls off a cliff. A purpose-built engine for coding agents is one that treats the shared prefix as the primary object and sizes the prefill pool for cache *misses*, not for the raw token count.
 
 ### Serialization order is a caching decision
 
@@ -1402,7 +2028,7 @@ The colocated baseline runs both H100s on every request at tensor-parallel 2. Th
 
 That trade only pays when phase contention is what hurts — which needs enough concurrency that a long prefill is genuinely blocking somebody's decode, and enough GPUs that each pool still has real parallelism after the split. Eight concurrent requests on two H100s is not that. There was nothing to isolate, so the split bought nothing and cost half the machine.
 
-Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short burst costs ~120ms extra, a -token prefix costs ~5.7s — and prefill is chunked at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times over. I did not profile it further, so that is where the explanation stops rather than where the speculation starts.
+Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short burst costs ~120ms extra, a 21,543-token prefix costs ~5.7s — and prefill is chunked at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times over. I did not profile it further, so that is where the explanation stops rather than where the speculation starts.
 
 ### Scale-to-zero costs 800 seconds
 
@@ -1420,34 +2046,208 @@ The half that does work is worth having. With `--enable-memory-saver`, releasing
 
 **Three:** prefix caching over a hybrid attention model, where part of the state is a recurrent checkpoint rather than a KV block and the reuse rules stop being a simple tree. And **four:** what the prefill:decode ratio should be under a realistic mixture of agent traffic rather than three hand-picked shapes — that ratio is the actual product decision, and everything above is only evidence for how to choose it.
 
+## Measured run
+
+Measured Rig A · 2× NVIDIA H100 80GB HBM3 · Qwen3-Coder-30B-A3B-Instruct · disaggregated
+
+2x H100 80GB, sglang 0.5.18, BF16, NIXL over NVLink.
+
+run_id
+
+riga-disaggregated
+
+captured
+
+2026-08-24 01:00
+
+engine
+
+sglang 0.5.18
+
+model
+
+Qwen/Qwen3-Coder-30B-A3B-Instruct
+
+dtype
+
+bfloat16
+
+interconnect
+
+NVLink NV18 (18 links) + InfiniBand
+
+kv transfer
+
+nixl
+
+prefix
+
+21,543 tokens · 97e097a907a1
+
+cost
+
+$6.58/hr
+
+launched with
+
+```
+prefill$ 
+                  python3 -m sglang.launch_server --model-path Qwen/Qwen3-Coder-30B-A3B-Instruct --tp-size 1 --mem-fraction-static 0.88 --max-running-requests 64 --enable-metrics --enable-cache-report --enable-memory-saver --disaggregation-transfer-backend nixl --disaggregation-mode prefill --host 127.0.0.1 --port 30001 --base-gpu-id 0
+```
+
+```
+decode$ 
+                  python3 -m sglang.launch_server --model-path Qwen/Qwen3-Coder-30B-A3B-Instruct --tp-size 1 --mem-fraction-static 0.88 --max-running-requests 64 --enable-metrics --enable-cache-report --enable-memory-saver --disaggregation-transfer-backend nixl --disaggregation-mode decode --host 127.0.0.1 --port 30002 --base-gpu-id 1
+```
+
+```
+router$ 
+                  python3 -m sglang_router.launch_router --pd-disaggregation --prefill http://127.0.0.1:30001 --decode http://127.0.0.1:30002 --host 127.0.0.1 --port 30080
+```
+
 ---
 
 Source: https://nikhilkulkarni1755.com/take-homes/weave
 
 # PostHog Engineering Impact — take-home
 
-[back](/) PH PostHog Engineering Impact take-home posthog/posthog 90-day window Feature Owners Feature Owners Engineers who own subsystems end-to-end with depth and continuity Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score 85
+[back](/)
+
+PH
+
+PostHog Engineering Impact
+
+take-home posthog/posthog 90-day window
+
+Feature Owners
+
+Feature Owners Engineers who own subsystems end-to-end with depth and continuity
+
+Matt Pua
+
+[@MattPua](https://github.com/MattPua)
+
+#1
+
+Feature Owner
+
+Score 85
 
 Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.
 
-PRs merged 8 / 14 Primary subsystem frontend Dir. focus 97% Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) ▾ expand Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score 77.7
+PRs merged 8 / 14
+
+Primary subsystem frontend
+
+Dir. focus 97%
+
+Top PRs
+
+[#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007)
+
+▾ expand
+
+Phil Haack
+
+[@haacked](https://github.com/haacked)
+
+#2
+
+Feature Owner
+
+Score 77.7
 
 Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.
 
-PRs merged 9 / 13 Primary subsystem rust Dir. focus 59% Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) ▾ expand Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score 74.2
+PRs merged 9 / 13
+
+Primary subsystem rust
+
+Dir. focus 59%
+
+Top PRs
+
+[#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055)
+
+▾ expand
+
+Julian Bez
+
+[@webjunkie](https://github.com/webjunkie)
+
+#3
+
+Feature Owner
+
+Score 74.2
 
 Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.
 
-PRs merged 10 / 15 Primary subsystem tools Dir. focus 37% Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) ▾ expand Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score 70
+PRs merged 10 / 15
+
+Primary subsystem tools
+
+Dir. focus 37%
+
+Top PRs
+
+[#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994)
+
+▾ expand
+
+Tom Piccirello
+
+[@Piccirello](https://github.com/Piccirello)
+
+#4
+
+Feature Owner
+
+Score 70
 
 Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.
 
-PRs merged 11 / 12 Primary subsystem posthog Dir. focus 73% Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) ▾ expand Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score 69.9
+PRs merged 11 / 12
+
+Primary subsystem posthog
+
+Dir. focus 73%
+
+Top PRs
+
+[#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004)
+
+▾ expand
+
+Marius Andra
+
+[@mariusandra](https://github.com/mariusandra)
+
+#5
+
+Feature Owner
+
+Score 69.9
 
 Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.
 
-PRs merged 3 / 3 Primary subsystem posthog Dir. focus 77% Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) ▾ expand
-          Scores are normalized within each bucket. See data decisions 59 engineers · PostHog/posthog
+PRs merged 3 / 3
+
+Primary subsystem posthog
+
+Dir. focus 77%
+
+Top PRs
+
+[#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902)
+
+▾ expand
+
+Scores are normalized within each bucket.
+
+See data decisions
+
+59 engineers · PostHog/posthog
 
 ## Thought Process: Engineering Impact Categories
 
@@ -1457,27 +2257,39 @@ Before writing scoring logic, I mapped 7 distinct engineering impact archetypes.
 
 Own a subsystem end-to-end. Large PRs, concentrated in specific directories, long commit history in same files.
 
-signal: PR size × complexity × ownership continuity 2. Reviewers / Gatekeepers
+signal: PR size × complexity × ownership continuity
+
+2. Reviewers / Gatekeepers
 
 Unblock the team. High review volume, fast turnaround, substantive comments (not just approvals).
 
-signal: reviews given × comment depth × others' PRs they touched that shipped 3. Cross-cutting Contributors
+signal: reviews given × comment depth × others' PRs they touched that shipped
+
+3. Cross-cutting Contributors
 
 Work across many features simultaneously. Touch infra, frontend, backend in the same week.
 
-signal: directory diversity × PR frequency × files changed across subsystems 4. Bug Fixers / Reliability
+signal: directory diversity × PR frequency × files changed across subsystems
+
+4. Bug Fixers / Reliability
 
 Keep the product stable. Small targeted PRs, issue-linked commits, fast cycle time.
 
-signal: issues closed × fix speed × recurrence rate 5. Community Managers
+signal: issues closed × fix speed × recurrence rate
+
+5. Community Managers
 
 PostHog is open source — a unique bucket. Triage external PRs, respond to issues, review community contributions.
 
-signal: external PR reviews + issue responses + community PR merges 6. Force Multipliers / Mentors
+signal: external PR reviews + issue responses + community PR merges
+
+6. Force Multipliers / Mentors
 
 Their reviews make other engineers better. Impact flows through review quality.
 
-signal: comment quality (length/substance), junior PRs they reviewed that shipped cleanly 7. Infrastructure / Platform
+signal: comment quality (length/substance), junior PRs they reviewed that shipped cleanly
+
+7. Infrastructure / Platform
 
 Enable everyone else. CI/CD, tooling, build system. Low visibility but high leverage.
 
@@ -1499,7 +2311,9 @@ The 7-category framework covers far more than the current 3. Adding cross-cuttin
 
 Four concrete issues hit during data collection — each with a decision and reasoning.
 
-Issue 1 Fetching all PRs before date-filtering Problem
+Issue 1 Fetching all PRs before date-filtering
+
+Problem
 
 Initial paginate() downloaded the entire PR history before applying the 90-day filter — 6421 PRs from a repo with 37k+ total commits.
 
@@ -1511,7 +2325,9 @@ Why
 
 Early termination cuts both total API calls and runtime proportionally. For this repo, the difference is between minutes and hours.
 
-Issue 2 6419 PRs in 90 days = hours of runtime Problem
+Issue 2 6419 PRs in 90 days = hours of runtime
+
+Problem
 
 Even with early termination, ~6400 non-bot PRs in 90 days. At 0.05s sleep: 6419 × 3 × 0.05s ≈ 16 min in sleep alone, total ~5+ hours.
 
@@ -1523,7 +2339,9 @@ Why
 
 300 PRs is sufficient to identify the top 5. 0.02s sleep keeps us under GitHub's 5000 req/hr limit. Trade-off: engineers active earlier in the window but not in the most recent 300 will be under-represented.
 
-Issue 3 Transient HTTP 500 from GitHub API Problem
+Issue 3 Transient HTTP 500 from GitHub API
+
+Problem
 
 During the first run, one PR's /files endpoint returned HTTP 500.
 
@@ -1535,7 +2353,9 @@ Why
 
 500s from GitHub are transient. If a PR's detail fetch ultimately fails, that PR contributes no file/review data but is still counted — graceful degradation.
 
-Issue 4 PRs not filtered to main branch Problem
+Issue 4 PRs not filtered to main branch
+
+Problem
 
 Initial API call fetched PRs targeting any base branch — feature branches, release branches, etc. This inflated PR counts with work that never lands in production.
 
@@ -1547,39 +2367,281 @@ Why
 
 Engineering impact should be measured by work that lands in the main codebase. Filtering to master ensures metrics reflect production-bound work only.
 
-Final Parameters WINDOW_DAYS 90 Assignment spec MAX_PRS 300 Runtime constraint — sufficient for top-5 ranking SLEEP_BETWEEN_CALLS 0.02s Safe under 5000 req/hr; keeps runtime ~10 min BASE_BRANCH master Only PRs targeting PostHog's main branch MIN_PRS_THRESHOLD 3 Exclude engineers with too little signal Retries per call 3 Handle transient GitHub 500s/429s
+Final Parameters
+
+WINDOW_DAYS 90 Assignment spec
+
+MAX_PRS 300 Runtime constraint — sufficient for top-5 ranking
+
+SLEEP_BETWEEN_CALLS 0.02s Safe under 5000 req/hr; keeps runtime ~10 min
+
+BASE_BRANCH master Only PRs targeting PostHog's main branch
+
+MIN_PRS_THRESHOLD 3 Exclude engineers with too little signal
+
+Retries per call 3 Handle transient GitHub 500s/429s
 
 ## Full Engineer Detail (all metrics + most-touched files, Feature Owners)
 
-Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score 85
+Matt Pua
+
+[@MattPua](https://github.com/MattPua)
+
+#1
+
+Feature Owner
+
+Score 85
 
 Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.
 
-PRs merged 8 / 14 Primary subsystem frontend Dir. focus 97% Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) All Metrics PRs authored 14 PRs merged 8 Merge rate 57% Primary subsystem frontend Dir. concentration 97% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files frontend/src/scenes/dashboard/DashboardItems.tsx frontend/src/lib/components/Cards/InsightCard/InsightCard.tsx frontend/src/scenes/dashboard/dashboardLogic.tsx frontend/src/scenes/dashboard/DashboardHeaderActions.tsx frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png ▴ collapse
+PRs merged 8 / 14
 
-Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score 77.7
+Primary subsystem frontend
+
+Dir. focus 97%
+
+Top PRs
+
+[#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007)
+
+All Metrics
+
+PRs authored 14
+
+PRs merged 8
+
+Merge rate 57%
+
+Primary subsystem frontend
+
+Dir. concentration 97%
+
+Repeat files (3+ touches) 3
+
+Avg PR size (lines) 0
+
+Most-Touched Files
+
+frontend/src/scenes/dashboard/DashboardItems.tsx
+
+frontend/src/lib/components/Cards/InsightCard/InsightCard.tsx
+
+frontend/src/scenes/dashboard/dashboardLogic.tsx
+
+frontend/src/scenes/dashboard/DashboardHeaderActions.tsx
+
+frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png
+
+▴ collapse
+
+Phil Haack
+
+[@haacked](https://github.com/haacked)
+
+#2
+
+Feature Owner
+
+Score 77.7
 
 Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.
 
-PRs merged 9 / 13 Primary subsystem rust Dir. focus 59% Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) All Metrics PRs authored 13 PRs merged 9 Merge rate 69% Primary subsystem rust Dir. concentration 59% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files rust/feature-flags/src/api/auth.rs rust/feature-flags/src/metrics/consts.rs posthog/api/feature_flag.py rust/feature-flags/src/utils/test_utils.rs rust/feature-flags/tests/test_flag_definitions.rs ▴ collapse
+PRs merged 9 / 13
 
-Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score 74.2
+Primary subsystem rust
+
+Dir. focus 59%
+
+Top PRs
+
+[#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055)
+
+All Metrics
+
+PRs authored 13
+
+PRs merged 9
+
+Merge rate 69%
+
+Primary subsystem rust
+
+Dir. concentration 59%
+
+Repeat files (3+ touches) 3
+
+Avg PR size (lines) 0
+
+Most-Touched Files
+
+rust/feature-flags/src/api/auth.rs
+
+rust/feature-flags/src/metrics/consts.rs
+
+posthog/api/feature_flag.py
+
+rust/feature-flags/src/utils/test_utils.rs
+
+rust/feature-flags/tests/test_flag_definitions.rs
+
+▴ collapse
+
+Julian Bez
+
+[@webjunkie](https://github.com/webjunkie)
+
+#3
+
+Feature Owner
+
+Score 74.2
 
 Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.
 
-PRs merged 10 / 15 Primary subsystem tools Dir. focus 37% Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) All Metrics PRs authored 15 PRs merged 10 Merge rate 67% Primary subsystem tools Dir. concentration 37% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files .github/workflows/pr-approval-agent.yml tools/pr-approval-agent/reviewer.py .github/workflows/ci-backend.yml .github/CODEOWNERS-soft tools/pr-approval-agent/README.md ▴ collapse
+PRs merged 10 / 15
 
-Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score 70
+Primary subsystem tools
+
+Dir. focus 37%
+
+Top PRs
+
+[#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994)
+
+All Metrics
+
+PRs authored 15
+
+PRs merged 10
+
+Merge rate 67%
+
+Primary subsystem tools
+
+Dir. concentration 37%
+
+Repeat files (3+ touches) 3
+
+Avg PR size (lines) 0
+
+Most-Touched Files
+
+.github/workflows/pr-approval-agent.yml
+
+tools/pr-approval-agent/reviewer.py
+
+.github/workflows/ci-backend.yml
+
+.github/CODEOWNERS-soft
+
+tools/pr-approval-agent/README.md
+
+▴ collapse
+
+Tom Piccirello
+
+[@Piccirello](https://github.com/Piccirello)
+
+#4
+
+Feature Owner
+
+Score 70
 
 Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.
 
-PRs merged 11 / 12 Primary subsystem posthog Dir. focus 73% Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) All Metrics PRs authored 12 PRs merged 11 Merge rate 92% Primary subsystem posthog Dir. concentration 73% Repeat files (3+ touches) 1 Avg PR size (lines) 0 Most-Touched Files mypy-baseline.txt posthog/conftest.py posthog/management/commands/migrate_clickhouse.py posthog/management/commands/setup_test_environment.py ee/api/billing.py ▴ collapse
+PRs merged 11 / 12
 
-Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score 69.9
+Primary subsystem posthog
+
+Dir. focus 73%
+
+Top PRs
+
+[#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004)
+
+All Metrics
+
+PRs authored 12
+
+PRs merged 11
+
+Merge rate 92%
+
+Primary subsystem posthog
+
+Dir. concentration 73%
+
+Repeat files (3+ touches) 1
+
+Avg PR size (lines) 0
+
+Most-Touched Files
+
+mypy-baseline.txt
+
+posthog/conftest.py
+
+posthog/management/commands/migrate_clickhouse.py
+
+posthog/management/commands/setup_test_environment.py
+
+ee/api/billing.py
+
+▴ collapse
+
+Marius Andra
+
+[@mariusandra](https://github.com/mariusandra)
+
+#5
+
+Feature Owner
+
+Score 69.9
 
 Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.
 
-PRs merged 3 / 3 Primary subsystem posthog Dir. focus 77% Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) All Metrics PRs authored 3 PRs merged 3 Merge rate 100% Primary subsystem posthog Dir. concentration 77% Repeat files (3+ touches) 2 Avg PR size (lines) 0 Most-Touched Files posthog/hogql/database/database.py posthog/hogql/database/test/test_database.py posthog/hogql/database/utils.py products/data_warehouse/backend/api/test/test_view_link.py products/data_warehouse/backend/api/view_link.py ▴ collapse
+PRs merged 3 / 3
+
+Primary subsystem posthog
+
+Dir. focus 77%
+
+Top PRs
+
+[#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902)
+
+All Metrics
+
+PRs authored 3
+
+PRs merged 3
+
+Merge rate 100%
+
+Primary subsystem posthog
+
+Dir. concentration 77%
+
+Repeat files (3+ touches) 2
+
+Avg PR size (lines) 0
+
+Most-Touched Files
+
+posthog/hogql/database/database.py
+
+posthog/hogql/database/test/test_database.py
+
+posthog/hogql/database/utils.py
+
+products/data_warehouse/backend/api/test/test_view_link.py
+
+products/data_warehouse/backend/api/view_link.py
+
+▴ collapse
 
 ---
 

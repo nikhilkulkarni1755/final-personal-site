@@ -1,13 +1,22 @@
 # From *Matrices* to Minds
 
 [Back to Blog](/blog)
-            Complete Technical Deep-Dive
+
+Complete Technical Deep-Dive
 
 How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.
 
 Author: Nikhil Kulkarni, Claude Code
 
-March 5, 2026 25 min read Linear Algebra Neural Networks Transformers GPUs [01 · Matrix Basics](#s1) [02 · Matrix Multiplication](#s2) [03 · Neurons & Layers](#s3) [04 · CNNs](#s4) [05 · RNNs & LSTMs](#s5) [06 · Transformers](#s6) [07 · Tokens & Embeddings](#s7) [08 · GPUs & TPUs](#s8) [09 · The Full Stack](#s9) Chapter 01
+March 5, 2026
+
+25 min read
+
+Linear Algebra Neural Networks Transformers GPUs
+
+[01 · Matrix Basics](#s1) [02 · Matrix Multiplication](#s2) [03 · Neurons & Layers](#s3) [04 · CNNs](#s4) [05 · RNNs & LSTMs](#s5) [06 · Transformers](#s6) [07 · Tokens & Embeddings](#s7) [08 · GPUs & TPUs](#s8) [09 · The Full Stack](#s9)
+
+Chapter 01
 
 ## What is a Matrix?
 
@@ -17,7 +26,19 @@ Imagine you have a 3×3 grid of numbers. Each position is called an **element**.
 
 #### A 3×2 Matrix · "Shape is (3, 2)"
 
-2 5 −1 3 4 0 3 rows · 2 columns
+2
+
+5
+
+−1
+
+3
+
+4
+
+0
+
+3 rows · 2 columns
 
 Notation: A[i][j]
 
@@ -27,7 +48,9 @@ Row index **i** goes top→bottom Column index **j** goes left→right So A[0][1
 
 Matrices are a compact way to represent **linear transformations** — functions that rotate, scale, stretch, or project data. Instead of writing 100 separate equations, you write one matrix operation.
 
-💡 Key Insight — In deep learning, a matrix row is often a **data sample** and columns are **features**. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there. Chapter 02
+💡 Key Insight — In deep learning, a matrix row is often a **data sample** and columns are **features**. A dataset of 1000 images at 28×28 pixels becomes a matrix of shape (1000, 784). Everything flows from there.
+
+Chapter 02
 
 ## Matrix Multiplication
 
@@ -60,7 +83,29 @@ C[i][j] = Σ  A[i][k] × B[k][j]
 
 ### Step-by-step Example
 
-Interactive · 2×3 times 3×2 ▶ Animate A (2×3) × B (3×2) = C (2×2) ? ? ? ? Click Animate to see each dot product computed step by step.
+Interactive · 2×3 times 3×2
+
+▶ Animate
+
+A (2×3)
+
+×
+
+B (3×2)
+
+=
+
+C (2×2)
+
+?
+
+?
+
+?
+
+?
+
+Click Animate to see each dot product computed step by step.
 
 ### FLOP Count — Why this matters for AI
 
@@ -78,7 +123,9 @@ FLOPs per layer:         512 × 4096 × 4096 ≈ 8.6 Billion
 Total FLOPs per forward pass: ~830 Billion
 ```
 
-💡 Key Insight — Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel. Chapter 03
+💡 Key Insight — Training GPT-3 required ~3.14 × 10²³ FLOPs. At peak A100 GPU throughput (312 TFLOPS), that would take ~32 years on a single GPU. Meta trained LLaMA-3 on ~16,000 GPUs in parallel.
+
+Chapter 03
 
 ## From Matrix Multiplication to Neural Networks
 
@@ -113,7 +160,33 @@ Output = f( x @ W + b )              — shape (batch_size, n)
   f   = activation (ReLU, sigmoid, etc.)
 ```
 
-Input Layerx — raw features ▼ Linear: y = xW + bone matrix multiply ▼ Activation: f(y)ReLU, GELU, sigmoid... ▼ Linear: z = yW₂ + b₂another matrix multiply ▼ Output Layerpredictions / logits
+Input Layer
+
+x — raw features
+
+▼
+
+Linear: y = xW + b
+
+one matrix multiply
+
+▼
+
+Activation: f(y)
+
+ReLU, GELU, sigmoid...
+
+▼
+
+Linear: z = yW₂ + b₂
+
+another matrix multiply
+
+▼
+
+Output Layer
+
+predictions / logits
 
 ### Activation Functions — The Non-Linearity
 
@@ -145,7 +218,9 @@ Update:   W₁ ← W₁ - α·∂L/∂W₁     (α = learning rate)
 This backward pass is ALSO mostly matrix multiplications!
 ```
 
-⚡ Important — Both the **forward pass** (inference) and the **backward pass** (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible. Chapter 04
+⚡ Important — Both the **forward pass** (inference) and the **backward pass** (training) are dominated by matrix multiplications. This is why GPU/TPU hardware is designed around one thing: performing massive matrix multiplies as fast as possible.
+
+Chapter 04
 
 ## Convolutional Neural Networks (CNNs)
 
@@ -170,7 +245,55 @@ For each position (i,j) in the output:
 
 #### 3×3 Convolution — Edge Detection
 
-Input Patch 0 255 255 0 255 255 0 0 0 ⊙ Sobel Kernel -1 0 +1 -2 0 +2 -1 0 +1 = Output 1020 Strong edge detected!
+Input Patch
+
+0
+
+255
+
+255
+
+0
+
+255
+
+255
+
+0
+
+0
+
+0
+
+⊙
+
+Sobel Kernel
+
+-1
+
+0
+
++1
+
+-2
+
+0
+
++2
+
+-1
+
+0
+
++1
+
+=
+
+Output
+
+1020
+
+Strong edge detected!
 
 ### Convolution is Matrix Multiplication (im2col)
 
@@ -189,7 +312,47 @@ This is why convolution training is fast: it's all GEMM!
 
 ### Typical CNN Architecture
 
-Input Image (224×224×3)3 channels: R, G, B ▼ Conv Layer (64 filters, 3×3)extracts local features ▼ BatchNorm + ReLUnormalize + non-linearity ▼ MaxPool (2×2)downsample: 112×112 ▼ More Conv Blocks...deeper features emerge ▼ Global Average Poolspatial → vector ▼ Fully Connected + Softmaxfinal matrix multiply → classes Chapter 05
+Input Image (224×224×3)
+
+3 channels: R, G, B
+
+▼
+
+Conv Layer (64 filters, 3×3)
+
+extracts local features
+
+▼
+
+BatchNorm + ReLU
+
+normalize + non-linearity
+
+▼
+
+MaxPool (2×2)
+
+downsample: 112×112
+
+▼
+
+More Conv Blocks...
+
+deeper features emerge
+
+▼
+
+Global Average Pool
+
+spatial → vector
+
+▼
+
+Fully Connected + Softmax
+
+final matrix multiply → classes
+
+Chapter 05
 
 ## Recurrent Neural Networks (RNNs & LSTMs)
 
@@ -234,7 +397,9 @@ Cell:  cₜ = fₜ ⊙ cₜ₋₁ + iₜ ⊙ g̃ₜ  ← Update cell state
   σ = sigmoid (outputs between 0 and 1 = "gate open/closed")
 ```
 
-⚡ Important — The **fundamental problem** with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve. Chapter 06
+⚡ Important — The **fundamental problem** with RNNs and LSTMs: they must process tokens one-at-a-time, sequentially. You can't parallelize across the sequence length. This makes them slow to train and limits context length. This is what Transformers were designed to solve.
+
+Chapter 06
 
 ## Transformers & Attention
 
@@ -270,8 +435,105 @@ Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
   Final output:  (seq_len, d_k)      ← rich, context-aware vectors
 ```
 
-Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The 0.9 0.3 0.1 0.1 0.7 0.1 cat 0.4 0.8 0.5 0.1 0.2 0.3 sat 0.1 0.6 0.9 0.4 0.1 0.2 on 0.1 0.1 0.3 0.9 0.2 0.6 the 0.7 0.2 0.1 0.1 0.9 0.3 mat 0.1 0.3 0.2 0.5 0.3 0.8
-          Each cell = attention weight from row-token → col-token. Darker = stronger attention.
+Attention Heatmap — "The cat sat on the mat"
+
+The
+
+cat
+
+sat
+
+on
+
+the
+
+mat
+
+The
+
+0.9
+
+0.3
+
+0.1
+
+0.1
+
+0.7
+
+0.1
+
+cat
+
+0.4
+
+0.8
+
+0.5
+
+0.1
+
+0.2
+
+0.3
+
+sat
+
+0.1
+
+0.6
+
+0.9
+
+0.4
+
+0.1
+
+0.2
+
+on
+
+0.1
+
+0.1
+
+0.3
+
+0.9
+
+0.2
+
+0.6
+
+the
+
+0.7
+
+0.2
+
+0.1
+
+0.1
+
+0.9
+
+0.3
+
+mat
+
+0.1
+
+0.3
+
+0.2
+
+0.5
+
+0.3
+
+0.8
+
+Each cell = attention weight from row-token → col-token. Darker = stronger attention.
 
 ### Multi-Head Attention
 
@@ -292,7 +554,37 @@ Total params per attention layer ≈ 4 × d_model²
 
 ### The Full Transformer Block
 
-Input Embeddingstoken embeddings + positional encoding ▼ Multi-Head Self-AttentionQ·Kᵀ/√d · V — parallel matrix ops ▼ Add & LayerNormresidual connection ▼ Feed-Forward Network2 linear layers: 4× expand then contract ▼ Add & LayerNormresidual connection ▼ → Repeat N times (e.g., 96 layers in GPT-3)
+Input Embeddings
+
+token embeddings + positional encoding
+
+▼
+
+Multi-Head Self-Attention
+
+Q·Kᵀ/√d · V — parallel matrix ops
+
+▼
+
+Add & LayerNorm
+
+residual connection
+
+▼
+
+Feed-Forward Network
+
+2 linear layers: 4× expand then contract
+
+▼
+
+Add & LayerNorm
+
+residual connection
+
+▼
+
+→ Repeat N times (e.g., 96 layers in GPT-3)
 
 ### Why Transformers Beat RNNs
 
@@ -360,7 +652,35 @@ Modern LLMs use RoPE (Rotary Position Embedding) instead —
 
 ### From Token to Output Probability
 
-token IDs[9890, 38, ...] embedding lookup(vocab, d_model) + pos encoding N × Transformer blocksattention + FFN final LayerNorm lm_head · Wᵀ(d_model → vocab) softmax→ probabilities sample next token 💡 Key Insight — The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer. Chapter 08
+token IDs
+
+[9890, 38, ...]
+
+embedding lookup
+
+(vocab, d_model)
+
++ pos encoding
+
+N × Transformer blocks
+
+attention + FFN
+
+final LayerNorm
+
+lm_head · Wᵀ
+
+(d_model → vocab)
+
+softmax
+
+→ probabilities
+
+sample next token
+
+💡 Key Insight — The final projection (d_model → vocab_size) is the largest matrix multiply in the forward pass. For Llama-3 (d_model=8192, vocab=128K): that's a matrix of shape (8192, 131072) = over 1 billion parameters in a single layer.
+
+Chapter 08
 
 ## GPUs & TPUs: The Hardware Behind the Math
 
@@ -414,9 +734,15 @@ For a matrix multiply (GEMM):
   • Result written back to global GPU memory (HBM)
 ```
 
-GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
-          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
-          ↕ GPU idle — data sits in HBM (off-chip memory)
+GPU — Pull Model (HBM → SRAM → Cores)
+
+▶ Run
+
+HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+
+↕
+
+GPU idle — data sits in HBM (off-chip memory)
 
 ### Memory Hierarchy & Bandwidth
 
@@ -461,27 +787,49 @@ Key advantages over GPU:
   • 4x more energy-efficient for Transformer workloads
 ```
 
-TPU — Push Model (Systolic Array) ▶ Run
-                ↓ partial sums exit bottom edge
-              ACC
-            ↓
-          
-          Unified Buffer (On-Chip SRAM) — 24 MB
-          Systolic array idle — weights pre-loaded into MAC units
+TPU — Push Model (Systolic Array)
+
+▶ Run
+
+↓ partial sums exit bottom edge
+
+ACC
+
+↓
+
+Unified Buffer (On-Chip SRAM) — 24 MB
+
+Systolic array idle — weights pre-loaded into MAC units
 
 ### GPU vs TPU — The Architectural Difference
 
 The fundamental difference is the data flow model. GPUs **pull** data from memory into independent compute blocks. TPUs **push** data through a grid of interconnected units in a wave. Run both side by side to see the contrast:
 
-GPU vs TPU — Side by Side GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
-          HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
-          ↕ GPU idle — data sits in HBM (off-chip memory) TPU — Push Model (Systolic Array) ▶ Run
-                ↓ partial sums exit bottom edge
-              ACC
-            ↓
-          
-          Unified Buffer (On-Chip SRAM) — 24 MB
-          Systolic array idle — weights pre-loaded into MAC units
+GPU vs TPU — Side by Side
+
+GPU — Pull Model (HBM → SRAM → Cores)
+
+▶ Run
+
+HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
+
+↕
+
+GPU idle — data sits in HBM (off-chip memory)
+
+TPU — Push Model (Systolic Array)
+
+▶ Run
+
+↓ partial sums exit bottom edge
+
+ACC
+
+↓
+
+Unified Buffer (On-Chip SRAM) — 24 MB
+
+Systolic array idle — weights pre-loaded into MAC units
 
 ### Precision Formats
 
@@ -527,7 +875,37 @@ Every token you generate traces through this entire stack — from characters in
 
 ### One Forward Pass, Top to Bottom
 
-**"Paris is the capital of"** Raw text input ↓ BPE Tokenizer → [9521, 318, 262, 3139, 286]5 token IDs ↓ Embedding matrix lookup + positional encoding→ X of shape (5, 4096) ↓ 32 × Transformer BlockEach: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm ↓ LM head: (5, 4096) × (4096, 32000) → logits (5, 32000) ↓ Softmax → probabilities → sample last position→ token 3681 = "France"
+**"Paris is the capital of"**
+
+Raw text input
+
+↓
+
+BPE Tokenizer → [9521, 318, 262, 3139, 286]
+
+5 token IDs
+
+↓
+
+Embedding matrix lookup + positional encoding
+
+→ X of shape (5, 4096)
+
+↓
+
+32 × Transformer Block
+
+Each: Q=XWq, K=XWk, V=XWv → Attn(Q,K,V) → FFN → ResNorm
+
+↓
+
+LM head: (5, 4096) × (4096, 32000) → logits (5, 32000)
+
+↓
+
+Softmax → probabilities → sample last position
+
+→ token 3681 = "France"
 
 ### The Numbers Behind "Thinking"
 
@@ -563,5 +941,16 @@ Training compute:    ~10²⁵ FLOPs
 | Mixtral, GPT-4 | MoE Transformer | Sparse expert routing | Efficient LLM at scale |
 | Mamba, RWKV | State Space Models | Linear complexity attention alternatives | Long context, efficiency |
 
-💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
-      Views Likes Comments [Back to Blog](/blog)
+💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.**
+
+🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth.
+
+viewing now
+
+Views
+
+Likes
+
+Comments
+
+[Back to Blog](/blog)

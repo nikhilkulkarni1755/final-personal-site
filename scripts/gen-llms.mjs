@@ -32,22 +32,93 @@ function write(relPath, content) {
 // Collapses an exact-duplicate run of "### heading ... body" sections back to
 // one occurrence. Home.tsx's carousels render `[...items, ...items]` for a
 // CSS infinite-scroll marquee, so every card appears twice in the DOM order —
+// An empty heading — a section title with no resolvable content under it —
+// reads as "this section exists and is empty" to an agent, which is worse
+// than the section not being there at all: it implies an absence of work
+// rather than an absence of extraction (this is exactly what happened to
+// Contributions/Certifications before the cross-file render-prop fix, and
+// it's worth keeping as a permanent safety net for any future gap of the
+// same shape). A heading counts as empty when the very next block is
+// itself a heading, or there is no next block at all. Runs to a fixed
+// point since dropping one heading can make its predecessor's "next
+// block" another heading.
+function dropEmptyHeadings(markdown) {
+  let blocks = markdown.split(/\n{2,}/);
+  const headingLevel = (b) => {
+    const m = /^(#{1,6})\s/.exec(b);
+    return m ? m[1].length : null;
+  };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const drop = new Set();
+    for (let i = 0; i < blocks.length; i++) {
+      const level = headingLevel(blocks[i]);
+      if (level === null) continue;
+      // A deeper heading right after (## then ### then real bullets) is
+      // legitimate nesting, not emptiness — keep scanning past it. Only a
+      // sibling/ancestor heading (level <= this one) with nothing but
+      // headings in between means there was really nothing under this one.
+      let hasContent = false;
+      for (let j = i + 1; j < blocks.length; j++) {
+        const jLevel = headingLevel(blocks[j]);
+        if (jLevel !== null && jLevel <= level) break;
+        if (jLevel === null) { hasContent = true; break; }
+      }
+      if (!hasContent) drop.add(i);
+    }
+    if (drop.size) {
+      changed = true;
+      blocks = blocks.filter((_, i) => !drop.has(i));
+    }
+  }
+  return blocks.join('\n\n');
+}
+
 // that's a rendering trick, not distinct content, and would double every
 // project/post/app in the mirror if left alone.
 function dedupeSections(markdown) {
+  // Home.tsx's carousels render `[...items, ...items]` — the WHOLE item
+  // array duplicated once (A,B,C,A,B,C), not each item repeated in place.
+  // Within each "## ..." section, greedily find the largest adjacent run
+  // of blocks that exactly repeats immediately after itself and collapse
+  // it to one copy, then keep scanning — rather than requiring the WHOLE
+  // section body to be an exact half/half split, which breaks the moment
+  // unrelated content (e.g. Home.tsx's un-headed "Featured Section" skill
+  // cards, which sit right after the Apps carousel with no H2 of its own)
+  // follows the duplicated run in the same section.
   const blocks = markdown.split(/\n{2,}/);
-  const sections = [];
+  const groups = [[]]; // groups[0] = everything before the first "## "
   for (const b of blocks) {
-    if (/^###\s/.test(b)) sections.push([b]);
-    else if (sections.length) sections[sections.length - 1].push(b);
-    else sections.push([b]);
+    if (/^##\s/.test(b)) groups.push([b]);
+    else groups[groups.length - 1].push(b);
   }
   const out = [];
-  for (let i = 0; i < sections.length; i++) {
-    const prev = sections[i - 1];
-    const cur = sections[i];
-    if (prev && prev.join('\n\n') === cur.join('\n\n')) continue;
-    out.push(...cur);
+  for (const group of groups) {
+    const heading = /^##\s/.test(group[0]) ? group[0] : null;
+    const body = heading ? group.slice(1) : group;
+    if (heading) out.push(heading);
+    let i = 0;
+    while (i < body.length) {
+      let collapsed = false;
+      const maxL = Math.floor((body.length - i) / 2);
+      for (let L = maxL; L >= 1; L--) {
+        let match = true;
+        for (let k = 0; k < L; k++) {
+          if (body[i + k] !== body[i + L + k]) { match = false; break; }
+        }
+        if (match) {
+          out.push(...body.slice(i, i + L));
+          i += 2 * L;
+          collapsed = true;
+          break;
+        }
+      }
+      if (!collapsed) {
+        out.push(body[i]);
+        i += 1;
+      }
+    }
   }
   return out.join('\n\n');
 }
@@ -76,7 +147,44 @@ const privacy = ensureH1First(extractPageMarkdown(path.join(SRC, 'Privacy.tsx'))
 const docker = ensureH1First(extractPageMarkdown(path.join(SRC, 'DockerSecretsPost.tsx')));
 const linkedin = ensureH1First(extractPageMarkdown(path.join(SRC, 'LinkedinAgentPost.tsx')));
 const matmul = ensureH1First(extractPageMarkdown(path.join(SRC, 'MatmulTutorial.tsx')));
-const fireworks = ensureH1First(extractPageMarkdown(path.join(SRC, 'FireworksAI.tsx')), 'A purpose-built disaggregated inference engine');
+// FireworksAI.tsx destructures `active` (the currently-selected measurement
+// run) from useFireworksCaptures(), a hook that fetches it at runtime from
+// public/spearfishing/fireworks-ai/data/*.json — invisible to static
+// extraction, which left several sentences with a value silently dropped
+// out of them (e.g. "Reading a -token project"). The hook's own default
+// selection (mode starts 'disaggregated'; a complete measured pair exists
+// on the one real rig) is riga-disaggregated.json, so that's loaded here
+// and threaded through as the real value — not a guess, the actual file
+// the page would fetch on first load.
+const fireworksDataDir = path.join(ROOT, 'public', 'spearfishing', 'fireworks-ai', 'data');
+const activeRun = JSON.parse(fs.readFileSync(path.join(fireworksDataDir, 'riga-disaggregated.json'), 'utf8'));
+const runBadgePath = path.join(ROOT, 'src', 'components', 'fireworks', 'RunBadge.tsx');
+// RunBadge is "provenance for every number on the page" per its own doc
+// comment (run id, model, dtype, interconnect, exact prefix token count +
+// hash, cost, launch argv) — entirely gated on the same unresolvable
+// `active`, so it was completely absent before. Its collapsed-state summary
+// line is what names the actual model (Qwen3-Coder-30B-A3B-Instruct); the
+// page never named it anywhere else, which is why grepping for the model
+// name against the old mirror came back empty. open:true (the accordion's
+// useState default is false) recovers the expanded detail too, the same
+// targeted-state-override approach already used for WeaveTakeHome's
+// EngineerCard(expanded: true).
+const runProvenance = extractComponentMarkdown(runBadgePath, 'RunBadge', { run: activeRun }, { open: true });
+
+let fireworksRaw = extractPageMarkdown(path.join(SRC, 'FireworksAI.tsx'), { active: activeRun });
+// One sentence is still unrecoverable without reimplementing phases.ts's
+// timeline-duration math from scratch (a real risk of getting a number
+// wrong rather than just missing one) — dropped rather than left broken,
+// per "resolve it or drop the sentence."
+const brokenSentence = 'This set finished in .';
+if (!fireworksRaw.includes(brokenSentence)) {
+  throw new Error(`Expected sentence "${brokenSentence}" not found in FireworksAI.tsx output — the source text this drop targets may have changed; update or remove this fix.`);
+}
+fireworksRaw = fireworksRaw.replace(brokenSentence, '').replace(/[ \t]+\n/g, '\n');
+const fireworks = ensureH1First(
+  [fireworksRaw, '## Measured run\n\n' + runProvenance].join('\n\n'),
+  'A purpose-built disaggregated inference engine',
+);
 
 // WeaveTakeHome's ~3,500 words of written analysis live behind a modal that
 // only opens on click, so a DOM snapshot (or a naive render of the page's
@@ -134,7 +242,7 @@ const pages = [
   { route: '/privacy-policy', file: 'privacy-policy.md', title: 'Privacy Policy', md: privacy },
   { route: '/spearfishing/fireworks-ai', file: 'spearfishing/fireworks-ai.md', title: 'A purpose-built disaggregated inference engine', md: fireworks },
   { route: '/take-homes/weave', file: 'take-homes/weave.md', title: 'PostHog Engineering Impact — take-home', md: weave },
-];
+].map((p) => ({ ...p, md: dropEmptyHeadings(p.md) }));
 
 for (const p of pages) {
   const abs = write(p.file, p.md);

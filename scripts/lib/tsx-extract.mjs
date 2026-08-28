@@ -21,7 +21,7 @@ const UNRESOLVED = Symbol('unresolved');
 // here stays UNRESOLVED rather than being guessed at.
 const GLOBAL_FNS = { String, Number, Boolean };
 const MATH_FNS = { round: Math.round, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, abs: Math.abs, pow: Math.pow, sqrt: Math.sqrt };
-const NUMBER_STRING_METHODS = new Set(['toLocaleString', 'toFixed', 'toString', 'toUpperCase', 'toLowerCase', 'trim']);
+const NUMBER_STRING_METHODS = new Set(['toLocaleString', 'toFixed', 'toString', 'toUpperCase', 'toLowerCase', 'trim', 'split', 'pop', 'join', 'slice', 'replace', 'toISOString']);
 
 // Silent content loss is worse than the documented "unresolved -> nothing"
 // rule: that rule is for content we genuinely cannot know (runtime state,
@@ -173,13 +173,25 @@ function scopeGet(scope, name) {
   return UNRESOLVED;
 }
 function scopeSet(scope, name, val) { scope.vars.set(name, val); }
+// A stored function value (render prop, helper const) can be invoked from a
+// different file than the one it was written in — e.g. AutoRotatingCarousel
+// (its own file) calling a `renderItem` it received from Home.tsx. The JSX
+// tags inside that function's body belong lexically to Home.tsx, so tag
+// resolution needs Home.tsx's entry (its own imports/components), not the
+// invoking file's. Every scope chain is rooted at some file's module scope,
+// which now carries a back-reference to that file's entry — walk up to it.
+function scopeRootEntry(scope) {
+  let s = scope;
+  while (s && s.parent) s = s.parent;
+  return s && s.entry;
+}
 function moduleScope(entry) {
   // Backed directly by entry.dataScope (not a snapshot copy) so declarations
   // added to it later in file order — collectTopLevel evaluates top-level
   // consts in source order, and later ones may reference earlier ones — are
   // visible to every scope chain rooted here, including ones already handed out.
   if (entry._moduleScope) return entry._moduleScope;
-  entry._moduleScope = { vars: entry.dataScope, parent: null };
+  entry._moduleScope = { vars: entry.dataScope, parent: null, entry };
   return entry._moduleScope;
 }
 
@@ -309,6 +321,14 @@ function evalExprInner(node, scope) {
     if (node.operator === ts.SyntaxKind.MinusToken) return -v;
     if (node.operator === ts.SyntaxKind.PlusToken) return +v;
   }
+  if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Date') {
+    const args = (node.arguments ?? []).map((a) => evalExpr(a, scope));
+    if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
+    try {
+      const d = new Date(...args);
+      return Number.isNaN(d.getTime()) ? UNRESOLVED : d;
+    } catch { return UNRESOLVED; }
+  }
   if (ts.isCallExpression(node)) {
     // A callable value bound anywhere reachable by evaluating the callee
     // expression — a bare name (renderItem(x)) or a dotted lookup on a
@@ -337,7 +357,7 @@ function evalExprInner(node, scope) {
     // Chained number/string formatting, e.g. Math.round(x).toLocaleString().
     if (ts.isPropertyAccessExpression(node.expression) && NUMBER_STRING_METHODS.has(node.expression.name.text)) {
       const receiver = evalExpr(node.expression.expression, scope);
-      if ((typeof receiver === 'number' || typeof receiver === 'string') && typeof receiver[node.expression.name.text] === 'function') {
+      if ((typeof receiver === 'number' || typeof receiver === 'string' || Array.isArray(receiver) || receiver instanceof Date) && typeof receiver[node.expression.name.text] === 'function') {
         const args = node.arguments.map((a) => evalExpr(a, scope));
         if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
         try { return receiver[node.expression.name.text](...args); } catch { return UNRESOLVED; }
@@ -502,6 +522,18 @@ function renderInner(node, scope, ctx) {
     const name = tagInfo.name;
     if (name === 'br') return ' ';
     if (name === 'style' || name === 'script' || name === 'svg' || name === 'path') return '';
+    if (name === 'iframe') {
+      // A YouTube embed's real content is the video, not any text — the
+      // only way to represent it faithfully in markdown is a working link
+      // to the actual video (reconstructed from the embed URL, not
+      // fabricated: YouTube's embed and watch URLs share the same id).
+      const src = getAttrLiteral(attrs, 'src', scope);
+      if (typeof src === 'string') {
+        const m = /youtube\.com\/embed\/([\w-]+)/.exec(src);
+        if (m) return block(`[Watch the demo on YouTube](https://www.youtube.com/watch?v=${m[1]})`);
+      }
+      return '';
+    }
     if (name === 'a') {
       const href = getAttrLiteral(attrs, 'href', scope) ?? getAttrLiteral(attrs, 'to', scope);
       const inner = normalizeInline(renderChildrenGeneric(children, scope, ctx));
@@ -581,8 +613,17 @@ function renderInner(node, scope, ctx) {
       ];
       return block(lines.join('\n'));
     }
-    // generic block container: div/section/article/header/footer/main/figure
-    return renderChildrenGeneric(children, scope, ctx);
+    // div/section/article/header/footer/main/figure are block-level in real
+    // HTML/CSS, and treating them that way (rather than as transparent
+    // passthrough) matters here: without it, two adjacent hand-authored
+    // sibling <section>s — or a bare label/icon span sitting right after
+    // one — run together with no separator, and content from one visually
+    // distinct part of the page silently attaches to the end of another's
+    // paragraph (this is what caused the Apps-carousel/Skills-grid bleed
+    // and the earlier org-name bleed between contribution cards).
+    // finalizeMarkdown()'s block-split-trim-rejoin pass cleans up any
+    // resulting redundant blank lines, so wrapping unconditionally is safe.
+    return block(renderChildrenGeneric(children, scope, ctx));
   }
 
   if (tagInfo.kind === 'link') {
@@ -744,8 +785,13 @@ function resolveTag(tagNameNode, scope, ctx) {
   const name = tagNameNode.getText();
   if (/^[a-z]/.test(name)) return { kind: 'html', name };
 
+  // The tag's own file is unambiguous ground truth for which imports/
+  // components are in scope for it — resolved directly from the AST node
+  // rather than threaded through ctx, which is fragile: a JSX node reached
+  // by invoking a stored function value (a render prop passed across files)
+  // does not carry its defining file's ctx along with it as data.
+  const entry = loadFile(tagNameNode.getSourceFile().fileName);
   // react-router-dom Link special case
-  const entry = ctx.entry;
   if (name === 'Link' && entry) {
     const imp = entry.imports.get('Link');
     if (imp && imp.external && imp.source === 'react-router-dom') {
@@ -858,7 +904,12 @@ function expandExpr(expr, scope, ctx) {
       } else {
         bodyExpr = unwrapParens(fnVal.node.body);
       }
-      return bodyExpr ? expandExpr(bodyExpr, s, ctx) : [];
+      // The invoked function's JSX belongs to whichever file it was
+      // written in (its closure scope's owning entry), not the file
+      // that happens to be calling it — see scopeRootEntry.
+      const fnEntry = scopeRootEntry(fnVal.closureScope);
+      const fnCtx = fnEntry ? { ...ctx, entry: fnEntry } : ctx;
+      return bodyExpr ? expandExpr(bodyExpr, s, fnCtx) : [];
     }
   }
   if (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'map') {
@@ -879,7 +930,20 @@ function expandExpr(expr, scope, ctx) {
       } else {
         bodyExpr = unwrapParens(cb.body);
       }
-      if (bodyExpr) out.push(...expandExpr(bodyExpr, s, ctx));
+      if (bodyExpr) {
+        // Each .map() iteration is a distinct repeated unit (a card, a row,
+        // an <li>) — mark it so sibling-joining inserts a real paragraph
+        // break between iterations rather than the single space used for
+        // hand-authored adjacent inline elements. Without this, two mapped
+        // cards whose own root tag doesn't happen to force a block break
+        // (a wrapping <div> around a leading text node) run together as
+        // one paragraph, with content silently bleeding across card
+        // boundaries — e.g. one contribution's org name landing at the
+        // end of the *previous* contribution's paragraph.
+        const produced = expandExpr(bodyExpr, s, ctx);
+        for (const p of produced) p.fromMap = true;
+        out.push(...produced);
+      }
     });
     return out;
   }
@@ -895,18 +959,32 @@ function renderChildrenGeneric(children, scope, ctx) {
   const items = expand(children, scope, ctx);
   let out = '';
   let prevWasEl = false;
+  let prevFromMap = false;
+  let prevMultiline = false;
   for (const it of items) {
     const piece = it.kind === 'text' ? it.value : render(it.node, it.scope, ctx);
     if (!piece) continue;
-    // Sibling elements with no JsxText between them (e.g. mapped chips, an icon
-    // span next to a label span) render with no source whitespace at all; add a
-    // single separating space so words don't run together. normalizeInline()
-    // collapses this back down wherever it isn't wanted.
-    if (prevWasEl && it.kind === 'el' && out && !/\s$/.test(out) && !/^\s/.test(piece)) {
-      out += ' ';
+    const curMultiline = piece.includes('\n');
+    if (prevWasEl && it.kind === 'el' && out) {
+      if ((prevFromMap || it.fromMap) && (prevMultiline || curMultiline)) {
+        // Crossing a .map() iteration boundary (see expandExpr) between two
+        // substantial, multi-block items (cards, not one-line chips) — a
+        // real paragraph break, so one card's content can never bleed into
+        // the next's paragraph.
+        out += '\n\n';
+      } else if (!/\s$/.test(out) && !/^\s/.test(piece)) {
+        // Sibling elements with no JsxText between them (mapped chips, an
+        // icon span next to a label span) render with no source
+        // whitespace at all; add a single separating space so words don't
+        // run together. normalizeInline() collapses this back down
+        // wherever it isn't wanted.
+        out += ' ';
+      }
     }
     out += piece;
     prevWasEl = it.kind === 'el';
+    prevFromMap = it.kind === 'el' && !!it.fromMap;
+    prevMultiline = curMultiline;
   }
   return out;
 }
@@ -924,7 +1002,7 @@ function finalizeMarkdown(raw) {
  * Extract markdown for a page component's default export.
  * @param {string} absFilePath
  */
-export function extractPageMarkdown(absFilePath) {
+export function extractPageMarkdown(absFilePath, varOverrides = {}) {
   const entry = loadFile(absFilePath);
   const exportName = findDefaultExportName(entry);
   if (!exportName || !entry.componentDefs.has(exportName)) {
@@ -935,13 +1013,24 @@ export function extractPageMarkdown(absFilePath) {
     throw new Error(`Could not statically resolve return JSX for ${absFilePath}`);
   }
   const scope = newScope(moduleScope(entry));
+  // Bind a variable this page destructures from a custom data-fetching hook
+  // (e.g. `const { active } = useFireworksCaptures()`) to its real value —
+  // loaded by the caller directly from the same JSON file the hook itself
+  // fetches at runtime, per the "resolve it from the JSON, which is where
+  // it genuinely lives" fix (rather than "unresolved -> nothing", which is
+  // correct for content we truly cannot know, but wrong here: the value is
+  // sitting in public/spearfishing/fireworks-ai/data/*.json the whole time).
+  // Set BEFORE fillLocalConsts, not after: later statements in the body
+  // (e.g. `const prefixTokens = active.prefix.approx_tokens...`) need the
+  // override in scope at the moment they're evaluated, not afterward.
+  for (const [k, v] of Object.entries(varOverrides)) scopeSet(scope, k, v);
   fillLocalConsts(info.bodyBlock, scope);
   const raw = render(info.returnNode, scope, { entry });
   return finalizeMarkdown(raw);
 }
 
 /** Extract markdown for a named (non-default) component export, used for cross-file pieces like Writeup. */
-export function extractComponentMarkdown(absFilePath, componentName, propsLiteral = {}) {
+export function extractComponentMarkdown(absFilePath, componentName, propsLiteral = {}, stateOverrides = {}) {
   const entry = loadFile(absFilePath);
   if (!entry.componentDefs.has(componentName)) {
     throw new Error(`Component ${componentName} not found in ${absFilePath}`);
@@ -961,6 +1050,14 @@ export function extractComponentMarkdown(absFilePath, componentName, propsLitera
     }
   }
   fillLocalConsts(info.bodyBlock, scope);
+  // Override a useState value the component would otherwise default to
+  // (e.g. an accordion's `open` starting false) — for extracting a real
+  // click-to-reveal detail panel, the same targeted pattern already used
+  // for WeaveTakeHome's EngineerCard(expanded: true). Set AFTER
+  // fillLocalConsts, which is what actually binds `const [open] =
+  // useState(false)` to its default in the first place — setting the
+  // override any earlier just gets clobbered back to that default.
+  for (const [k, v] of Object.entries(stateOverrides)) scopeSet(scope, k, v);
   const raw = render(info.returnNode, scope, { entry });
   return finalizeMarkdown(raw);
 }

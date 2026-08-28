@@ -1,13 +1,20 @@
 # Your Agentic Coding Tool is *Reading* Your Secrets
 
 [Back to Blog](/blog)
-            Agentic AI Engineering
+
+Agentic AI Engineering
 
 Why your coding agent should never see your secrets — and how Docker makes that possible.
 
 Author: Nikhil Kulkarni
 
-May 20, 2026 3 min read Docker Security LLM Agents Vibe Coding DevOps [01 · The Problem](#s1) [02 · The Fix](#s2) [03 · Caveats](#s3)
+May 20, 2026
+
+3 min read
+
+Docker Security LLM Agents Vibe Coding DevOps
+
+[01 · The Problem](#s1) [02 · The Fix](#s2) [03 · Caveats](#s3)
 
 Every session with an agentic coding tool — Claude Code, Cursor, Copilot, all of them — is systematically insecure in a way most developers haven't thought through.
 
@@ -20,25 +27,40 @@ Section 01
 They do this silently inside large toolcalls using standard shell commands like `cat`, `grep -r`, `find`, and `printenv` — completely normal parts of how coding agents navigate a project. Some of this data can be rotated if it leaks: a new API key takes thirty seconds. But some of it can't — your server IP, your personal information, your internal infrastructure. These live in your codebase because your application needs them. There's no reason they need to be stored on a third-party AI provider's servers indefinitely.
 
 secret exposure — two scenarios
-      
-            ✗ hardcoded / grepped
-          
-            $ grep -r "password" .
-          
-            $ cat .env
-          
-            DB_PASS=s3cr3t! 
+
+✗ hardcoded / grepped
+
+$ grep -r "password" .
+
+$ cat .env
+
+DB_PASS=s3cr3t! 
             API_KEY=sk-abc123 
             VM_IP=192.168.1.1
-          ↑ sent to LLM servers stored forever
-            ✓ injected
-          
-            docker run \   --env-file secrets.env
-          
-            ssh ${VM_IP} 
+
+↑ sent to LLM servers
+
+stored forever
+
+✓ injected
+
+docker run \   --env-file secrets.env
+
+ssh ${VM_IP} 
             curl -H "key: ${API_KEY}" 
             psql ${DB_URL}
-          ⟳ LLM sees names only values stay local unsafe path safe path Agent runs grep -r to find credentials in the codebase… click to pause Section 02
+
+⟳ LLM sees names only
+
+values stay local
+
+unsafe path safe path
+
+Agent runs grep -r to find credentials in the codebase…
+
+click to pause
+
+Section 02
 
 ## The Fix
 
@@ -60,20 +82,50 @@ docker run \
 ```
 
 injection flow — secrets never in the repo
-    
-        secrets.envoutside repo →
-        docker run--env-file →
-        containerprocess env vars ↓
-        ${API_KEY}
-      
-        ${DB_URL}
-      
-        ${VM_IP}
-      ↓
-        agent ✓sees names only →
-        LLM promptno real values →
-        Anthropic / OpenAIharmless log
-      bind mount keeps host files in sync — edits persist, nothing is copied
+
+secrets.env
+
+outside repo
+
+→
+
+docker run
+
+--env-file
+
+→
+
+container
+
+process env vars
+
+↓
+
+${API_KEY}
+
+${DB_URL}
+
+${VM_IP}
+
+↓
+
+agent ✓
+
+sees names only
+
+→
+
+LLM prompt
+
+no real values
+
+→
+
+Anthropic / OpenAI
+
+harmless log
+
+bind mount keeps host files in sync — edits persist, nothing is copied
 
 Critically, the container uses a bind mount, meaning the agent edits the exact same files on your host machine in real time: your `PLAN.md` gets updated, your code changes persist, your `CLAUDE.md` and memory files are all live and valid across sessions. Nothing is lost, nothing is copied — the container and your local machine share the same filesystem.
 
@@ -106,4 +158,11 @@ For a tighter boundary, Claude Code's native sensitive config and PreToolUse hoo
 The extra hour of setup is the difference between your infrastructure living on someone else's servers forever and it never being there at all.
 
 viewing now
-      Views Likes Comments [Back to Blog](/blog)
+
+Views
+
+Likes
+
+Comments
+
+[Back to Blog](/blog)

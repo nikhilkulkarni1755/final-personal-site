@@ -2,11 +2,11 @@
 
 Inference systems
 
-Serving a coding agent is two jobs with opposite shapes. Reading a -token project is compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and measured it against a colocated baseline on the same hardware.
+Serving a coding agent is two jobs with opposite shapes. Reading a 21,543-token project is compute-bound and happens once; writing the patch is memory-bound and happens one token at a time. Run them on the same GPUs and every scheduling choice is a compromise, so I split them across two H100s and measured it against a colocated baseline on the same hardware.
 
 **Disaggregation lost, on almost every axis.** Everything below is that measurement — what it did, why the obvious explanation turned out to be wrong, and what it says about when the technique is actually the right call.
 
-· ×  ·  ·
+Measured Rig A · 2× NVIDIA H100 80GB HBM3 · Qwen3-Coder-30B-A3B-Instruct · disaggregated
 
 What the split does
 
@@ -18,7 +18,7 @@ Two requests issued together. Each bar is one request: reading its prompt, then 
             derived from the recorded time-to-first-token and every inter-token gap, so it is measured timing rather
             than a sampled average. It shows *which phase each request was in*, not how busy the GPUs were.
             Both modes share one time axis, so the toggle compares runs rather than two differently-stretched
-            pictures. This set finished in .
+            pictures.
 
 Try it
 
@@ -27,17 +27,26 @@ Try it
 This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Pick a prompt and watch the patch land at its real recorded speed.
 
 Send
-          1×
-              2×
-              4×
-              8×
-               reset project
+
+1×
+
+2×
+
+4×
+
+8×
+
+reset project
 
 docscribe/
 
 files · lines
 
-frontend/style.css code preview
+frontend/style.css
+
+code
+
+preview
 
 Prefix caching
 
@@ -49,7 +58,7 @@ Same project, three different questions. The first pays for the whole prefix; th
 
 ## What the measurement actually said
 
-- **Disaggregation lost.** Time to first token on a -token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.
+- **Disaggregation lost.** Time to first token on a 21,543-token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.
 - **It was not the interconnect, which is what I expected.** The engine's own counters put KV transfer at **0.75ms per request** across NVLink. The cache moved essentially for free. Every argument that begins "the link between the pools is the floor" is wrong here, and I had written one before measuring.
 - **Two GPUs is the wrong size for this technique.** Each disaggregated worker runs at tensor-parallel 1; the colocated baseline runs both cards on every request at tensor-parallel 2. Splitting a two-GPU box gives up half the parallelism per request to buy isolation that nothing at this scale needed. That accounts for roughly 2× of a 13× gap; the rest is orchestration around chunked prefill, which I did not profile and will not guess at.
 - **Sparsity buys math, not memory.** Each worker held **59GB** of the same weights — the arithmetic that makes two GPUs the minimum. A 30.5B model with 3.3B active still has to hold all of it resident.
@@ -68,9 +77,9 @@ The charts are evidence. This is what they are evidence for — and where the re
 
 "Disaggregated" is not a configuration you switch on and benefit from. Splitting prefill from decode buys you two schedulers you can tune independently, and that is only worth the KV transfer if the two halves of your traffic actually want different things. So the design question is not *whether* to split — it is what your token shape says the split should be.
 
-A coding agent has an unusually lopsided shape. Every turn carries the whole project: **tokens of context** against an instruction of maybe twenty, and an answer of a few hundred to a few thousand. Two things follow. Prefill dominates the arithmetic, so a naive prefill:decode ratio of 1:1 leaves the decode pool idling. And the context is *the same every turn*, which means most of that prefill should never happen twice.
+A coding agent has an unusually lopsided shape. Every turn carries the whole project: **21,543 tokens of context** against an instruction of maybe twenty, and an answer of a few hundred to a few thousand. Two things follow. Prefill dominates the arithmetic, so a naive prefill:decode ratio of 1:1 leaves the decode pool idling. And the context is *the same every turn*, which means most of that prefill should never happen twice.
 
-That is why the cache result matters more than the split result here. On this workload the radix tree turns a -token prefill into a lookup, and the second request's time-to-first-token falls off a cliff. A purpose-built engine for coding agents is one that treats the shared prefix as the primary object and sizes the prefill pool for cache *misses*, not for the raw token count.
+That is why the cache result matters more than the split result here. On this workload the radix tree turns a 21,543-token prefill into a lookup, and the second request's time-to-first-token falls off a cliff. A purpose-built engine for coding agents is one that treats the shared prefix as the primary object and sizes the prefill pool for cache *misses*, not for the raw token count.
 
 ### Serialization order is a caching decision
 
@@ -108,7 +117,7 @@ The colocated baseline runs both H100s on every request at tensor-parallel 2. Th
 
 That trade only pays when phase contention is what hurts — which needs enough concurrency that a long prefill is genuinely blocking somebody's decode, and enough GPUs that each pool still has real parallelism after the split. Eight concurrent requests on two H100s is not that. There was nothing to isolate, so the split bought nothing and cost half the machine.
 
-Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short burst costs ~120ms extra, a -token prefix costs ~5.7s — and prefill is chunked at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times over. I did not profile it further, so that is where the explanation stops rather than where the speculation starts.
+Which explains roughly 2× of a 13× gap. The remainder scales with prefill length — a short burst costs ~120ms extra, a 21,543-token prefix costs ~5.7s — and prefill is chunked at 8,192 tokens, so a long prompt pays whatever per-chunk orchestration exists several times over. I did not profile it further, so that is where the explanation stops rather than where the speculation starts.
 
 ### Scale-to-zero costs 800 seconds
 
@@ -125,3 +134,62 @@ The half that does work is worth having. With `--enable-memory-saver`, releasing
 **Two:** where the remaining seconds go. KV transfer is ruled out and tensor parallelism explains about 2×; the rest is orchestration around chunked prefill and wants a profiler rather than another chart.
 
 **Three:** prefix caching over a hybrid attention model, where part of the state is a recurrent checkpoint rather than a KV block and the reuse rules stop being a simple tree. And **four:** what the prefill:decode ratio should be under a realistic mixture of agent traffic rather than three hand-picked shapes — that ratio is the actual product decision, and everything above is only evidence for how to choose it.
+
+## Measured run
+
+Measured Rig A · 2× NVIDIA H100 80GB HBM3 · Qwen3-Coder-30B-A3B-Instruct · disaggregated
+
+2x H100 80GB, sglang 0.5.18, BF16, NIXL over NVLink.
+
+run_id
+
+riga-disaggregated
+
+captured
+
+2026-08-24 01:00
+
+engine
+
+sglang 0.5.18
+
+model
+
+Qwen/Qwen3-Coder-30B-A3B-Instruct
+
+dtype
+
+bfloat16
+
+interconnect
+
+NVLink NV18 (18 links) + InfiniBand
+
+kv transfer
+
+nixl
+
+prefix
+
+21,543 tokens · 97e097a907a1
+
+cost
+
+$6.58/hr
+
+launched with
+
+```
+prefill$ 
+                  python3 -m sglang.launch_server --model-path Qwen/Qwen3-Coder-30B-A3B-Instruct --tp-size 1 --mem-fraction-static 0.88 --max-running-requests 64 --enable-metrics --enable-cache-report --enable-memory-saver --disaggregation-transfer-backend nixl --disaggregation-mode prefill --host 127.0.0.1 --port 30001 --base-gpu-id 0
+```
+
+```
+decode$ 
+                  python3 -m sglang.launch_server --model-path Qwen/Qwen3-Coder-30B-A3B-Instruct --tp-size 1 --mem-fraction-static 0.88 --max-running-requests 64 --enable-metrics --enable-cache-report --enable-memory-saver --disaggregation-transfer-backend nixl --disaggregation-mode decode --host 127.0.0.1 --port 30002 --base-gpu-id 1
+```
+
+```
+router$ 
+                  python3 -m sglang_router.launch_router --pd-disaggregation --prefill http://127.0.0.1:30001 --decode http://127.0.0.1:30002 --host 127.0.0.1 --port 30080
+```

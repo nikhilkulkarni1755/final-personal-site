@@ -11,5 +11,14 @@ Build Difficult Habits with Like Minded People
 - •In App Purchases, Websockets for amazing service
 - •End to End system designed to help build sustainable habits
 
-React Native Firebase In App Purchases Websockets Node.js [App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392) viewing now
-      Views Likes Comments
+React Native Firebase In App Purchases Websockets Node.js
+
+[App Store](https://apps.apple.com/us/app/the-progress-app/id6503723392)
+
+viewing now
+
+Views
+
+Likes
+
+Comments
