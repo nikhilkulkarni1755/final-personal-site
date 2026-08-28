@@ -80,3 +80,5 @@ supabase/.branches/
 finds/email/.dry-run/
 # Finds pipeline: per-lane local runtime state (never committed)
 finds/hitl/.state/
+# Finds daily run: per-run stage artifacts (never committed -- D6)
+finds/run/.runs/
