@@ -48,13 +48,17 @@ async function proxy(request, target, search) {
 
 // Extensionless paths the client-side router (src/App.tsx) actually renders,
 // with a short title for each — reused below both for 404 knowledge and for
-// the ?mode=agent page list.
+// the ?mode=agent page list. This is a hand-maintained mirror of App.tsx's
+// <Route path="..."> list and WILL drift the moment a route is added there
+// and not here (it already did once, for /interesting-finds) — run
+// `node functions/_lib/check-routes.mjs` after adding a route to catch it.
 const STATIC_ROUTES = new Map([
   ['/', 'Home'],
   ['/projects', 'Projects'],
   ['/blog', 'Blog'],
   ['/apps', 'Apps'],
   ['/about', 'About'],
+  ['/interesting-finds', 'Interesting finds'],
   ['/privacy-policy', 'Privacy policy'],
   ['/spearfishing/voice-agent', 'Live demo: voice-driven marketplace agent'],
   ['/spearfishing/fireworks-ai', 'Project writeup: Fireworks AI'],
