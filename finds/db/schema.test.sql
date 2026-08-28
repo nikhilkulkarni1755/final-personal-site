@@ -220,6 +220,66 @@ BEGIN
     END;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- finds_published: the ONLY table anon may read, and only when published
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand UUID;
+    n    INTEGER;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+
+    -- a published find with no evidence behind it is what D7 forbids
+    BEGIN
+        INSERT INTO finds_published (
+            candidate_id, slug, name, product_url, source_labels, found_at,
+            score_claim_verified, score_rare_problem, score_anyone_can_use,
+            score_agentic_friendly, citations, published_at)
+        VALUES (cand, 'acme', 'Acme', 'https://acme.dev', ARRAY['Peerlist'],
+                NOW(), 3, 2, 3, 3, '[]'::jsonb, NOW());
+        RAISE EXCEPTION 'a published find with no citations was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    INSERT INTO finds_published (
+        candidate_id, slug, name, product_url, source_labels, found_at,
+        score_claim_verified, score_rare_problem, score_anyone_can_use,
+        score_agentic_friendly, citations, published_at)
+    VALUES (cand, 'acme', 'Acme', 'https://acme.dev',
+            ARRAY['Peerlist', 'Show HN'], NOW(), 3, 2, 3, 3,
+            '[{"criterion": "C1", "url": "https://acme.dev/pricing",
+               "quote": "Free forever for individuals", "stance": "supports"}]'::jsonb,
+            NOW());
+
+    -- a draft: not published yet
+    INSERT INTO finds_published (
+        candidate_id, slug, name, product_url, source_labels, found_at,
+        score_claim_verified, score_rare_problem, score_anyone_can_use,
+        score_agentic_friendly, citations, published_at)
+    SELECT id, 'other', 'Other', 'https://other.dev', ARRAY['Show HN'],
+           NOW(), 1, 1, 1, 1,
+           '[{"criterion": "C1", "url": "https://other.dev", "stance": "supports"}]'::jsonb,
+           NULL
+      FROM finds_candidates WHERE name = 'Other';
+
+    -- the anon read path: RLS must hide the draft
+    SET LOCAL ROLE anon;
+    SELECT count(*) INTO n FROM finds_published;
+    ASSERT n = 1, format('anon sees %s published finds, expected 1 (the draft must be hidden)', n);
+    RESET ROLE;
+
+    -- anon may not write to the one table it can read
+    SET LOCAL ROLE anon;
+    BEGIN
+        UPDATE finds_published SET name = 'defaced';
+        ASSERT (SELECT count(*) FROM finds_published WHERE name = 'defaced') = 0,
+               'anon updated a published find';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    RESET ROLE;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.

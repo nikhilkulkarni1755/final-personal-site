@@ -48,3 +48,7 @@ for table in finds_sources finds_source_health finds_candidates \
     fi
 done
 echo "anon is denied on every private table"
+
+# ...and finds_published is the one table it CAN read.
+psql -c "SET ROLE anon; SELECT 1 FROM finds_published LIMIT 1;" >/dev/null
+echo "anon can read finds_published"

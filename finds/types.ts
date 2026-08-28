@@ -290,3 +290,70 @@ export type NewVerdictEvidence = Pick<
   'verdict_id' | 'evidence_id' | 'candidate_id'
 > &
   Partial<Pick<VerdictEvidenceRow, 'stance'>>;
+
+/* ========================================================================== */
+/* published finds -- the only public shape                                    */
+/* ========================================================================== */
+
+/**
+ * One citation shown on the public page: the evidence behind a score, copied
+ * out of `finds_evidence` at publish time rather than joined, because the
+ * evidence table is private and must stay that way.
+ */
+export interface PublishedCitation {
+  criterion: Criterion;
+  url: string;
+  /** Verbatim excerpt. Absent when the citation is a measured behaviour. */
+  quote?: string;
+  stance: CitationStance;
+}
+
+/**
+ * A row of `finds_published` -- the ONLY anon-readable table in this
+ * initiative (DECISIONS D8). W7 renders from this and nothing else.
+ *
+ * It is a snapshot, not a view. The browser holds the anon key, so anything
+ * anon can select is public whether or not a page renders it; a join to
+ * candidates, evidence and verdicts would either leak the private pipeline or
+ * need a view that reads past RLS. It is also the honest editorial model: a
+ * published find is what Nikhil approved on the day he approved it, and a later
+ * re-crawl must not silently rewrite a page carrying his name.
+ *
+ * Rows with `published_at` null or in the future are invisible to anon, so a
+ * draft cannot be read by asking for it directly.
+ */
+export interface PublishedFindRow {
+  id: string;
+  candidate_id: string;
+  /** URL segment on the site: /interesting-finds/<slug> */
+  slug: string;
+  name: string;
+  tagline: string | null;
+  product_url: string;
+  /** Platforms it was seen on. Appearing on three at once is part of the story. */
+  source_labels: string[];
+  found_at: Timestamp;
+  published_at: Timestamp | null;
+  /** C1: what is advertised is actually true. Same 0-3 scale as VerdictScore. */
+  score_claim_verified: VerdictScore;
+  /** C2: solves a rare problem. */
+  score_rare_problem: VerdictScore;
+  /** C3: usable by any person. */
+  score_anyone_can_use: VerdictScore;
+  /** C4: agentic / MCP friendly. */
+  score_agentic_friendly: VerdictScore;
+  /** Non-empty by CHECK: going public does not suspend D7. */
+  citations: PublishedCitation[];
+  /** Nikhil's own words, or null. Per D4 nothing generated goes here. */
+  why_interesting: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+/**
+ * What W7 actually receives. `published_at` is non-null for every row the anon
+ * key can see, so the page never has to handle a draft.
+ */
+export type VisiblePublishedFind = Omit<PublishedFindRow, 'published_at'> & {
+  published_at: Timestamp;
+};
