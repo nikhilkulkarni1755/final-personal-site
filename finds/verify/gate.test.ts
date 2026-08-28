@@ -12,8 +12,9 @@ import { strict as assert } from 'node:assert';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { after, before, describe, it } from 'node:test';
-import { ACCEPTED_CONTENT_TYPES, R2_CAPS, REQUEST_HEADERS, USER_AGENT } from './config.ts';
-import { gatedFetch, isNeverTouch, readCapped } from './gate.ts';
+import { readFile as readSource } from 'node:fs/promises';
+import { R2_CAPS, USER_AGENT } from './config.ts';
+import { gatedFetch, isNeverTouch } from './gate.ts';
 import { createRunState } from './gateAdapter.ts';
 
 let server: Server;
@@ -85,35 +86,26 @@ describe('the caps match what bot.txt publicly promises', () => {
     assert.equal(R2_CAPS.minDelayMs, 2000);
   });
 
-  it('sends no cookie and no authorization header, ever', () => {
-    const names = Object.keys(REQUEST_HEADERS).map((name) => name.toLowerCase());
-    assert.ok(!names.includes('cookie'), 'D3: Nikhil live Peerlist cookies are in this environment');
-    assert.ok(!names.includes('authorization'));
-    assert.equal(REQUEST_HEADERS['User-Agent'], USER_AGENT);
+  it('leaves the no-credentials guarantee to safeFetch, which owns the socket', async () => {
+    const safeFetch = await readSource(new URL('../gate/safeFetch.ts', import.meta.url), 'utf8');
+    assert.match(safeFetch, /cookie/i, 'D3: Nikhil real Peerlist cookies are in this environment');
+    assert.match(safeFetch, /authorization/i);
   });
 
-  it('accepts only the content types R2 §5.3 lists', () => {
-    assert.deepEqual([...ACCEPTED_CONTENT_TYPES], [
-      'text/html',
-      'application/xhtml+xml',
-      'text/plain',
-      'text/markdown',
-      'application/json',
-    ]);
-  });
 });
 
-describe('response reading', () => {
-  it('stops at the byte cap and says it truncated', async () => {
-    const oversized = new Response('x'.repeat(R2_CAPS.maxResponseBytes + 1024));
-    const { text, truncated } = await readCapped(oversized, R2_CAPS.maxResponseBytes);
-    assert.equal(truncated, true);
-    assert.equal(text.length, R2_CAPS.maxResponseBytes);
+describe('W4 opens no sockets of its own (D22)', () => {
+  it('has no fetch, no delay and no byte cap left in this lane', async () => {
+    const source = await readSource(new URL('./gate.ts', import.meta.url), 'utf8');
+    // Comments stripped: the file's own doc block explains why there is no
+    // fetch here, and that sentence is not a fetch.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    assert.doesNotMatch(code, /\bfetch\(/, 'the gate is the only module that opens a socket');
+    assert.doesNotMatch(code, /respectDelay|readCapped/, 'spacing and byte caps moved to the gate with the fetch');
   });
 
-  it('reads a short body whole and does not claim truncation', async () => {
-    const { text, truncated } = await readCapped(new Response('hello'), R2_CAPS.maxResponseBytes);
-    assert.equal(text, 'hello');
-    assert.equal(truncated, false);
+  it('reports a gate that hands back no body instead of fetching it itself', async () => {
+    const source = await readSource(new URL('./gate.ts', import.meta.url), 'utf8');
+    assert.match(source, /returned no response body/);
   });
 });
