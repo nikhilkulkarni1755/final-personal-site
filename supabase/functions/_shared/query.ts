@@ -5,12 +5,27 @@ import { content } from './content.ts';
 type Doc = (typeof content.documents)[number];
 
 const norm = (s: string) => s.toLowerCase();
-const terms = (q: string) =>
-  norm(q).split(/[^a-z0-9+#.]+/).filter((t) => t.length > 1);
+// Common words match everything and let the longest document win on noise alone.
+const STOP = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'was', 'are',
+  'has', 'have', 'his', 'her', 'you', 'what', 'how', 'why', 'who', 'does', 'did', 'can',
+  'about', 'into', 'out', 'not', 'but', 'all', 'any', 'some', 'more', 'than', 'then',
+  'they', 'them', 'their', 'there', 'been', 'were', 'would', 'should', 'could']);
+const terms = (q: string) => {
+  const all = norm(q).split(/[^a-z0-9+#.]+/).filter((t) => t.length > 1);
+  const kept = all.filter((t) => !STOP.has(t));
+  return kept.length ? kept : all;
+};
 
+const isWordChar = (c: string | undefined) => c !== undefined && /[a-z0-9]/.test(c);
+
+/** Whole-word occurrences. Substring matching would score "multi" against
+ *  "multiplied" and hand every query to the longest essay. */
 function countOf(haystack: string, term: string): number {
   let n = 0, i = 0;
-  while ((i = haystack.indexOf(term, i)) !== -1) { n++; i += term.length; }
+  while ((i = haystack.indexOf(term, i)) !== -1) {
+    if (!isWordChar(haystack[i - 1]) && !isWordChar(haystack[i + term.length])) n++;
+    i += term.length;
+  }
   return n;
 }
 
@@ -42,8 +57,13 @@ export function search(query: string, limit = 5): SearchHit[] {
     const tags = norm((d.tags ?? []).join(' '));
     let score = 0;
     for (const t of ts) {
-      score += countOf(title, t) * 12 + countOf(tags, t) * 6 + countOf(body, t);
+      // Body hits are normalised by document length so a 17k-char essay does not
+      // outrank a precise short page just by being long.
+      score += countOf(title, t) * 12 + countOf(tags, t) * 6 +
+        countOf(body, t) / Math.sqrt(d.text.length / 1000);
     }
+    if (ts.length > 1 && body.includes(ts.join(' '))) score += 15; // exact phrase
+    score = Math.round(score * 10) / 10;
     if (score > 0) {
       hits.push({
         id: d.id, title: d.title, url: d.url, route: d.route, kind: d.kind,
