@@ -1,7 +1,7 @@
 /**
  * The only way a find reaches nikhilkulkarni1755.com.
  *
- *   node finds/publish/cli.ts publish   --candidate <uuid> --approval <file.json>
+ *   node finds/publish/cli.ts publish   --candidate <uuid>
  *                                       [--slug <segment>] [--at <iso> | --draft]
  *   node finds/publish/cli.ts unpublish --slug <segment>
  *
@@ -11,22 +11,29 @@
  * then. That is the same posture D4 fixed for W9's comment path, for the same
  * reason -- this speaks in his name to the public.
  *
- * --approval takes a FILE rather than a flag value so an approval never lands
- * in shell history or an Actions log, and because the file is meant to be the
- * record W8's Telegram poller captured, not something typed by hand. The real
- * guard is in approval.ts: the record must carry the chat id in
- * TELEGRAM_CHAT_ID, which is Nikhil's own chat.
+ * THE APPROVAL IS NOT AN ARGUMENT. It is read from `finds_approvals` (D29),
+ * the durable record W8's Telegram poller writes. The earlier version of this
+ * file took an approval FILE, which was a placeholder for exactly this table
+ * and is now gone: two ways to authorise the one irreversible, public-facing
+ * action is worse than one, and the file could not carry the replay key, the
+ * append-only guarantee or the composite FK that the table does.
  *
- * Shape of the file (finds/publish/approval.ts, FindApproval):
- *   { "candidate_id": "...", "channel": "telegram", "chat_id": "...",
- *     "message_id": 1234, "answered_at": "...", "answer": "...",
- *     "why_interesting": "his own words, or omit the key" }
+ * There is no `--list` and no "what is approved but unpublished" query. W3
+ * deliberately withheld that view from the schema because it is the missing
+ * ingredient for a three-line cron that auto-publishes, and reimplementing it
+ * here in JS would defeat the same reasoning. The candidate id comes from the
+ * digest, which is where Nikhil is already looking. The friction is the point.
  */
 
-import { readFile } from 'node:fs/promises';
-
-import type { FindApproval } from './approval.ts';
-import { getSupabaseClient, insertPublished, loadPublishSource, markPublished, takenSlugs, unpublishBySlug } from './db.ts';
+import {
+  getSupabaseClient,
+  insertPublished,
+  loadApproval,
+  loadPublishSource,
+  markPublished,
+  takenSlugs,
+  unpublishBySlug,
+} from './db.ts';
 import { buildSnapshot } from './snapshot.ts';
 
 function flag(name: string): string | undefined {
@@ -48,17 +55,24 @@ if (command === 'unpublish') {
   console.log(`unpublished ${slug} -- anon can no longer read it. The row and its citations stay.`);
 } else if (command === 'publish') {
   const candidateId = flag('candidate');
-  const approvalPath = flag('approval');
-  if (!candidateId || !approvalPath) {
-    die('usage: node finds/publish/cli.ts publish --candidate <uuid> --approval <file.json> [--slug s] [--at <iso> | --draft]');
+  if (!candidateId) {
+    die('usage: node finds/publish/cli.ts publish --candidate <uuid> [--slug s] [--at <iso> | --draft]');
   }
-  const approval = JSON.parse(await readFile(approvalPath, 'utf8')) as FindApproval;
 
   const at = flag('at');
   const publishedAt = process.argv.includes('--draft') ? null : (at ?? new Date().toISOString());
 
   const db = getSupabaseClient();
-  const source = await loadPublishSource(db, candidateId);
+  const approval = await loadApproval(db, candidateId);
+  // The generation HE approved, not the newest one. finds_published is a
+  // snapshot of what he agreed to on the day he agreed to it.
+  const { source, supersededBy } = await loadPublishSource(db, candidateId, approval.evidence_run_id);
+  if (supersededBy) {
+    console.error(
+      `  note: he approved generation ${approval.evidence_run_id}; ${supersededBy} has been ` +
+        `scored since. Publishing what he saw.`,
+    );
+  }
   const result = buildSnapshot(source, {
     approval,
     published_at: publishedAt,
@@ -81,5 +95,5 @@ if (command === 'unpublish') {
       : `published /interesting-finds/${result.row.slug} at ${publishedAt}`,
   );
 } else {
-  die('usage: node finds/publish/cli.ts publish|unpublish ...');
+  die('usage: node finds/publish/cli.ts publish --candidate <uuid> | unpublish --slug <segment>');
 }

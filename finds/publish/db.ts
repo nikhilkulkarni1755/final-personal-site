@@ -18,7 +18,14 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { CitationStance, Criterion, EvidenceRow, GateUseRights, VerdictScore } from '../types.ts';
+import type {
+  ApprovalRow,
+  CitationStance,
+  Criterion,
+  EvidenceRow,
+  GateUseRights,
+  VerdictScore,
+} from '../types.ts';
 import type { CandidateCitation, PublishSource, NewPublishedFind } from './types.ts';
 
 export { getSupabaseClient } from '../sources/db.ts';
@@ -37,15 +44,63 @@ export async function takenSlugs(db: SupabaseClient): Promise<string[]> {
 }
 
 /**
- * Everything snapshot.ts needs about one candidate, on its most recently
- * scored crawl generation.
+ * The newest approval Nikhil has given for this find (D29).
+ *
+ * There is deliberately no "approved but not yet published" query here or in
+ * the schema -- W3 declined the convenience view every other stage got, on the
+ * grounds that it is the one missing ingredient for a three-line cron that
+ * auto-publishes. Agreed, and not worked around: this reads approvals for a
+ * candidate the caller has already named.
+ *
+ * Newest by `answered_at`, because a candidate can be re-crawled, re-digested
+ * and approved again -- `finds_approvals` is unique on
+ * (candidate_id, evidence_run_id), not on candidate alone.
+ */
+export async function loadApproval(db: SupabaseClient, candidateId: string): Promise<ApprovalRow> {
+  const { data, error } = await db
+    .from('finds_approvals')
+    .select('*')
+    .eq('candidate_id', candidateId)
+    .order('answered_at', { ascending: false })
+    .limit(1);
+  fail('reading approvals', error);
+  const approval = (data ?? [])[0] as ApprovalRow | undefined;
+  if (!approval) {
+    throw new Error(
+      `Nikhil has not approved candidate ${candidateId}. Nothing publishes without his ` +
+        `explicit, per-find approval -- not a high score, not a threshold.`,
+    );
+  }
+  return approval;
+}
+
+/** What one publish needs to read, plus the one thing the operator must be told. */
+export interface PublishReadout {
+  source: PublishSource;
+  /**
+   * The newest scored generation, when it is NOT the one being published.
+   * Publishing what he approved is correct -- finds_published is a snapshot of
+   * what he agreed to on the day -- but doing it silently while newer evidence
+   * exists is not, so the CLI says so.
+   */
+  supersededBy: string | null;
+}
+
+/**
+ * Everything snapshot.ts needs about one candidate, on ONE named crawl
+ * generation -- the one his approval carries.
  *
  * The generation matters: re-crawling appends rather than overwrites, so
- * without pinning one, a published find could mix a fresh crawl's score with a
- * stale crawl's quote. Same rule W5's selection uses -- the newest verdict
- * names the generation.
+ * without pinning one a published find could mix a fresh crawl's score with a
+ * stale crawl's quote. It is passed in rather than inferred because the
+ * approval is what names it: he approved the evidence the digest showed him,
+ * and a re-score since then is not something the publish path may substitute.
  */
-export async function loadPublishSource(db: SupabaseClient, candidateId: string): Promise<PublishSource> {
+export async function loadPublishSource(
+  db: SupabaseClient,
+  candidateId: string,
+  evidenceRunId: string,
+): Promise<PublishReadout> {
   const candidate = await db
     .from('finds_candidates')
     .select('id,name,tagline,product_url,first_seen_at')
@@ -62,8 +117,13 @@ export async function loadPublishSource(db: SupabaseClient, candidateId: string)
   fail('reading verdicts', verdicts.error);
   const newest = verdicts.data?.[0];
   if (!newest) throw new Error(`Candidate ${candidateId} has never been scored. Nothing to publish.`);
-  const evidenceRunId = newest.evidence_run_id as string;
   const generation = (verdicts.data ?? []).filter((v) => v.evidence_run_id === evidenceRunId);
+  if (generation.length === 0) {
+    throw new Error(
+      `Candidate ${candidateId} has no scores on generation ${evidenceRunId}. The approval names ` +
+        `a generation the verdicts do not have, which should be a foreign-key violation upstream.`,
+    );
+  }
 
   const [citations, sightings, sources] = await Promise.all([
     db
@@ -123,20 +183,23 @@ export async function loadPublishSource(db: SupabaseClient, candidateId: string)
   ].sort();
 
   return {
-    candidate: {
-      id: candidate.data.id as string,
-      name: candidate.data.name as string,
-      tagline: (candidate.data.tagline as string | null) ?? null,
-      product_url: candidate.data.product_url as string,
-      first_seen_at: candidate.data.first_seen_at as string,
+    supersededBy: (newest.evidence_run_id as string) === evidenceRunId ? null : (newest.evidence_run_id as string),
+    source: {
+      candidate: {
+        id: candidate.data.id as string,
+        name: candidate.data.name as string,
+        tagline: (candidate.data.tagline as string | null) ?? null,
+        product_url: candidate.data.product_url as string,
+        first_seen_at: candidate.data.first_seen_at as string,
+      },
+      source_labels: labels,
+      evidence_run_id: evidenceRunId,
+      scores: generation.map((v) => ({
+        criterion: v.criterion as Criterion,
+        score: v.score as VerdictScore,
+      })),
+      citations: built,
     },
-    source_labels: labels,
-    evidence_run_id: evidenceRunId,
-    scores: generation.map((v) => ({
-      criterion: v.criterion as Criterion,
-      score: v.score as VerdictScore,
-    })),
-    citations: built,
   };
 }
 

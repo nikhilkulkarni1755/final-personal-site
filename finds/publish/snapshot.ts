@@ -24,8 +24,8 @@
  *   5. a slug that is not stable/unique -> a find's URL is what a maker links back to
  */
 
-import type { Criterion, VerdictScore } from '../types.ts';
-import { assertApprovedByNikhil, type FindApproval } from './approval.ts';
+import type { ApprovalRow, Criterion, VerdictScore } from '../types.ts';
+import { assertApprovedByNikhil } from './approval.ts';
 import { describeScope, isWithinScope, publishScopeFor } from './scope.ts';
 import type { CandidateCitation, NewPublishedFind, PublishSource } from './types.ts';
 
@@ -36,7 +36,7 @@ const CRITERIA: Criterion[] = ['C1', 'C2', 'C3', 'C4'];
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export interface PublishOptions {
-  approval: FindApproval;
+  approval: ApprovalRow;
   /**
    * The visibility switch. `null` drafts it, a future ISO timestamp schedules
    * it, and either way anon cannot read the row until the time passes. There is
@@ -72,7 +72,7 @@ export function buildSnapshot(source: PublishSource, options: PublishOptions): S
   // Not a refusal: a publish reached without Nikhil's approval is a wiring
   // fault, and it must be impossible to collect it alongside data problems and
   // then look past it.
-  assertApprovedByNikhil(options.approval, source.candidate.id);
+  assertApprovedByNikhil(options.approval, source.candidate.id, source.evidence_run_id);
 
   const refusals: string[] = [];
   const notes: string[] = [];
@@ -188,7 +188,7 @@ export function buildSnapshot(source: PublishSource, options: PublishOptions): S
       ),
       // Per D4 the system never authors prose in his name, so this is his text
       // or nothing. There is no fallback to a generated sentence.
-      why_interesting: options.approval.why_interesting ?? null,
+      why_interesting: options.approval.why_interesting,
     },
   };
 }

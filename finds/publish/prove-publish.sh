@@ -12,8 +12,10 @@
 #     anon while it is drafted, invisible while it is scheduled, visible once
 #     the timestamp passes, and invisible again after an unpublish -- with RLS
 #     on and the anon role really set, which is exactly what W7's useFinds gets;
-#   * a re-crawled candidate is published from the generation it was last
-#     SCORED on, score and quote together, never a mix of two;
+#   * the approval is read from finds_approvals (D29) -- the durable record W8's
+#     poller writes -- and a re-crawled candidate is published from the
+#     generation HE APPROVED, score and quote together, never a mix of two,
+#     and never a generation the digest did not show him;
 #   * the DECISIONS D23 case is refused: a tenant on a shared host whose
 #     evidence includes a page the host wrote never reaches the table at all.
 #
@@ -40,8 +42,18 @@ pg_ctl -D "$CLUSTER/data" -o "-k $CLUSTER -p $PORT -c listen_addresses=127.0.0.1
        -l "$CLUSTER/pg.log" -w start >/dev/null
 
 DB="postgresql://postgres@127.0.0.1:$PORT/postgres"
-psql() { command psql "$DB" -X -q -v ON_ERROR_STOP=1 "$@"; }
-q()    { command psql "$DB" -X -q -t -A -v ON_ERROR_STOP=1 -c "$1"; }
+
+# The two named crawl generations, defined ONCE and passed to every psql
+# invocation. GEN_A is one crawl pass over both candidates (a pass covers many);
+# GEN_B is a later re-crawl of w11-own alone, which is what append-only evidence
+# really accumulates. No literal run id appears anywhere else in this file, so a
+# citation or an approval cannot be pointed at the wrong generation by accident.
+GEN_A='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+GEN_B='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+GENS=(-v "GEN_A=$GEN_A" -v "GEN_B=$GEN_B")
+
+psql() { command psql "$DB" -X -q "${GENS[@]}" -v ON_ERROR_STOP=1 "$@"; }
+q()    { command psql "$DB" -X -q -t -A "${GENS[@]}" -v ON_ERROR_STOP=1 -c "$1"; }
 
 psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
          GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
@@ -59,13 +71,8 @@ unset PGOPTIONS
 #              /pricing -- a page the HOST wrote. This is D23's mechanism, and
 #              it is the shape 45% of one real day's candidates had.
 #
-# TWO NAMED GENERATIONS, defined once and never spelled out again. Evidence is
-# append-only, so a candidate really does accumulate them: GEN_A is one crawl
-# pass over BOTH candidates (a pass covers many), and GEN_B is a later re-crawl
-# of w11-own alone. Every insert below takes the generation as an argument, so
-# no literal run id survives outside these two lines and a citation cannot be
-# pointed at the wrong generation by accident -- it would have to be asked for.
-# That is W5's shape, adopted after its fixture hit the same constraint: a
+# Every insert takes a generation as an argument (GEN_A / GEN_B, defined above).
+# That is W5's shape, adopted after its fixture hit W3's same-run constraint: a
 # fixture that does not model the invariant the production code maintains will
 # eventually assert something production would never do.
 #
@@ -73,8 +80,6 @@ unset PGOPTIONS
 # DEFERRED: a verdict and its citations must commit together or not at all.
 # ---------------------------------------------------------------------------
 psql >/dev/null <<'SETUP'
-\set GEN_A 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-\set GEN_B 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 BEGIN;
 INSERT INTO finds_sources (slug, display_name, homepage_url) VALUES
   ('w11_proof', 'W11 Proof Source', 'https://w11-source.invalid/');
@@ -162,6 +167,22 @@ SELECT v.id, e.id, v.candidate_id, v.evidence_run_id,
     OR (v.criterion = 'C2' AND e.url IN ('https://w11-own.invalid/docs', 'https://w11-host.invalid/maker/w11-tool'))
     OR (v.criterion = 'C3' AND e.url IN ('https://w11-own.invalid/legal', 'https://w11-host.invalid/maker/w11-tool'))
     OR (v.criterion = 'C4' AND e.url IN ('https://w11-own.invalid/docs', 'https://w11-host.invalid/maker/w11-tool'));
+
+-- Nikhil saying yes, in finds_approvals (D29) -- the durable record W8's poller
+-- writes and this lane reads. Seeded LAST because the composite FK requires the
+-- generation to have been scored already; that is the constraint doing its job.
+-- w11-own is approved on GEN_B, the generation the digest would have shown him
+-- after the re-crawl. The chat id is the throwaway one exported below.
+INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+       telegram_update_id, answer, why_interesting, answered_at)
+SELECT c.id,
+       CASE WHEN c.product_url = 'https://w11-own.invalid/' THEN :'GEN_B' ELSE :'GEN_A' END::uuid,
+       'w11-proof-chat', 7000 + (row_number() OVER (ORDER BY c.product_url))::int, 900001,
+       'yes, publish this one',
+       CASE WHEN c.product_url = 'https://w11-own.invalid/'
+            THEN 'the only one I would actually install' END,
+       NOW()
+  FROM finds_candidates c;
 COMMIT;
 SETUP
 
@@ -176,12 +197,19 @@ export TELEGRAM_CHAT_ID="w11-proof-chat"
 # Build the offline input for one candidate: exactly the reads db.ts performs,
 # in SQL, because this cluster has no PostgREST in front of it.
 # ---------------------------------------------------------------------------
+# $1 product_url  $2 published_at SQL  $3 optional generation override.
+#
+# The generation comes from THE APPROVAL, not from the newest verdict -- that is
+# the production rule: finds_published is a snapshot of what he agreed to on the
+# day he agreed to it, so a re-score since then is not something the publish
+# path may substitute. $3 exists only so section 2 can force the mismatch.
 input_for() {
   q "
   WITH c AS (SELECT * FROM finds_candidates WHERE product_url = '$1'),
-       run AS (SELECT evidence_run_id FROM finds_verdicts
-                WHERE candidate_id = (SELECT id FROM c)
-                ORDER BY created_at DESC LIMIT 1)
+       a AS (SELECT * FROM finds_approvals
+              WHERE candidate_id = (SELECT id FROM c)
+              ORDER BY answered_at DESC LIMIT 1),
+       run AS (SELECT COALESCE(${3:-NULL}::uuid, (SELECT evidence_run_id FROM a)) AS evidence_run_id)
   SELECT json_build_object(
     'source', json_build_object(
       'candidate', json_build_object('id', c.id, 'name', c.name, 'tagline', c.tagline,
@@ -203,10 +231,7 @@ input_for() {
                       JOIN finds_crawl_verdicts cv ON cv.id = e.crawl_verdict_id
                      WHERE v.candidate_id = c.id AND v.evidence_run_id = (SELECT evidence_run_id FROM run))),
     'options', json_build_object(
-      'approval', json_build_object('candidate_id', c.id, 'channel', 'telegram',
-                   'chat_id', '$TELEGRAM_CHAT_ID', 'message_id', 7,
-                   'answered_at', '2026-08-28T21:00:00Z', 'answer', 'yes, publish this one',
-                   'why_interesting', 'the only one I would actually install'),
+      'approval', (SELECT row_to_json(a) FROM a),
       'published_at', $2))
     FROM c;"
 }
@@ -237,7 +262,21 @@ test "$(q 'SELECT count(*) FROM finds_published;')" = "0"
 echo "PASS  nothing reached finds_published"
 
 echo
-echo "=== 2. the clean candidate, drafted (published_at NULL) ==="
+echo "=== 2. an approval for a generation he never saw ==="
+# The approval names GEN_B. Force the source to be built from GEN_A instead --
+# which is what a naive "publish the newest scored generation" would do after a
+# re-crawl, and what would put evidence he never read on a page under his name.
+input_for 'https://w11-own.invalid/' 'NULL' "'$GEN_A'" | node finds/publish/offline.ts \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+      const o=JSON.parse(s);
+      if(!o.refused_outright){console.error("FAIL: a mismatched generation was accepted");process.exit(1)}
+      console.log("  REFUSED  "+o.refused_outright);
+    })'
+test "$(q 'SELECT count(*) FROM finds_published;')" = "0"
+echo "PASS  he approves evidence, not just a product"
+
+echo
+echo "=== 3. the clean candidate, drafted (published_at NULL) ==="
 ROW=$(input_for 'https://w11-own.invalid/' 'NULL' | node finds/publish/offline.ts \
       | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const o=JSON.parse(s);
         if(!o.row){console.error(JSON.stringify(o,null,2));process.exit(1)}
@@ -250,14 +289,14 @@ test "$(anon_sees)" = "0"
 echo "PASS  a drafted find is invisible to the site"
 
 echo
-echo "=== 3. scheduled for the future ==="
+echo "=== 4. scheduled for the future ==="
 psql -c "UPDATE finds_published SET published_at = NOW() + INTERVAL '1 day';" >/dev/null
 echo "  anon rows: $(anon_sees)"
 test "$(anon_sees)" = "0"
 echo "PASS  a scheduled find is invisible until its time"
 
 echo
-echo "=== 4. published ==="
+echo "=== 5. published ==="
 psql -c "UPDATE finds_published SET published_at = NOW() - INTERVAL '1 minute';" >/dev/null
 test "$(anon_sees)" = "1"
 echo "  what W7's useFinds gets back, as the anon role with RLS on:"
@@ -274,17 +313,17 @@ command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
 psql -c "DO \$\$ BEGIN
   ASSERT (SELECT bool_and(j->>'quote' LIKE 're-crawl:%')
             FROM finds_published, jsonb_array_elements(citations) j WHERE j ? 'quote'),
-         'a published quote must come from the generation the published score was read from';
+         'a published quote must come from the generation his approval names';
   ASSERT (SELECT score_agentic_friendly FROM finds_published) = 3,
-         'the published score must come from the newest scored generation, not the first crawl';
+         'the published score must come from the generation he approved, not the first crawl';
   ASSERT NOT EXISTS (SELECT 1 FROM finds_published, jsonb_array_elements(citations) j
                       WHERE j->>'url' LIKE '%/legal' AND j ? 'quote'),
          'a noindex page may be linked and not excerpted';
 END \$\$;" >/dev/null
-echo "PASS  the site can read it, from the generation it was last scored on"
+echo "PASS  the site can read it, and it is the generation he approved"
 
 echo
-echo "=== 5. unpublish: published_at = NULL, the row stays ==="
+echo "=== 6. unpublish: published_at = NULL, the row stays ==="
 SLUG=$(q "SELECT slug FROM finds_published LIMIT 1;")
 psql -c "UPDATE finds_published SET published_at = NULL WHERE slug = \$w11\$$SLUG\$w11\$;" >/dev/null
 echo "  anon rows: $(anon_sees)   rows still on file: $(q 'SELECT count(*) FROM finds_published;')"
@@ -293,7 +332,7 @@ test "$(q 'SELECT count(*) FROM finds_published;')" = "1"
 echo "PASS  a takedown hides the find without erasing what was claimed"
 
 echo
-echo "=== 6. the citations that survived, and why ==="
+echo "=== 7. the citations that survived, and why ==="
 command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
   "SELECT j->>'criterion' AS criterion, j->>'url' AS url, j->>'stance' AS stance,
           coalesce(j->>'quote', '(no quote -- the page refuses a public excerpt)') AS quote
