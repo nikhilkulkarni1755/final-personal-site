@@ -6,7 +6,7 @@
       "type": "skill-md",
       "description": "Query Nikhil Kulkarni's engineering background — writing, projects, open-source contributions and resume — via his site's MCP server or JSON API instead of scraping.",
       "url": "/.well-known/agent-skills/ask-about-nikhil-kulkarni/SKILL.md",
-      "digest": "sha256:1b1f0b2117d75e8691a640b92b58c5b17efc6a108f47d298a352e9a0b577f100"
+      "digest": "sha256:e4f544dda218eb52d4adf0e3768a0eddc077760d2fac6a2aaeb0d81894d2ae6b"
     }
   ]
 }

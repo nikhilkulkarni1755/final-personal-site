@@ -3,6 +3,7 @@
 import {
   content, getDocument, getProject, listDocuments, listProjects, openSource, search,
 } from '../_shared/query.ts';
+import { publicApiRoutes } from '../_shared/routes.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -17,18 +18,6 @@ const json = (body: unknown, status = 200) =>
       'Cache-Control': 'public, max-age=3600' },
   });
 
-const ROUTES: Record<string, string> = {
-  '/': 'this index',
-  '/search?q=&limit=': 'full-text search across every page and post',
-  '/documents': 'every indexed page and post, with metadata',
-  '/documents/{id}': 'one document in full, as markdown text',
-  '/projects?tech=': 'projects, optionally filtered by technology',
-  '/projects/{name}': 'one project plus the pages that discuss it',
-  '/open-source': 'merged contributions to vLLM, SGLang and ax-agent-studio',
-  '/resume': 'experience, education, skills and certifications',
-  '/posts': 'blog posts with dates, tags and read times',
-  '/apps': 'shipped applications',
-};
 
 Deno.serve((req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -51,7 +40,7 @@ Deno.serve((req) => {
           documents: content.documents.length, projects: content.projects.length,
           posts: content.posts.length, contributions: content.contributions.length,
         },
-        endpoints: ROUTES,
+        endpoints: publicApiRoutes(),
         mcp: `${content.site}/.well-known/mcp/server-card.json`,
       });
 
@@ -92,6 +81,6 @@ Deno.serve((req) => {
       return json({ apps: content.apps });
 
     default:
-      return json({ error: 'not_found', endpoints: ROUTES }, 404);
+      return json({ error: 'not_found', endpoints: publicApiRoutes() }, 404);
   }
 });

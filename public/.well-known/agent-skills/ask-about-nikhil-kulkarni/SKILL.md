@@ -29,11 +29,15 @@ Each page and post is also exposed as a resource under `site://`.
 
 ## Fallback: the JSON API
 
-Same content over plain GET, for clients that do not speak MCP:
+Same content over plain GET, for clients that do not speak MCP. Every endpoint
+is under `/api` — the bare paths are ordinary pages on the site and will hand
+you HTML with a 200, so use the prefix:
 
-- `/search?q=&limit=` — ranked matches with snippets
-- `/documents` and `/documents/{id}` — the index, and one document in full
-- `/projects`, `/projects/{name}`, `/open-source`, `/resume`, `/posts`, `/apps`
+- `/api/search?q=&limit=` — ranked matches with snippets
+- `/api/documents` and `/api/documents/{id}` — the index, and one document in full
+- `/api/projects?tech=` and `/api/projects/{name}`
+- `/api/open-source`, `/api/resume`, `/api/posts`, `/api/apps`
+- `/api` — the index, which lists all of the above
 
 ## What is not here
 
