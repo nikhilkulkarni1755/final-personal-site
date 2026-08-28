@@ -90,6 +90,13 @@ async function main() {
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+
+  // A build is not a visitor. Without this, every prerender run inserts a page_view row
+  // and an active_sessions heartbeat per route, so each deploy would fabricate traffic in
+  // the analytics tables. The counters these calls feed are ephemeral chrome that the real
+  // client refetches the moment it hydrates, so nothing readable is lost by cutting them.
+  await context.route('**://*.supabase.co/**', (r) => r.abort());
+
   const failures = [];
 
   try {
