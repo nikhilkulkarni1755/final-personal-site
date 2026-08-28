@@ -32,8 +32,13 @@ const payload = buildCommentPayload(input);
 console.log('[DRY RUN -- NOT SENT, no credential read, no network reached]');
 console.log(`  target activityId: ${payload.activityId}`);
 console.log(`  replyTo:           ${payload.replyTo ?? '(top-level comment)'}`);
-console.log(`  comment (repr):    ${JSON.stringify(payload.comment)}`);
-console.log(`  comment (raw):\n${payload.comment}`);
-console.log(`  utf-8 byte length: ${Buffer.byteLength(payload.comment, 'utf8')}`);
+console.log(`  input (repr):      ${JSON.stringify(input.comment)}`);
+console.log(`  input (raw):\n${input.comment}`);
+console.log(
+  '  -- per D13, sent as HTML-escaped + <p>/<br>-wrapped, not raw, so it renders on Peerlist ' +
+    'exactly as typed above (Peerlist comments ARE HTML: R1-sources.md §1.8):',
+);
+console.log(`  comment sent (repr): ${JSON.stringify(payload.comment)}`);
+console.log(`  utf-8 byte length:   ${Buffer.byteLength(payload.comment, 'utf8')}`);
 console.log('  exact JSON body that a real post would send:');
 console.log(`  ${JSON.stringify(payload)}`);
