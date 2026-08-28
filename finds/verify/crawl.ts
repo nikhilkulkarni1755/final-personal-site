@@ -46,7 +46,7 @@ import { looksLikeEmptyShell, pageRole, parsePage } from './extract.ts';
 import { gatedFetch, isNeverTouch } from './gate.ts';
 import { createRunState } from './gateAdapter.ts';
 import { renderPage } from './render.ts';
-import { normalise, parseLlmsTxt, parseSitemap, prioritise } from './scope.ts';
+import { normalise, parseLlmsTxt, parseSitemap, prioritise, projectScope, withinScope } from './scope.ts';
 import { collectC2, collectC3, collectC4 } from './signals.ts';
 import type { EvidenceObservation, EvidenceQuote, FetchOutcome, GateDecision, NewEvidence } from './types.ts';
 
@@ -241,6 +241,13 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   home.hash = '';
   const homeUrl = home.toString();
 
+  // D23: what counts as this project's own pages. For a product that owns its
+  // domain this is the whole authority; for a project living under a path on a
+  // shared host it is that path and nothing else. Everything downstream --
+  // links, sitemap entries, llms.txt targets, and what may enter the corpus the
+  // C1 diff reads -- is filtered through this.
+  const scope = projectScope(homeUrl);
+
   const fetchAndRecord = async (url: string): Promise<FetchOutcome> => {
     const outcome = await gatedFetch(url, runState, { candidateId: options.candidateId });
     records.push({ decision: outcome.decision, evidence: evidenceFor(base, outcome) });
@@ -250,29 +257,57 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   /* -- the landing page. Everything else is optional; this is not. --------- */
   const homeOutcome = await fetchAndRecord(homeUrl);
   const homeRow = records.at(-1)!.evidence;
+  const homeObservations = homeRow.observations!;
+  // Recorded before anything can return early, so the audit trail always says
+  // which pages this crawl considered to be the candidate's -- including on the
+  // runs that collected nothing.
+  homeObservations.push({
+    kind: 'crawl_scope',
+    detail: scope.ownsAuthority
+      ? `This product owns ${scope.authority}, so every page of it is fairly attributed to it.`
+      : `This project lives at ${scope.prefix} on ${scope.authority}, a host it shares with others. ` +
+        `Only pages under that path may be crawled or quoted; the host's own pages are not this ` +
+        `project's evidence (D23).`,
+    value: `${scope.authority}${scope.prefix}`,
+  });
   if (homeOutcome.kind !== 'fetched' || homeOutcome.http_status >= 400) {
     return { crawlRunId, records };
   }
 
-  const homeObservations = homeRow.observations!;
   const homePage = await readablePage(homeOutcome, homeObservations);
   const claims = extractClaims(homePage);
   homeRow.claims = claims;
   corpus.push({ url: homeOutcome.final_url, role: 'homepage', text: homePage.text });
   for (const anchor of homePage.anchors) {
-    const url = normalise(anchor.href, homeOutcome.final_url, homeUrl);
+    const url = normalise(anchor.href, homeOutcome.final_url, scope);
     if (url) discoveredUrls.add(url);
   }
 
   /* -- R2 §5.1 step 1: llms.txt ------------------------------------------- */
+  // /llms.txt and /sitemap.xml sit at the AUTHORITY root, so on a shared host
+  // they are the landlord's inventory of the landlord's site -- github.com's
+  // sitemap is GitHub Inc.'s pages, not this repo's. Probing them for a tenant
+  // is how the whole misattribution starts, so a tenant gets neither.
   const llmsUrl = new URL('/llms.txt', homeUrl).toString();
-  const llmsOutcome = await fetchAndRecord(llmsUrl);
   let llmsTxt: { url: string; http_status: number; bytes: number } | null = null;
+  const llmsOutcome = scope.ownsAuthority
+    ? await fetchAndRecord(llmsUrl)
+    : ({ kind: 'refused' } as const);
+  if (!scope.ownsAuthority) {
+    homeObservations.push({
+      kind: 'root_files_skipped',
+      detail:
+        `This candidate is a project under ${scope.prefix} on ${scope.authority}, which it does not ` +
+        `own, so /llms.txt and /sitemap.xml were not requested: at the root of a shared host those ` +
+        `describe the host's own site, not this project.`,
+      value: scope.prefix,
+    });
+  }
   if (llmsOutcome.kind === 'fetched') {
     const isText = (llmsOutcome.content_type ?? '').startsWith('text/') && !/^\s*</.test(llmsOutcome.body);
     llmsTxt = { url: llmsUrl, http_status: llmsOutcome.http_status, bytes: isText ? llmsOutcome.body.length : 0 };
     if (llmsOutcome.http_status === 200 && isText) {
-      for (const url of parseLlmsTxt(llmsOutcome.body, llmsUrl, homeUrl)) discoveredUrls.add(url);
+      for (const url of parseLlmsTxt(llmsOutcome.body, llmsUrl, scope)) discoveredUrls.add(url);
     }
   }
 
@@ -285,7 +320,7 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   // the one that decides.
   const declaredSitemaps = ((homeOutcome.decision.robots.sitemaps as string[] | undefined) ?? []).flatMap(
     (candidateSitemap) => {
-      const safe = normalise(candidateSitemap, homeUrl, homeUrl);
+      const safe = normalise(candidateSitemap, homeUrl, scope);
       if (safe) return [safe];
       homeObservations.push({
         kind: 'sitemap_directive_rejected',
@@ -300,14 +335,16 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   );
   const sitemapUrls = declaredSitemaps.length
     ? declaredSitemaps.slice(0, 5)
-    : [new URL('/sitemap.xml', homeUrl).toString()];
+    : scope.ownsAuthority
+      ? [new URL('/sitemap.xml', homeUrl).toString()]
+      : [];
   for (const sitemapUrl of sitemapUrls) {
     if (Date.now() > deadline) break;
     const outcome = await fetchAndRecord(sitemapUrl);
     if (outcome.kind !== 'fetched' || outcome.http_status !== 200) continue;
     const { locs, children } = parseSitemap(outcome.body);
     for (const loc of [...locs, ...children]) {
-      const url = normalise(loc, sitemapUrl, homeUrl);
+      const url = normalise(loc, sitemapUrl, scope);
       if (url) discoveredUrls.add(url);
     }
   }
@@ -337,9 +374,25 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
     if (outcome.kind !== 'fetched' || outcome.http_status !== 200) continue;
     const row = records.at(-1)!.evidence;
     const page = await readablePage(outcome, row.observations!);
+    // The last line of defence for D23. Nothing reaches the corpus -- which is
+    // what the C1 diff quotes from -- unless it is this project's own page. A
+    // cross-scope redirect is the realistic way a landlord's page arrives here
+    // after every earlier filter, and a quote from it would be attributed to
+    // the candidate.
+    if (!withinScope(outcome.final_url, scope)) {
+      row.observations!.push({
+        kind: 'out_of_scope_after_redirect',
+        detail:
+          `${url} redirected to ${outcome.final_url}, which is outside ${scope.authority}${scope.prefix}. ` +
+          `Fetched and recorded, but NOT used as evidence about this candidate: it is not this ` +
+          `project's page and quoting it would attribute someone else's words to them.`,
+        value: outcome.final_url,
+      });
+      continue;
+    }
     if (page.text.length > 0) corpus.push({ url: outcome.final_url, role: pageRole(url), text: page.text });
     for (const anchor of page.anchors) {
-      const link = normalise(anchor.href, outcome.final_url, homeUrl);
+      const link = normalise(anchor.href, outcome.final_url, scope);
       if (link) discoveredUrls.add(link);
     }
   }

@@ -12,6 +12,95 @@
  * goes through the gate one at a time.
  */
 
+/* -------------------------------------------------------------------------- */
+/* what counts as "this project's own pages"                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The scope of one candidate: an authority, and the path prefix inside it that
+ * belongs to this project.
+ *
+ * D23. This lane used to scope crawls to the AUTHORITY, which is right for a
+ * product that owns its domain and catastrophically wrong for a project hosted
+ * under a path on a shared host. W2 sets a GitHub candidate's product_url to
+ * `repo.homepage || repo.html_url`, so a repo with no homepage becomes
+ * `https://github.com/owner/repo` -- and authority scoping then walked GitHub
+ * Inc.'s own site and attributed it to the maker.
+ *
+ * What that produced, measured by V1 on github.com/affirmitv/ghosthands: 24
+ * pages crawled, ONE of them the repo. A C4 score of 3 for "an MCP endpoint
+ * linked from the site's own pages" was GitHub's MCP endpoint. And the only C1
+ * contradiction the system produced all day was a real project's README claim
+ * about a free offline tier, "contradicted" by "Start a free 30 day trial
+ * today" -- scraped from github.com/pricing. Every quote was real. All of them
+ * were misattributed, which tells the same lie as inventing one, and under D7
+ * a contradiction is disqualifying, so it killed a real person's project on the
+ * strength of a sentence written by GitHub Inc.
+ *
+ * The rule is deliberately generic. github.com is not special-cased and must
+ * not be: the same shape is gitlab.com, huggingface.co, itch.io, notion.site,
+ * a Substack, an App Store listing, and whichever host appears next -- and the
+ * next one would be silent again.
+ */
+export interface ProjectScope {
+  /** scheme://host[:port] */
+  authority: string;
+  /** '/' when the product owns the domain; otherwise the tenant's path. */
+  prefix: string;
+  /**
+   * True when this product owns the whole authority, so its subdomains and
+   * every path are fairly attributed to it.
+   */
+  ownsAuthority: boolean;
+}
+
+/** Paths that mean "the root", not "a tenant living here". */
+const ROOT_PATHS = /^\/?(index|home|default)?(\.html?|\.php)?$/i;
+
+/**
+ * Where this candidate's own pages live.
+ *
+ * A product_url with no meaningful path owns its authority. A product_url with
+ * a path is treated as a tenant under that path, which is the SAFE direction:
+ * under-scoping a single-tenant site costs us evidence and produces
+ * `c1_unsubstantiated`, which this lane already treats as a real and honest
+ * finding. Over-scoping produces a quote from somebody else's page presented as
+ * this project's, which is the failure D23 exists to prevent. Those two are not
+ * symmetric and the tie goes to the quieter one.
+ */
+export function projectScope(productUrl: string): ProjectScope {
+  const parsed = new URL(productUrl);
+  const path = parsed.pathname.replace(/\/+$/, '');
+  if (ROOT_PATHS.test(path)) {
+    return { authority: parsed.origin, prefix: '/', ownsAuthority: true };
+  }
+  return { authority: parsed.origin, prefix: path, ownsAuthority: false };
+}
+
+/**
+ * May a page at `url` be attributed to this candidate?
+ *
+ * For a tenant this is a path-prefix test against ONE authority -- no
+ * subdomains, because `skills.github.com` is the landlord's too. `/owner/repo`
+ * admits `/owner/repo/releases` and `/owner/repo/wiki`; it does not admit
+ * `/owner` (the account, not the project) or `/pricing`.
+ */
+export function withinScope(url: string, scope: ProjectScope): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (!isHttp(url)) return false;
+  if (scope.ownsAuthority) {
+    return sameRegistrableDomain(url, scope.authority);
+  }
+  if (parsed.origin !== scope.authority) return false;
+  const path = parsed.pathname.replace(/\/+$/, '') || '/';
+  return path === scope.prefix || path.startsWith(`${scope.prefix}/`);
+}
+
 /** R2 §5.2. A ranking heuristic, not a permission one. */
 const HIGH_SIGNAL_PATHS: readonly RegExp[] = [
   /^\/$/,
@@ -62,7 +151,7 @@ function isHttp(url: string): boolean {
 }
 
 /** Absolute, fragment-free, http(s), and on the candidate's domain. */
-export function normalise(href: string, base: string, candidateUrl: string): string | null {
+export function normalise(href: string, base: string, scope: ProjectScope): string | null {
   let absolute: URL;
   try {
     absolute = new URL(href, base);
@@ -71,15 +160,14 @@ export function normalise(href: string, base: string, candidateUrl: string): str
   }
   absolute.hash = '';
   const url = absolute.toString();
-  if (!isHttp(url) || !sameRegistrableDomain(url, candidateUrl)) return null;
-  return url;
+  return withinScope(url, scope) ? url : null;
 }
 
 /** Markdown link targets out of an llms.txt body. */
-export function parseLlmsTxt(body: string, base: string, candidateUrl: string): string[] {
+export function parseLlmsTxt(body: string, base: string, scope: ProjectScope): string[] {
   const found: string[] = [];
   for (const match of body.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
-    const url = normalise(match[1]!, base, candidateUrl);
+    const url = normalise(match[1]!, base, scope);
     if (url && !found.includes(url)) found.push(url);
   }
   return found;
