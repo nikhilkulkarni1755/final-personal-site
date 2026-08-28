@@ -14,6 +14,7 @@
     "email:send": "node finds/email/send.ts",
     "sources:typecheck": "tsc --noEmit -p finds/sources/tsconfig.json",
     "sources:ingest:hn": "node finds/sources/run-hn.ts",
+    "sources:ingest:uneed": "node finds/sources/run-uneed.ts",
     "sources:ingest:peerlist": "node finds/sources/run-peerlist.ts",
     "comment:typecheck": "tsc --noEmit -p finds/comment/tsconfig.json",
     "comment:verify": "node finds/comment/verifyFidelity.ts",
