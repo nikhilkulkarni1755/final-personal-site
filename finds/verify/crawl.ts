@@ -52,6 +52,46 @@ export interface CrawlResult {
 
 type PartialEvidence = Omit<NewEvidence, 'crawl_verdict_id'>;
 
+/**
+ * What we may DO with this page, carried onto the row itself.
+ *
+ * ACCESS and USE are separate axes (R2 §0). A page can be perfectly fetchable
+ * and still carry `publish_excerpt: false` -- a meta noindex on a legal page is
+ * the common case, and those pages are legitimate C1 evidence. W5 and W7 need
+ * to know that before a quote reaches Nikhil's public page, and the verdict row
+ * they would otherwise have to join back to is one table further away.
+ */
+function useRightsObservation(decision: GateDecision): EvidenceObservation {
+  const rights = decision.use_rights;
+  if (!rights) {
+    return {
+      kind: 'use_rights_unknown',
+      detail:
+        `The gate returned no USE lattice for ${decision.url}. Unknown is not permissive: nothing here ` +
+        `may be quoted publicly until it is known.`,
+      value: null,
+    };
+  }
+  const withheld = (
+    [
+      ['llm_ingest', rights.llm_ingest],
+      ['publish_excerpt', rights.publish_excerpt],
+      ['publish_link', rights.publish_link],
+      ['store_raw_body', rights.store_raw_body],
+    ] as const
+  )
+    .filter(([, granted]) => !granted)
+    .map(([name]) => name);
+  return {
+    kind: withheld.length ? 'use_rights_restricted' : 'use_rights_full',
+    detail: withheld.length
+      ? `This page may be fetched but NOT: ${withheld.join(', ')}. Reserved by ` +
+        `${rights.reserved_by.map((entry) => `${entry.signal} ${entry.directive}`).join('; ') || 'an unnamed signal'}.`
+      : 'Fetch, internal evaluation, public excerpt and public link are all permitted. Training never is.',
+    value: withheld.join(',') || null,
+  };
+}
+
 function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, outcome: FetchOutcome): PartialEvidence {
   const role = pageRole(outcome.url);
   if (outcome.kind === 'refused') {
@@ -96,6 +136,7 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
         detail: `GET ${outcome.url} returned ${outcome.http_status} in ${outcome.elapsed_ms} ms${outcome.truncated ? ', body truncated at the 2 MB cap' : ''}`,
         value: outcome.http_status,
       },
+      useRightsObservation(outcome.decision),
     ],
   };
 }
