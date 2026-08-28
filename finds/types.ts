@@ -98,6 +98,23 @@ export type CandidateStatus =
   | 'published'
   | 'rejected';
 
+/**
+ * What `product_url` actually points at.
+ *
+ * `dedicated` is the project's own site, so its pages are the project's words.
+ * `shared_host` is a tenant under a path on someone else's host --
+ * github.com/owner/repo, a Substack, an App Store listing -- where the
+ * surrounding pages belong to the host, not the project.
+ *
+ * The distinction is D23: a project's README claim was recorded as CONTRADICTED
+ * by a sentence from github.com/pricing, which under D7 disqualified it. Treat
+ * `shared_host` evidence as thin and scoped to the path prefix.
+ *
+ * `unknown` means not classified. It is never an endorsement -- do not fall
+ * back to treating it as `dedicated`, which is the assumption D23 punished.
+ */
+export type ProductUrlKind = 'dedicated' | 'shared_host' | 'unknown';
+
 /** A row of `finds_candidates`. Private. */
 export interface CandidateRow {
   id: string;
@@ -110,6 +127,8 @@ export interface CandidateRow {
   canonical_url: string;
   name: string;
   tagline: string | null;
+  /** Defaults to 'unknown' in the database; never assume 'dedicated'. */
+  product_url_kind: ProductUrlKind;
   first_seen_at: Timestamp;
   last_seen_at: Timestamp;
   status: CandidateStatus;
@@ -122,7 +141,16 @@ export interface CandidateRow {
  * generated column, so normalisation cannot be forgotten or disagreed about.
  * Upsert with `ON CONFLICT (canonical_url) DO UPDATE SET last_seen_at = NOW()`.
  */
-export type NewCandidate = Pick<CandidateRow, 'product_url' | 'name'> &
+/**
+ * Required here even though the column has a database default, so a connector
+ * that has not classified the URL has to say `'unknown'` out loud rather than
+ * silently inheriting it. The default exists to keep already-deployed writers
+ * working, not as a shape anyone should target.
+ */
+export type NewCandidate = Pick<
+  CandidateRow,
+  'product_url' | 'name' | 'product_url_kind'
+> &
   Partial<Pick<CandidateRow, 'tagline'>>;
 
 /** A row of `finds_candidate_sightings`: one platform listing. Private. */

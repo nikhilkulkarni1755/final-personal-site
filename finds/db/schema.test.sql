@@ -712,6 +712,43 @@ BEGIN
     END;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- product_url_kind: an unclassified URL must never read as an endorsement
+-- --------------------------------------------------------------------------
+-- D23: a project's README claim was recorded as CONTRADICTED by a sentence from
+-- github.com/pricing, which under D7 disqualified a real person's project. The
+-- assumption that punished us was treating a tenant listing as a product site,
+-- so 'dedicated' is the one value that must never be assumed.
+DO $$
+DECLARE
+    kind TEXT;
+    n    INTEGER;
+BEGIN
+    -- a writer that does not classify gets 'unknown', not 'dedicated'
+    INSERT INTO finds_candidates (product_url, name)
+    VALUES ('https://github.com/owner/repo', 'Unclassified');
+    SELECT product_url_kind INTO kind FROM finds_candidates WHERE name = 'Unclassified';
+    ASSERT kind = 'unknown',
+           format('an unclassified candidate defaulted to %s; only an explicit classification may say dedicated', kind);
+
+    -- the classifier's real values round-trip
+    INSERT INTO finds_candidates (product_url, name, product_url_kind)
+    VALUES ('https://gitlab.com/acme/thing', 'Tenant', 'shared_host');
+    SELECT product_url_kind INTO kind FROM finds_candidates WHERE name = 'Tenant';
+    ASSERT kind = 'shared_host', format('shared_host stored as %s', kind);
+
+    -- the enum is closed
+    BEGIN
+        UPDATE finds_candidates SET product_url_kind = 'probably_fine' WHERE name = 'Tenant';
+        RAISE EXCEPTION 'an arbitrary product_url_kind was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- the index's purpose: find everything not yet known to be a real product site
+    SELECT count(*) INTO n FROM finds_candidates WHERE product_url_kind <> 'dedicated';
+    ASSERT n >= 2, format('expected the unclassified and shared-host rows to be findable, saw %s', n);
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
