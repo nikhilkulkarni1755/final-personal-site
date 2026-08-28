@@ -15,7 +15,7 @@ import { R2_CAPS } from './config.ts';
 import { gatedFetch } from './gate.ts';
 import { createRunState } from './gateAdapter.ts';
 import { routeVerdict } from './render.ts';
-import { normalise } from './scope.ts';
+import { normalise, projectScope } from './scope.ts';
 
 describe('C2 -- the browser cannot leave the origin the gate cleared', () => {
   const ALLOWED = 'https://example.test/app';
@@ -57,6 +57,7 @@ describe('C2 -- the browser cannot leave the origin the gate cleared', () => {
 
 describe('C3 -- a hostile Sitemap: directive cannot steer the crawler', () => {
   const candidate = 'https://example.test/';
+  const scope = projectScope(candidate);
 
   it('is dropped before the gate ever sees it', () => {
     for (const hostile of [
@@ -65,13 +66,13 @@ describe('C3 -- a hostile Sitemap: directive cannot steer the crawler', () => {
       'https://evil.test/sitemap.xml',
       'file:///etc/passwd',
     ]) {
-      assert.equal(normalise(hostile, candidate, candidate), null, hostile);
+      assert.equal(normalise(hostile, candidate, scope), null, hostile);
     }
   });
 
   it('still allows the site to declare its own sitemap', () => {
     assert.equal(
-      normalise('https://example.test/sitemap-1.xml', candidate, candidate),
+      normalise('https://example.test/sitemap-1.xml', candidate, scope),
       'https://example.test/sitemap-1.xml',
     );
   });
