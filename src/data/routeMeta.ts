@@ -544,6 +544,37 @@ export const routeMeta: Record<string, RouteMeta> = {
       },
     ),
   },
+
+  '/bot': {
+    // Fully static crawler disclosure (src/pages/Bot.tsx) — no Supabase data,
+    // no stub fallback, so this gets full treatment with no caveats. A
+    // WebPage node is the honest fit here: this page isn't an article, a
+    // product listing, or a person profile, it's a disclosure document
+    // describing a crawler. Do not invent a richer type than that.
+    // Markdown mirror (W2) has not landed yet — checked their pushed tree
+    // (git ls-tree origin/agent-ready/w2-llmstxt), no bot.md — so
+    // hasMarkdownMirror: false until it does, same pattern as
+    // /interesting-finds before its twin landed.
+    ...meta('/bot', {
+      title: 'Interesting Finds Bot — Nikhil Kulkarni',
+      description:
+        'Public disclosure for InterestingFindsBot: who operates it, what it crawls and why, its exact User-Agent string, how to block it, and what it will never do.',
+      hasMarkdownMirror: false,
+    }),
+    jsonLd: graph(
+      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Interesting Finds Bot', path: '/bot' }]),
+      {
+        '@type': 'WebPage',
+        name: 'Interesting Finds Bot',
+        description:
+          'Public disclosure for InterestingFindsBot: who operates it, what it crawls and why, its exact User-Agent string, how to block it, and what it will never do.',
+        url: `${SITE_URL}/bot`,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+        author: personRef,
+        inLanguage: 'en-US',
+      },
+    ),
+  },
 };
 
 export default routeMeta;
