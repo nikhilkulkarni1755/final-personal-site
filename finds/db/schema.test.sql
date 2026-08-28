@@ -124,6 +124,38 @@ BEGIN
     END;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- Evidence is immutable and append-only, for EVERY caller
+-- --------------------------------------------------------------------------
+-- RLS cannot enforce this: the pipeline writes with the service role, which
+-- bypasses RLS entirely. So the ban has to be a trigger, and this asserts it
+-- holds even for the table owner.
+DO $$
+DECLARE
+    cand UUID;
+    run  UUID := gen_random_uuid();
+    ev   UUID;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates LIMIT 1;
+
+    INSERT INTO finds_evidence (candidate_id, crawl_run_id, url, page_role, http_status, quotes)
+    VALUES (cand, run, 'https://acme.dev/pricing', 'pricing', 200,
+            '[{"text": "Free forever for individuals", "locator": "h2"}]'::jsonb)
+    RETURNING id INTO ev;
+
+    BEGIN
+        UPDATE finds_evidence SET http_status = 500 WHERE id = ev;
+        RAISE EXCEPTION 'evidence was UPDATEable';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+
+    BEGIN
+        DELETE FROM finds_evidence WHERE id = ev;
+        RAISE EXCEPTION 'evidence was DELETEable';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.

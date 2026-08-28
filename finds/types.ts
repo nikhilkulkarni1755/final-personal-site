@@ -143,3 +143,77 @@ export type NewCandidateSighting = Pick<
   'candidate_id' | 'source_id' | 'external_id' | 'source_url'
 > &
   Partial<Pick<CandidateSightingRow, 'title' | 'author_handle' | 'posted_at' | 'raw'>>;
+
+/* ========================================================================== */
+/* evidence                                                                    */
+/* ========================================================================== */
+
+/** What a fetched page is to us, so scoring can ask for the pricing page. */
+export type EvidencePageRole =
+  | 'homepage'
+  | 'pricing'
+  | 'docs'
+  | 'api'
+  | 'mcp'
+  | 'changelog'
+  | 'about'
+  | 'blog'
+  | 'repo'
+  | 'robots_txt'
+  | 'llms_txt'
+  | 'other';
+
+/** Something the page asserts. The left-hand side of the C1 diff. */
+export interface EvidenceClaim {
+  text: string;
+  /** Where on the page it was found -- selector, heading, or section. */
+  locator?: string;
+}
+
+/** A verbatim excerpt. Quoted, never paraphrased, so a score is auditable. */
+export interface EvidenceQuote {
+  text: string;
+  locator?: string;
+}
+
+/** Measured behaviour rather than text: an endpoint responded, a schema parsed. */
+export interface EvidenceObservation {
+  kind: string;
+  detail?: string;
+  value?: string | number | boolean | null;
+}
+
+/**
+ * A row of `finds_evidence`. Private, immutable and append-only -- a trigger
+ * refuses UPDATE, DELETE and TRUNCATE for every caller, service role included,
+ * because RLS cannot stop a role that bypasses RLS. Re-crawling appends a new
+ * generation under a fresh `crawl_run_id`; it never overwrites.
+ */
+export interface EvidenceRow {
+  id: string;
+  candidate_id: string;
+  /** Groups one crawl pass. Verdicts record which generation they scored. */
+  crawl_run_id: string;
+  url: string;
+  page_role: EvidencePageRole;
+  /** A 404 on /docs is evidence, not a missing row. */
+  http_status: number | null;
+  content_type: string | null;
+  content_sha256: string | null;
+  fetched_at: Timestamp;
+  claims: EvidenceClaim[];
+  quotes: EvidenceQuote[];
+  observations: EvidenceObservation[];
+  created_at: Timestamp;
+}
+
+export type NewEvidence = Pick<
+  EvidenceRow,
+  'candidate_id' | 'crawl_run_id' | 'url' | 'page_role'
+> &
+  Partial<
+    Pick<
+      EvidenceRow,
+      'http_status' | 'content_type' | 'content_sha256' | 'fetched_at' | 'claims' | 'quotes' | 'observations'
+    >
+  >;
