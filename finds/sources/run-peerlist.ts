@@ -53,6 +53,7 @@ async function persist(client: SupabaseClient, sourceId: string, launch: Fetched
     product_url: launch.productUrl,
     name: launch.name,
     tagline: launch.tagline,
+    product_url_kind: launch.productUrlKind,
   });
   return upsertSighting(client, {
     candidate_id: candidateId,

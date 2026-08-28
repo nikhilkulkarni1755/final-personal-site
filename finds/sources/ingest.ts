@@ -4,9 +4,14 @@ import type { NewCandidate, NewCandidateSighting } from '../types.ts';
 // The two-step upsert every connector goes through, exactly as specified in
 // DEPENDENCIES.md's finds_candidates SHAPES READY note: on a repeat sighting
 // of an already-known product, ONLY last_seen_at changes -- name/tagline/
-// product_url stay exactly as the first source reported them (W3 tested
-// this: "three URL spellings from three platforms collapse to ONE candidate
-// row"). canonical_url is a GENERATED column -- never write it here.
+// product_url/product_url_kind stay exactly as the first source reported
+// them (W3 tested this: "three URL spellings from three platforms collapse
+// to ONE candidate row"). canonical_url is a GENERATED column -- never write
+// it here. product_url_kind (D23) is REQUIRED on NewCandidate even though
+// finds_candidates has a 'unknown' default -- the default exists only to
+// keep already-deployed writers from breaking, not as a value a connector
+// should ever supply on purpose (finds/types.ts). Every connector computes
+// it via classifyProductUrl() (hostClassifier.ts) before calling this.
 //
 // PostgREST's own upsert can only express "overwrite every submitted column
 // on conflict," which would let a later source silently rewrite an earlier
@@ -50,7 +55,12 @@ export async function upsertCandidate(client: SupabaseClient, input: NewCandidat
 
   const { data: inserted, error: insertError } = await client
     .from('finds_candidates')
-    .insert({ product_url: input.product_url, name: input.name, tagline: input.tagline ?? null })
+    .insert({
+      product_url: input.product_url,
+      name: input.name,
+      tagline: input.tagline ?? null,
+      product_url_kind: input.product_url_kind,
+    })
     .select('id')
     .single();
   if (insertError) {
