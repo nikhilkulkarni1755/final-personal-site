@@ -84,7 +84,17 @@ test('an empty queue is an empty day, not an error', () => {
 test('a contradicted claim is disqualifying however well it scores elsewhere', () => {
   const selection = selectForDay('2026-08-27', [candidate('Liar', { C1: 0, C2: 3, C3: 3, C4: 3 })]);
   assert.equal(selection.picks.length, 0);
-  assert.equal(selection.rejected[0].reason, 'c1_contradicted');
+  assert.equal(selection.rejected[0].reason, 'contradicted');
+  assert.match(selection.rejected[0].detail, /truth is the first criterion/);
+});
+
+test('a 0 on ANY criterion disqualifies, not only on C1', () => {
+  // A waitlisted product: nobody can use it, but C2 and C4 still clear the
+  // floor on their own. Without this rule it would reach the digest.
+  const selection = selectForDay('2026-08-27', [candidate('Waitlisted', { C1: 3, C2: 2, C3: 0, C4: 2 })]);
+  assert.equal(selection.picks.length, 0);
+  assert.equal(selection.rejected[0].reason, 'contradicted');
+  assert.match(selection.rejected[0].detail, /^C3 scored 0/);
 });
 
 test('an unsubstantiated C1 is not disqualifying -- thin docs are not a lie', () => {
