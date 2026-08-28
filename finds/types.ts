@@ -357,3 +357,58 @@ export interface PublishedFindRow {
 export type VisiblePublishedFind = Omit<PublishedFindRow, 'published_at'> & {
   published_at: Timestamp;
 };
+
+/* ========================================================================== */
+/* digests                                                                     */
+/* ========================================================================== */
+
+/**
+ * A digest cannot claim a delivery it did not get: `sent` requires `sent_at`
+ * and `failed` requires `error`, both by CHECK. Per D2 and D6, W6 may not fake
+ * a successful send.
+ */
+export type DigestStatus = 'pending' | 'sent' | 'failed';
+
+/** A row of `finds_digests`. Private. */
+export interface DigestRow {
+  id: string;
+  subject: string;
+  recipient: string;
+  status: DigestStatus;
+  sent_at: Timestamp | null;
+  /** Whatever the transport returned. Evidence a send really happened. */
+  provider_message_id: string | null;
+  /** Verbatim failure. Never a credential -- D2 forbids echoing the app password. */
+  error: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export type NewDigest = Pick<DigestRow, 'subject' | 'recipient'>;
+
+/**
+ * A row of `finds_digest_items`.
+ *
+ * `digest_status` is a trigger-maintained mirror of the parent digest's status
+ * and must never be written by hand. It exists so "a candidate may appear in at
+ * most one SENT digest" can be a partial unique index, which Postgres cannot
+ * build across a join. The consequence that matters: a failed send does not
+ * consume its candidates, so finds Nikhil never received are not lost.
+ */
+export interface DigestItemRow {
+  digest_id: string;
+  candidate_id: string;
+  /** Order in the email, so the digest can be reconstructed exactly. */
+  position: number;
+  digest_status: DigestStatus;
+  created_at: Timestamp;
+}
+
+export type NewDigestItem = Pick<DigestItemRow, 'digest_id' | 'candidate_id' | 'position'>;
+
+/**
+ * A row of the `finds_undigested_candidates` view: candidates not yet in a
+ * successfully sent digest. Select from this rather than writing a NOT EXISTS
+ * clause, so the never-twice rule lives in one place.
+ */
+export type UndigestedCandidateRow = CandidateRow;

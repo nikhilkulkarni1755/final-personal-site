@@ -280,6 +280,64 @@ BEGIN
     RESET ROLE;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- Digests: never the same find twice -- but a FAILED send must not burn one
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand UUID;
+    d1   UUID;
+    d2   UUID;
+    d3   UUID;
+    n    INTEGER;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+
+    -- a send cannot claim delivery it did not get
+    BEGIN
+        INSERT INTO finds_digests (subject, recipient, status)
+        VALUES ('Finds', 'nikhil@example.test', 'sent');
+        RAISE EXCEPTION 'a digest claimed sent with no sent_at';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- ...and cannot fail silently
+    BEGIN
+        INSERT INTO finds_digests (subject, recipient, status)
+        VALUES ('Finds', 'nikhil@example.test', 'failed');
+        RAISE EXCEPTION 'a digest failed with no error recorded';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- digest 1 fails to send
+    INSERT INTO finds_digests (subject, recipient) VALUES ('Finds', 'nikhil@example.test')
+    RETURNING id INTO d1;
+    INSERT INTO finds_digest_items (digest_id, candidate_id, position) VALUES (d1, cand, 0);
+    UPDATE finds_digests SET status = 'failed', error = 'SMTP 535' WHERE id = d1;
+
+    SELECT count(*) INTO n FROM finds_undigested_candidates WHERE id = cand;
+    ASSERT n = 1, 'a failed send burned the candidate -- Nikhil never saw it';
+
+    -- digest 2 carries the same candidate and succeeds
+    INSERT INTO finds_digests (subject, recipient) VALUES ('Finds', 'nikhil@example.test')
+    RETURNING id INTO d2;
+    INSERT INTO finds_digest_items (digest_id, candidate_id, position) VALUES (d2, cand, 0);
+    UPDATE finds_digests SET status = 'sent', sent_at = NOW() WHERE id = d2;
+
+    SELECT count(*) INTO n FROM finds_undigested_candidates WHERE id = cand;
+    ASSERT n = 0, 'a sent candidate is still offered for a future digest';
+
+    -- and now it cannot be sent a second time
+    INSERT INTO finds_digests (subject, recipient) VALUES ('Finds again', 'nikhil@example.test')
+    RETURNING id INTO d3;
+    INSERT INTO finds_digest_items (digest_id, candidate_id, position) VALUES (d3, cand, 0);
+    BEGIN
+        UPDATE finds_digests SET status = 'sent', sent_at = NOW() WHERE id = d3;
+        RAISE EXCEPTION 'the same find was sent twice';
+    EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
