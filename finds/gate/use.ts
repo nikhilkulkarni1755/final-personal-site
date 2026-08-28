@@ -17,9 +17,10 @@ export interface PageUseSignals {
   contentSignal: ContentSignal | null;
   /** Origin-scoped, from the matched robots.txt group (§1.5 S9, aipref). */
   contentUsage: ContentUsage | null;
-  /** Page-scoped, from response header or meta tag (§1.5 S10). */
+  /** Page-scoped, from response header or meta tag (§1.5 S10). tdm-policy
+   * URL is not tracked in this pass -- a known gap; §6 wants it recorded
+   * (never fetched, never auto-accepted) but nothing consumes it yet. */
   tdmReservation: boolean;
-  tdmPolicyUrl: string | null;
   robotsSourceUrl: string;
   pageUrl: string;
 }
@@ -47,20 +48,20 @@ export function computeUseRights(signals: PageUseSignals): UseRights {
   const noai = hasDirective(allDirectives, 'noai') || hasDirective(allDirectives, 'noimageai');
   const snippetChars = maxSnippetChars(allDirectives);
 
-  const reservedBy: UseRights['reservedBy'] = [];
+  const reservedBy: UseRights['reserved_by'] = [];
   const record = (signal: UseSignal, directive: string) =>
-    reservedBy.push({ signal, directive, sourceUrl: signal === 'CONTENT_SIGNAL' || signal === 'CONTENT_USAGE' ? signals.robotsSourceUrl : signals.pageUrl });
+    reservedBy.push({ signal, directive, source_url: signal === 'CONTENT_SIGNAL' || signal === 'CONTENT_USAGE' ? signals.robotsSourceUrl : signals.pageUrl });
 
   // §1.5 specificity rule: a Level-1 (per-operation) grant beats the
   // Level-2 (blanket) tdm-reservation. tdm-reservation never grants
   // anything on its own -- it only subtracts, and only where no Level-1
   // directive on the same authority has already taken a position on that
   // exact operation.
-  const aiInputGranted = signals.contentSignal?.aiInput === 'yes';
+  const aiInputGranted = signals.contentSignal?.ai_input === 'yes';
   const searchGranted = signals.contentSignal?.search === 'yes' || signals.contentUsage?.search === 'y';
 
   let llmIngest = true;
-  if (signals.contentSignal?.aiInput === 'no') {
+  if (signals.contentSignal?.ai_input === 'no') {
     llmIngest = false;
     record('CONTENT_SIGNAL', 'ai-input=no');
   }
@@ -100,13 +101,13 @@ export function computeUseRights(signals: PageUseSignals): UseRights {
   if (signals.contentUsage?.search === 'n') publishLink = false;
 
   return {
-    llmIngest,
-    publishExcerpt,
-    publishLink,
-    followLinks: !nofollow,
-    storeRawBody: !noarchive,
+    llm_ingest: llmIngest,
+    publish_excerpt: publishExcerpt,
+    publish_link: publishLink,
+    follow_links: !nofollow,
+    store_raw_body: !noarchive,
     train: false,
-    maxSnippetChars: snippetChars === -1 ? null : snippetChars,
-    reservedBy,
+    max_snippet_chars: snippetChars === -1 ? null : snippetChars,
+    reserved_by: reservedBy,
   };
 }

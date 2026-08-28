@@ -20,16 +20,19 @@ async function main(): Promise<void> {
 
   if (mode === '--site') {
     const result = await checkSite(url);
-    console.log(JSON.stringify({ site: result.site }, null, 2));
+    console.log(`origin: ${result.origin}`);
     console.log(`\nallowed pages (${result.allowed.length}${result.truncated ? ', truncated' : ''}):`);
-    for (const record of result.allowed) console.log(`  ALLOW    ${record.url}`);
+    for (const v of result.allowed) {
+      const use = v.use_rights ? ` [llm_ingest=${v.use_rights.llm_ingest} publish_excerpt=${v.use_rights.publish_excerpt} publish_link=${v.use_rights.publish_link}]` : '';
+      console.log(`  ALLOW    ${v.url}  (${v.reason_code})${use}`);
+    }
     console.log(`\ndisallowed pages (${result.disallowed.length}):`);
-    for (const record of result.disallowed) console.log(`  DISALLOW ${record.url}  -- ${record.verdict.reason}`);
+    for (const v of result.disallowed) console.log(`  DISALLOW ${v.url}  -- ${v.reason_code}: ${v.reason_detail}`);
     return;
   }
 
-  const record = await checkPage(url);
-  console.log(JSON.stringify(record, null, 2));
+  const verdict = await checkPage(url);
+  console.log(JSON.stringify(verdict, null, 2));
 }
 
 main().catch((err) => {

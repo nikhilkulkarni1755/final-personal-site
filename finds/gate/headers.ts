@@ -16,6 +16,8 @@
 // This module only extracts directive tokens; deciding what they mean for
 // FETCH vs USE is §3.1/§3.2's job, applied in access.ts/use.ts.
 
+import type { ContentUsage } from './types.ts';
+
 const PARAMETERIZED_DIRECTIVES = new Set([
   'unavailable_after',
   'max-snippet',
@@ -75,13 +77,13 @@ export function parseTdmReservationHeader(rawValue: string | null): boolean {
 }
 
 /** §1.5 S9 (aipref) response-header form: "Content-Usage: train-ai=n". */
-export function parseContentUsageHeader(rawValue: string | null): { trainAi?: 'y' | 'n'; search?: 'y' | 'n' } | null {
+export function parseContentUsageHeader(rawValue: string | null): ContentUsage | null {
   if (!rawValue) return null;
-  const out: { trainAi?: 'y' | 'n'; search?: 'y' | 'n' } = {};
+  const out: ContentUsage = {};
   for (const pair of rawValue.trim().split(/\s+/)) {
     const [rawKey, rawVal] = pair.split('=').map((s) => s.trim().toLowerCase());
     if (!rawKey || (rawVal !== 'y' && rawVal !== 'n')) continue;
-    if (rawKey === 'train-ai') out.trainAi = rawVal;
+    if (rawKey === 'train-ai') out.train_ai = rawVal;
     else if (rawKey === 'search') out.search = rawVal;
   }
   return Object.keys(out).length > 0 ? out : null;

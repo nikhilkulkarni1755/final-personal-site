@@ -68,6 +68,8 @@ export type RobotsOutcome =
       contentType: string | null;
       sha256: string;
       elapsedMs: number;
+      /** Verbatim, up to config.robotsTxtMaxBytes -- the primary exhibit (§6). */
+      bodyText: string;
     }
   | {
       kind: 'absent'; // treated as full access, no rules to apply
