@@ -105,6 +105,8 @@ export interface SendMessageParams {
   chatId: string;
   text: string;
   inlineKeyboard?: TelegramInlineButton[][];
+  /** Threads this message under an earlier one (current Bot API: reply_parameters). */
+  replyToMessageId?: number;
 }
 
 export async function sendMessage(
@@ -125,6 +127,7 @@ export async function sendMessage(
       chat_id: params.chatId,
       text: params.text,
       reply_markup: params.inlineKeyboard ? { inline_keyboard: params.inlineKeyboard } : undefined,
+      reply_parameters: params.replyToMessageId ? { message_id: params.replyToMessageId } : undefined,
     },
     timeoutMs,
   );

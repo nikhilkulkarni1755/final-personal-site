@@ -23,7 +23,9 @@ export type HitlAnswerKind = 'option' | 'text';
  * Set on a matched answer only when the question it answers was an
  * askApproval() (see ask.ts) -- i.e. the routing in poll.ts attempted (or
  * deliberately skipped) a finds_approvals write for it (D29).
- *   'inserted'          -- a new row was written.
+ *   'inserted'          -- a new row was written. Only an explicit
+ *                          inline-keyboard Approve tap ever causes this
+ *                          (D32): free text alone never does.
  *   'duplicate_message' -- this exact (chat_id, message_id) was already
  *                          recorded; Telegram redelivered an update we'd
  *                          already handled. Not an error.
@@ -32,8 +34,13 @@ export type HitlAnswerKind = 'option' | 'text';
  *   'rejected'           -- Nikhil tapped the non-approve option. Nothing is
  *                          ever written for a rejection (DECISIONS D29 has
  *                          no reject representation in finds_approvals).
+ *   'noted'              -- a free-text reply arrived before any tap. Saved
+ *                          as a draft why_interesting on the pending entry
+ *                          (see ApprovalContext.draftNote) but NOT written
+ *                          to finds_approvals: D32 holds that ambiguity is
+ *                          not consent, so only a tap approves.
  */
-export type ApprovalWriteStatus = 'inserted' | 'duplicate_message' | 'already_approved' | 'rejected';
+export type ApprovalWriteStatus = 'inserted' | 'duplicate_message' | 'already_approved' | 'rejected' | 'noted';
 
 export interface HitlAnswer {
   questionId: string;
@@ -55,11 +62,19 @@ export interface HitlAnswer {
  * approves and which option index means "approve" (the other -- there are
  * always exactly two -- means reject, and a reject writes nothing: D29
  * deliberately has no reject representation in finds_approvals).
+ *
+ * D32: only the inline-keyboard tap approves. A free-text reply arriving
+ * first is captured here as `draftNote` rather than written to
+ * finds_approvals -- ambiguity is not consent. If a later tap approves, the
+ * write uses `draftNote` as why_interesting; if he never taps, nothing is
+ * ever written and the note is discarded with the rest of the pending entry.
  */
 export interface ApprovalContext {
   candidateId: string;
   evidenceRunId: string;
   approveOptionIndex: number;
+  /** Free text he sent before tapping, verbatim. See D32 above. */
+  draftNote?: string;
 }
 
 /** A question that has been sent and is awaiting Nikhil's answer. */
