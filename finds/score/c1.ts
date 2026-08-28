@@ -36,7 +36,7 @@
 
 import type { EvidenceRow } from '../types.ts';
 import type { C1Status, CriterionScore, ScoreCitation, UnscoreableReason } from './types.ts';
-import { RUBRIC_VERSION, corpusClause, corpusStats } from './rubric.ts';
+import { RUBRIC_VERSION, citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
 
 /** The observation kinds W4's diffClaims() emits. The contract between us. */
 const CORROBORATED = 'c1_corroborated';
@@ -59,36 +59,6 @@ const UNSUBSTANTIATED = 'c1_unsubstantiated';
 const CLEAR_SUPPORT_MIN_CLAIMS = 3;
 const CLEAR_SUPPORT_MIN_RATIO = 0.6;
 
-interface Finding {
-  row: EvidenceRow;
-  detail: string;
-}
-
-function collect(rows: readonly EvidenceRow[], kind: string): Finding[] {
-  const found: Finding[] = [];
-  for (const row of rows) {
-    for (const observation of row.observations) {
-      if (observation.kind === kind) found.push({ row, detail: observation.detail ?? '' });
-    }
-  }
-  return found;
-}
-
-/** One citation per distinct evidence row, so a 40-claim diff is readable. */
-function cite(findings: readonly Finding[], stance: ScoreCitation['stance'], label: string): ScoreCitation[] {
-  const byRow = new Map<string, { row: EvidenceRow; count: number }>();
-  for (const finding of findings) {
-    const seen = byRow.get(finding.row.id);
-    if (seen) seen.count += 1;
-    else byRow.set(finding.row.id, { row: finding.row, count: 1 });
-  }
-  return [...byRow.values()].map(({ row, count }) => ({
-    evidence_id: row.id,
-    stance,
-    note: `${count} ${label} claim(s) recorded against ${row.url} (${row.page_role})`,
-  }));
-}
-
 export type C1Result =
   | { kind: 'scored'; score: CriterionScore }
   | { kind: 'unscoreable'; reason: UnscoreableReason; detail: string };
@@ -107,9 +77,9 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
     return { kind: 'unscoreable', reason: 'no_evidence', detail: 'No evidence rows in this crawl generation.' };
   }
 
-  const contradicted = collect(rows, CONTRADICTED);
-  const corroborated = collect(rows, CORROBORATED);
-  const unsubstantiated = collect(rows, UNSUBSTANTIATED);
+  const contradicted = findings(rows, CONTRADICTED);
+  const corroborated = findings(rows, CORROBORATED);
+  const unsubstantiated = findings(rows, UNSUBSTANTIATED);
   const checkable = corroborated.length + unsubstantiated.length;
 
   // No claims diff in the evidence at all. NOT "we checked and found nothing"
@@ -130,10 +100,7 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
     status: C1Status,
     rationale: string,
     citations: ScoreCitation[],
-  ): C1Result => ({
-    kind: 'scored',
-    score: { criterion: 'C1', score, status, rationale: `${rationale} ${corpusClause(stats)}`, citations, rubric_version: RUBRIC_VERSION },
-  });
+  ): C1Result => ({ kind: 'scored', score: { ...criterionScore('C1', score, rationale, citations, stats), status } });
 
   // ---- CONTRADICTED. Disqualifying, and it cites what disproves the claim. --
   if (contradicted.length > 0) {
@@ -145,7 +112,7 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
         "contradicted by the site's own pages. Under rubric " +
         `${RUBRIC_VERSION} any contradicted claim scores 0 and disqualifies the candidate regardless of C2-C4.` +
         (shown.length > 0 ? ` ${shown.join(' ')}` : ''),
-      cite(contradicted, 'contradicts', 'contradicted'),
+      citeRows(contradicted, 'contradicts', 'contradicted claim(s)'),
     );
   }
 
@@ -157,7 +124,7 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
       `UNSUBSTANTIATED: none of the ${checkable} checkable claim(s) found corroborating OR contradicting ` +
         'evidence among the pages we were permitted to read. This is an absence of evidence, not evidence ' +
         'against the product, and it scores 1 ("no evidence either way") rather than 0.',
-      cite(unsubstantiated, 'inconclusive', 'unsubstantiated'),
+      citeRows(unsubstantiated, 'inconclusive', 'unsubstantiated claim(s)'),
     );
   }
 
@@ -171,6 +138,6 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
       `echoed on another page of the site (${(ratio * 100).toFixed(0)}%), ${unsubstantiated.length} found ` +
       `nothing either way, and none are contradicted. Rubric ${RUBRIC_VERSION} scores 3 only at ` +
       `>=${CLEAR_SUPPORT_MIN_CLAIMS} corroborated and >=${(CLEAR_SUPPORT_MIN_RATIO * 100).toFixed(0)}%.`,
-    cite(corroborated, 'supports', 'corroborated'),
+    citeRows(corroborated, 'supports', 'corroborated claim(s)'),
   );
 }

@@ -12,8 +12,8 @@
  *   still be readable, so the version travels with every score.
  */
 
-import type { EvidenceRow } from '../types.ts';
-import type { CorpusStats } from './types.ts';
+import type { Criterion, EvidenceRow, VerdictScore } from '../types.ts';
+import type { CorpusStats, CriterionScore, ScoreCitation } from './types.ts';
 
 /**
  * Bump on ANY change that could move a score for unchanged evidence: a
@@ -84,4 +84,79 @@ export function corpusClause(stats: CorpusStats): string {
     `Corpus: ${stats.pages_read} page(s) fetched (${stats.pages_ok} answered 2xx), ` +
     `${stats.urls_refused} URL(s) refused by the permission gate.`
   );
+}
+
+/**
+ * Assemble one criterion's verdict. Every score goes through here, so no
+ * criterion can forget to state its corpus or to stamp the rubric version it
+ * was decided under.
+ */
+export function criterionScore(
+  criterion: Criterion,
+  score: VerdictScore,
+  rationale: string,
+  citations: ScoreCitation[],
+  stats: CorpusStats,
+): CriterionScore {
+  return {
+    criterion,
+    score,
+    rationale: `${rationale} ${corpusClause(stats)}`,
+    citations,
+    rubric_version: RUBRIC_VERSION,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* reading W4's observations, and turning them into citations                   */
+/* -------------------------------------------------------------------------- */
+
+/** One observation of a given kind, and the evidence row it was recorded on. */
+export interface Finding {
+  row: EvidenceRow;
+  detail: string;
+  value: string | number | boolean | null;
+}
+
+/**
+ * Every observation of these kinds, across a generation.
+ *
+ * Kinds are the contract between W4 (which collects) and W5 (which judges).
+ * A kind W4 stops emitting must show up here as an empty list -- never as a
+ * silently missing signal that quietly moves a score.
+ */
+export function findings(rows: readonly EvidenceRow[], ...kinds: string[]): Finding[] {
+  const wanted = new Set(kinds);
+  const found: Finding[] = [];
+  for (const row of rows) {
+    for (const observation of row.observations) {
+      if (wanted.has(observation.kind)) {
+        found.push({ row, detail: observation.detail ?? '', value: observation.value ?? null });
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * One citation per distinct evidence row, so a forty-claim diff cites four
+ * pages rather than forty times. The count is kept in the note: a reader
+ * following the citation needs to know how much of the row it stands for.
+ */
+export function citeRows(
+  found: readonly Finding[],
+  stance: ScoreCitation['stance'],
+  label: string,
+): ScoreCitation[] {
+  const byRow = new Map<string, { row: EvidenceRow; count: number }>();
+  for (const finding of found) {
+    const seen = byRow.get(finding.row.id);
+    if (seen) seen.count += 1;
+    else byRow.set(finding.row.id, { row: finding.row, count: 1 });
+  }
+  return [...byRow.values()].map(({ row, count }) => ({
+    evidence_id: row.id,
+    stance,
+    note: `${count} ${label} recorded against ${row.url} (${row.page_role})`,
+  }));
 }
