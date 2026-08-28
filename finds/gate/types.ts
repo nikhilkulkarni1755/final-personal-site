@@ -145,6 +145,39 @@ export interface EvidenceEntry {
   elapsed_ms: number;
 }
 
+/**
+ * D21: the gate is the ONLY thing that opens a socket for a page's content
+ * -- it already had to fetch the page once to read X-Robots-Tag/meta
+ * robots/tdm-reservation (USE signals), and a second, uncoordinated fetch
+ * by whoever consumes the verdict (W4) doubled every request, defeated the
+ * page cap (it counts URLs, not requests), and produced exactly the burst
+ * fingerprint bot.txt promises never to produce. `page` carries that one
+ * fetch's result so nothing needs to fetch the URL again. Shaped to match
+ * W4's own FetchOutcome (finds/verify/types.ts) so adopting it is a
+ * near-drop-in swap, not a rewrite of their consumer.
+ */
+export type PageFetchOutcome =
+  /** allowed=false, or allowed=true but the fetch never happened (denied
+   * mid-flight by a page-level 401/403/429/451/challenge -- see gate.ts). */
+  | { kind: 'not_fetched' }
+  | {
+      kind: 'fetched';
+      /** After redirects. Differs from the verdict's `url` when the origin moved us. */
+      final_url: string;
+      http_status: number;
+      content_type: string | null;
+      /** Empty when the content type is not one R2 §5.3 accepts (images,
+       * PDF, video, ...) -- the request still happened once, but the body
+       * was never read, matching what a second fetch would have done anyway. */
+      body: string;
+      content_sha256: string;
+      /** True when the R2 §5.3 2 MB per-response cap cut the body short. */
+      truncated: boolean;
+      fetched_at: string;
+      elapsed_ms: number;
+    }
+  | { kind: 'error'; error: string; fetched_at: string; elapsed_ms: number };
+
 /** The gate's return value for one URL -- matches R2-permission-rubric.md §6
  * and finds_crawl_verdicts. `candidate_id` is null when the gate is used
  * standalone (e.g. the CLI); W4 must set it before persisting, since the
@@ -181,4 +214,17 @@ export interface GateVerdict {
 
   decided_at: string;
   expires_at: string | null; // null only for manual_denylist (§7)
+}
+
+/**
+ * checkPage()'s actual return type. Deliberately NOT part of GateVerdict
+ * itself -- `page` has no column in finds_crawl_verdicts (there is no page
+ * body in that table, by design: it is a permission record, not a content
+ * store), so folding it into the persisted shape would invite someone to
+ * try to persist it there. `extends GateVerdict` means every existing
+ * caller typed against `GateVerdict` keeps compiling unchanged; only a
+ * caller that wants the page body needs to know this type exists.
+ */
+export interface GateVerdictWithPage extends GateVerdict {
+  page: PageFetchOutcome;
 }

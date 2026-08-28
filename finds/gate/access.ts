@@ -24,10 +24,27 @@ export interface AuthorityDenial {
  * that would need the TTL cache instead (§7 handles cross-run memory). */
 export interface RunState {
   deniedAuthorities: Map<string, AuthorityDenial>;
+  /** Per-authority timestamp of the last request the GATE actually issued
+   * (robots.txt or a page's own content fetch). gate.ts is the only reader
+   * and writer -- access.ts just carries the shape so it travels with the
+   * same RunState P2/P3 already thread through a crawl. This is what makes
+   * request pacing centralized in one place (the gate, the sole fetcher)
+   * rather than split between the gate's own fetch and a caller's fetch,
+   * which is exactly the seam D21 found: two fetches of one URL, only one
+   * of them paced. */
+  lastRequestAt: Map<string, number>;
+  /** D22: how many page-content requests (never robots.txt) the gate has
+   * actually issued for this authority, this run. checkPage refuses to
+   * issue another once this reaches the authority's crawl_budget.page_cap
+   * -- a physical ceiling on requests, not a caller's loop bound that a
+   * double-fetch or an eager caller could exceed. The 25-page, 2-second
+   * promise on https://nikhilkulkarni1755.com/bot.txt is enforced here and
+   * nowhere else (D21/D22). */
+  pageFetchCount: Map<string, number>;
 }
 
 export function createRunState(): RunState {
-  return { deniedAuthorities: new Map() };
+  return { deniedAuthorities: new Map(), lastRequestAt: new Map(), pageFetchCount: new Map() };
 }
 
 /** Called by gate.ts after any page-level fetch (not robots.txt, which
