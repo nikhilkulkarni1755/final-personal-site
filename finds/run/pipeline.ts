@@ -38,6 +38,10 @@ export interface StageCommand {
    * Environment variable NAMES this stage cannot run without. Absent =>
    * the stage is BLOCKED and says which name was missing. The value is
    * never read here and never printed anywhere.
+   *
+   * `'A|B'` means "either of these". D17 lets SUPABASE_URL fall back to
+   * VITE_SUPABASE_URL, and a stage that would actually run must not be
+   * reported BLOCKED just because it is using the fallback.
    */
   needsEnv?: string[];
   /** Files an earlier stage must have produced. Absent => BLOCKED. */
@@ -135,7 +139,8 @@ export function assertNoCommentPath(stages: Stage[]): void {
 /* ========================================================================== */
 
 function missingEnv(names: string[]): string[] {
-  return names.filter((n) => !process.env[n]?.trim());
+  // Only NAMES are read and reported; no value is ever returned or logged.
+  return names.filter((spec) => !spec.split('|').some((n) => process.env[n]?.trim()));
 }
 
 function runCommand(cmd: StageCommand): Promise<{ code: number | null; signal: string | null; timedOut: boolean }> {
@@ -166,7 +171,7 @@ async function runStage(stage: Stage): Promise<StageResult> {
 
   const absent = missingEnv(stage.command.needsEnv ?? []);
   if (absent.length > 0) {
-    return { ...base, status: 'blocked', detail: `unset: ${absent.join(', ')}` };
+    return { ...base, status: 'blocked', detail: `unset: ${absent.join(', ').replace(/\|/g, ' or ')}` };
   }
 
   const absentFiles = (stage.command.needsFile ?? []).filter((f) => !existsSync(f));

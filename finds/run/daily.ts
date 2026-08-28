@@ -18,9 +18,11 @@
  * on main, this run is RED, and it says exactly which stage stopped it.
  *
  * Usage: node finds/run/daily.ts
- *   env  DATABASE_URL           required -- Postgres (see D17 note in lanes/W10.md)
- *        GMAIL_USER             required for the send (D2)
- *        GMAIL_APP_PASSWORD     required for the send (D2)
+ *   env  SUPABASE_URL                required (falls back to VITE_SUPABASE_URL)
+ *        SUPABASE_SERVICE_ROLE_KEY   required -- D17. Never VITE_-prefixed.
+ *        GITHUB_TOKEN                required by the GitHub connector only
+ *        GMAIL_USER                  required for the send (D2)
+ *        GMAIL_APP_PASSWORD          required for the send (D2)
  *        FINDS_RUN_DATE         override the run's date (default: today, UTC)
  *        FINDS_RUN_DIR          override where stage artifacts go
  */
@@ -42,37 +44,43 @@ mkdirSync(RUN_DIR, { recursive: true });
  */
 const DIGEST_INPUT = join(RUN_DIR, 'digest-input.json');
 
+/**
+ * D17, and D19 which corrected this file: every stage that touches the
+ * datastore goes through finds/sources/db.ts's service-role client. There is
+ * no second database credential. SUPABASE_URL falls back to
+ * VITE_SUPABASE_URL (the URL is public); the KEY never carries a VITE_
+ * prefix, because Vite would bundle a full RLS bypass into the browser.
+ */
+const DB_ENV = ['SUPABASE_URL|VITE_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+
 const STAGES: Stage[] = [
   {
     id: 'preflight',
-    what: 'prove Postgres is reachable and migrated, and print per-source health',
+    what: 'prove Supabase is reachable and migrated, and print per-source health',
     owner: 'W10 (composing W2 db + W3 schema)',
-    command: { args: ['finds/run/preflight.ts'], timeoutMs: 60_000, needsEnv: ['DATABASE_URL'] },
-    // A database that is not there invalidates every stage after it, and --
+    command: { args: ['finds/run/preflight.ts'], timeoutMs: 60_000, needsEnv: DB_ENV },
+    // A datastore that is not there invalidates every stage after it, and --
     // just as important -- it would make every connector fail at once and
     // look like four dead sources. Abort, so D3 stays meaningful.
     onFailure: 'abort',
   },
+
+  // D3: a source being unreachable is reported DOWN and the run carries on.
+  // run-hn.ts has already written the failure to finds_sources by the time it
+  // exits non-zero, so the DOWN state is durable, not just a log line.
   {
     id: 'ingest:hn',
-    what: 'pull today\'s Show HN launches into finds_candidates',
+    what: 'pull today\'s Show HN launches (no credential, ~134/day)',
     owner: 'W2',
-    command: { args: ['finds/sources/run-hn.ts'], timeoutMs: 10 * 60_000, needsEnv: ['DATABASE_URL'] },
-    // D3: a source being unreachable is reported DOWN and the run carries on.
-    // run-hn.ts has already written the failure to finds_sources by the time
-    // it exits non-zero, so the DOWN state is durable, not just a log line.
+    command: { args: ['finds/sources/run-hn.ts'], timeoutMs: 10 * 60_000, needsEnv: DB_ENV },
     onFailure: 'continue',
   },
-  // Peerlist is deliberately not wired: finds/sources/run-peerlist.ts is
-  // registered in package.json but does not exist on main yet. Wiring a
-  // stage that cannot run would be a fake stage. It is also a Monday-only
-  // drop (~286/week, D10) against Show HN's daily ~134, so the daily supply
-  // does not depend on it -- see lanes/W10.md for the schedule note.
+
   {
     id: 'census',
     what: 'count what actually landed, and fail loudly on an empty day',
     owner: 'W10',
-    command: { args: ['finds/run/census.ts'], timeoutMs: 60_000, needsEnv: ['DATABASE_URL'] },
+    command: { args: ['finds/run/census.ts'], timeoutMs: 5 * 60_000, needsEnv: DB_ENV },
     onFailure: 'continue',
   },
   {
@@ -81,9 +89,7 @@ const STAGES: Stage[] = [
     owner: 'W4 (through W1\'s gate)',
     command: null,
     missingBecause:
-      'finds/verify/** is not on main yet. The gate (W1) merged in PR #9 and is ' +
-      'ready; nothing may fetch a page except through it, and W3\'s finds_evidence ' +
-      'composite FK enforces that. Until the crawler lands there is no evidence to score.',
+      'finds/verify/** is not wired into the daily run yet.',
     onFailure: 'continue',
   },
   {
