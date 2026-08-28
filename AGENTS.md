@@ -33,10 +33,17 @@ index.html" behavior.
 - `npm run lint` — ESLint
 - `npm run preview` — serve the production build locally (prerendered files included)
 
-Building requires Node 22.18+ and a working Chromium (the prerender step launches one
-via Playwright, currently pinned to `playwright@1.60.0`). Version pinning for Node
-itself (an `engines` field / `.nvmrc`) is landing separately; once it does, this line
-should name the exact pinned version instead of a floor.
+Building requires Node **exactly 22.18.0 or newer** and a working Chromium (the
+prerender step launches one via Playwright, currently pinned to `playwright@1.60.0`).
+The Node floor is pinned in `.node-version` at the repo root, not in package.json
+`engines` — Cloudflare Pages reads `.nvmrc`, `.node-version`, and `NODE_VERSION`, and
+does not read `engines` (that field is there only for npm's own local warning). Below
+22.18.0 the build fails inside `routeMeta.ts` with a bare syntax error and no hint as
+to why: 22.18.0 is the exact Node release that unflagged native TypeScript type
+stripping, and was chosen as the smallest version delta from Cloudflare Pages' own v3
+image default (22.16.0). A preflight check now fails loudly and names this requirement
+if the build ever runs on an older Node anyway, instead of surfacing a bare syntax
+error.
 
 ## Where content lives
 
