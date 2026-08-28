@@ -11,7 +11,10 @@
     "email:test": "node --test finds/email/render.test.ts",
     "email:typecheck": "tsc --noEmit -p finds/email/tsconfig.json",
     "email:dry-run": "node finds/email/dry-run.ts",
-    "email:send": "node finds/email/send.ts"
+    "email:send": "node finds/email/send.ts",
+    "sources:typecheck": "tsc --noEmit -p finds/sources/tsconfig.json",
+    "sources:ingest:hn": "node finds/sources/run-hn.ts",
+    "sources:ingest:peerlist": "node finds/sources/run-peerlist.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
@@ -19,6 +22,7 @@
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
     "nodemailer": "^9.0.6",
+    "pg": "^8.23.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
@@ -29,6 +33,7 @@
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
