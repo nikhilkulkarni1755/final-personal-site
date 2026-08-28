@@ -97,8 +97,15 @@ export interface SelectionCandidate {
 }
 
 export type RejectionReason =
-  /** C1 = 0. The claim is contradicted by evidence we hold. Disqualifying. */
-  | 'c1_contradicted'
+  /**
+   * Some criterion scored 0: the evidence CONTRADICTS it. Disqualifying on any
+   * of the four, not only C1. A 0 is not "did badly", it is "we hold evidence
+   * against this" -- the product's claims are contradicted, or nobody can use
+   * it, or its category is crowded by its own account, or its only agent
+   * surface is dead. Each of those is a reason not to send it, and the
+   * criterion is named in the detail.
+   */
+  | 'contradicted'
   /** Not all four criteria were scoreable, so the find is not comparable. */
   | 'incomplete_scores'
   /** Scored, and the evidence simply does not support enough of it. */
@@ -185,12 +192,14 @@ export function selectForDay(date: string, candidates: readonly SelectionCandida
       ALL_CRITERIA.map((criterion) => [criterion, candidate.scores[criterion]!]),
     ) as Record<Criterion, VerdictScore>;
 
-    if (scores.C1 === 0) {
+    const contradicted = ALL_CRITERIA.filter((criterion) => scores[criterion] === 0);
+    if (contradicted.length > 0) {
       reject(
         candidate,
-        'c1_contradicted',
-        'C1 is contradicted: the site is contradicted by evidence we hold. Disqualifying however ' +
-          'well it scores elsewhere -- truth is the first criterion.',
+        'contradicted',
+        `${contradicted.join(', ')} scored 0: we hold evidence AGAINST ${contradicted.length > 1 ? 'those criteria' : 'that criterion'}, ` +
+          'not merely an absence of evidence for it. Disqualifying however well it scores elsewhere' +
+          (contradicted.includes('C1') ? ' -- and truth is the first criterion.' : '.'),
       );
       continue;
     }
@@ -275,12 +284,12 @@ export function selectForDay(date: string, candidates: readonly SelectionCandida
   const summary =
     picks.length === 0
       ? `${date}: nothing worth sending. ${candidates.length} candidate(s) considered -- ` +
-        `${tally('c1_contradicted')} contradicted, ${tally('below_quality_floor')} below the quality floor, ` +
+        `${tally('contradicted')} contradicted, ${tally('below_quality_floor')} below the quality floor, ` +
         `${tally('incomplete_scores')} not fully scoreable. Sending no digest is the correct output; a digest ` +
         'of mediocre finds is worth less than no digest.'
       : `${date}: ${picks.length} of ${candidates.length} candidate(s) selected, from ` +
         `${new Set(picks.flatMap((p) => p.source_slugs)).size} source(s). ` +
-        `${rejected.length} not selected (${tally('c1_contradicted')} contradicted, ` +
+        `${rejected.length} not selected (${tally('contradicted')} contradicted, ` +
         `${tally('below_quality_floor')} below the floor, ${tally('incomplete_scores')} not fully scoreable, ` +
         `${tally('source_quota')} source quota, ${tally('same_problem_space')} same problem space, ` +
         `${tally('day_full')} queued for another day).`;
