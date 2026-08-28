@@ -26,7 +26,8 @@
  * shell), and one to `/app-shell.html` gets clean-URL'd, 308ing every route to
  * /app-shell. public/_redirects is therefore left exactly as it was.
  *
- * app-shell.html is the pristine copy this pass restores index.html from on a
+ * The pristine shell is stashed under node_modules/.cache, not in dist/ — it is a
+ * build intermediate, not a page. This pass restores index.html from it on a
  * re-run, which is what makes the build idempotent.
  *
  * Nothing is written to dist/ until the browser and server are both down. While
@@ -38,7 +39,7 @@
  */
 import { preview } from 'vite';
 import { chromium } from 'playwright';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -47,7 +48,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
 const ROUTE_META = join(ROOT, 'src/data/routeMeta.ts');
 const INDEX = join(DIST, 'index.html');
-const SHELL = join(DIST, 'app-shell.html');
+/**
+ * The pristine SPA shell, stashed OUTSIDE dist/ so it is never deployed: it is a
+ * build intermediate, and as a file in dist/ it shipped to production as a stray
+ * page that 308'd to /app-shell and then 404'd. node_modules/.cache is the usual
+ * home for this and is already ignored by git.
+ */
+const SHELL_CACHE = join(ROOT, 'node_modules/.cache/prerender/app-shell.html');
 
 /**
  * Real routes in src/App.tsx that we deliberately do not snapshot, and so must
@@ -217,13 +224,21 @@ async function waitForStableDom(page) {
 async function main() {
   const routeMeta = await loadRouteMeta();
 
-  // vite build empties dist/, so on a normal build index.html is pristine and we
-  // take the shell copy from it. If app-shell.html survives, a previous pass has
-  // already overwritten index.html with the rendered homepage — restore it, so a
-  // bare `npm run prerender` re-run starts from the same input as the first and
-  // produces byte-identical output.
-  if (existsSync(SHELL)) await copyFile(SHELL, INDEX);
-  else await copyFile(INDEX, SHELL);
+  // The un-rendered shell is the one file every route renders into, so the pass has
+  // to start from it. An empty #root is what identifies it: vite build emits that,
+  // and a previous pass replaces it with the rendered homepage. Pristine => stash a
+  // copy for later. Already rendered => this is a bare `npm run prerender` re-run,
+  // so restore from that stash and start from the same input the first run had.
+  // The stash is only ever READ when index.html is mutated, and only ever WRITTEN
+  // from a pristine one, so it cannot go stale against the current build.
+  let shell = await readFile(INDEX, 'utf8');
+  if (shell.includes('<div id="root"></div>')) {
+    await mkdir(dirname(SHELL_CACHE), { recursive: true });
+    await writeFile(SHELL_CACHE, shell, 'utf8');
+  } else {
+    shell = await readFile(SHELL_CACHE, 'utf8');
+    await writeFile(INDEX, shell, 'utf8');
+  }
 
   const server = await preview({
     root: ROOT,
@@ -295,12 +310,12 @@ async function main() {
     await writeFile(out, html, 'utf8');
   }
 
-  const shell = neutralShell(await readFile(SHELL, 'utf8'));
+  const neutral = neutralShell(shell);
   for (const path of UNRENDERED) {
     const out = join(DIST, `${path}.html`);
     await mkdir(dirname(out), { recursive: true });
-    await writeFile(out, shell, 'utf8');
-    console.log(`neutral shell ${path.padEnd(31)} ${shell.length} bytes (not snapshotted, D4)`);
+    await writeFile(out, neutral, 'utf8');
+    console.log(`neutral shell ${path.padEnd(31)} ${neutral.length} bytes (not snapshotted, D4)`);
   }
   console.log(`\nprerendered ${ROUTES.length} routes into dist/`);
 }
