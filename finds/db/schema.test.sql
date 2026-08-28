@@ -156,6 +156,70 @@ BEGIN
     END;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- DECISIONS D7: a score with no cited evidence cannot be committed
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand UUID;
+    run  UUID;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates LIMIT 1;
+    SELECT crawl_run_id INTO run FROM finds_evidence LIMIT 1;
+
+    -- The check is deferred to COMMIT, so a subtransaction is what proves it.
+    BEGIN
+        INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
+        VALUES (cand, run, 'C4', 3, 'feels agentic', 'test');
+        -- force the deferred constraint to fire without ending the outer txn
+        SET CONSTRAINTS ALL IMMEDIATE;
+        RAISE EXCEPTION 'an uncited score was accepted';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+END $$;
+
+-- A cited score commits fine, and citing another product's evidence does not.
+DO $$
+DECLARE
+    cand  UUID;
+    run   UUID;
+    ev    UUID;
+    other UUID;
+    v     UUID;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates LIMIT 1;
+    SELECT id, crawl_run_id INTO ev, run FROM finds_evidence LIMIT 1;
+
+    INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
+    VALUES (cand, run, 'C1', 3, 'pricing page states free tier; quoted', 'test')
+    RETURNING id INTO v;
+    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
+    VALUES (v, ev, cand, 'supports');
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    -- a second product, with its own evidence
+    INSERT INTO finds_candidates (product_url, name) VALUES ('https://other.dev', 'Other')
+    RETURNING id INTO other;
+    INSERT INTO finds_evidence (candidate_id, crawl_run_id, url, page_role)
+    VALUES (other, gen_random_uuid(), 'https://other.dev', 'homepage');
+
+    -- citing Acme's evidence for Other's verdict must be a FK violation
+    BEGIN
+        INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id)
+        VALUES (v, (SELECT id FROM finds_evidence WHERE candidate_id = other), cand);
+        RAISE EXCEPTION 'a verdict cited another product''s evidence';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- and stripping a live score's last citation must not be committable
+    BEGIN
+        DELETE FROM finds_verdict_evidence WHERE verdict_id = v;
+        SET CONSTRAINTS ALL IMMEDIATE;
+        RAISE EXCEPTION 'a live score was stripped of its justification';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
