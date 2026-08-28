@@ -1,42 +1,33 @@
 #!/usr/bin/env bash
-# Runs finds/run/daily.ts for real, three ways, and asserts what it does.
+# Runs the REAL finds/run/daily.ts and shows what it does. Nothing is mocked
+# here and nothing is sent.
 #
-# A workflow you have never executed is a guess, and the paths that matter in
-# an unattended daily job are not the happy path -- they are "a credential is
-# missing" and "a source is down". Those are scenarios A and B here. The
-# happy-ingest path is C.
+# WHAT THIS CAN AND CANNOT PROVE, stated plainly.
 #
-# Everything runs against a throwaway Postgres cluster created in $TMPDIR and
-# destroyed on exit. No real database is touched, nothing is emailed, nothing
-# is committed, and the launches ingested in scenario C are REAL Show HN
-# posts fetched live (D6 -- there is no fixture).
+# D19 moved the pipeline onto one Supabase service-role credential (D17), which
+# means every database stage now speaks PostgREST rather than raw Postgres. The
+# previous version of this script span up a throwaway local Postgres cluster and
+# pointed DATABASE_URL at it -- that no longer proves anything, because no stage
+# reads DATABASE_URL any more and there is no local PostgREST to put in front of
+# a local cluster. Keeping the cluster would have been theatre.
 #
-# Needs initdb/pg_ctl/psql on PATH, same as finds/db/test-schema.sh.
-set -euo pipefail
+# So the split is:
+#   * the RUNNER's failure policy -- abort vs continue, blocked, missing, and
+#     the no-fake-green artifact check -- is proven by finds/run/pipeline.test.ts
+#     with real subprocesses and no credentials at all. That is where the D3
+#     "a source dying does not stop the run, a datastore dying does" guarantee
+#     is actually tested. Run it: node --test finds/run/pipeline.test.ts
+#   * THIS script proves the credential paths end to end against whatever
+#     credentials really exist in the environment.
+#
+# NOT PROVEN, and it should stay visible until it is: the datastore-up path.
+# No SUPABASE_SERVICE_ROLE_KEY exists anywhere yet (repo secrets are empty and
+# .env carries only the public anon key), so nothing here can show a green
+# preflight followed by a real ingest. That is a missing credential, not a
+# missing test, and it is the top item on the coordinator's list for Nikhil.
+set -uo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CLUSTER="$(mktemp -d "${TMPDIR:-/tmp}/finds-run-prove.XXXXXX")"
-PGPORT=$(( 49152 + RANDOM % 10000 ))
-trap 'pg_ctl -D "$CLUSTER/data" stop -m immediate >/dev/null 2>&1 || true; rm -rf "$CLUSTER"' EXIT
-
-initdb -D "$CLUSTER/data" -U postgres --auth=trust >"$CLUSTER/initdb.log" 2>&1
-pg_ctl -D "$CLUSTER/data" \
-       -o "-k $CLUSTER -c listen_addresses=127.0.0.1 -p $PGPORT" \
-       -l "$CLUSTER/pg.log" -w start >/dev/null
-
-# client-min-messages=warning: the migrations are idempotent (DROP ... IF
-# EXISTS), so applying them to a fresh cluster emits ~30 "does not exist,
-# skipping" NOTICEs that bury the output this script exists to show.
-psql() { PGOPTIONS='--client-min-messages=warning' \
-         command psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 "$@"; }
-psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
-         GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-         ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;"
-for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration" >/dev/null; done
-
-cd "$REPO_ROOT"
-RUNS="$CLUSTER/runs"
-DB_URL="postgresql://postgres@127.0.0.1:$PGPORT/postgres"
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # Never send, in any scenario: the send path mails Nikhil for real.
 unset GMAIL_USER GMAIL_APP_PASSWORD || true
@@ -49,68 +40,43 @@ expect() { # expect <log> <stage> <STATUS>
 $(sed -n '/^  preflight/,/^$/p' "$1")"
 }
 
-run_daily() { # run_daily <log> <extra env assignments...>
-    local log="$1"; shift
-    set +e
-    env "$@" FINDS_RUN_DIR="$RUNS/$log" HN_LOOKBACK_HOURS=3 \
-        node finds/run/daily.ts >"$CLUSTER/$log.log" 2>&1
-    echo $? >"$CLUSTER/$log.exit"
-    set -e
-    cat "$CLUSTER/$log.log"
-    echo "exit=$(cat "$CLUSTER/$log.exit")"
-}
+LOGS="$(mktemp -d "${TMPDIR:-/tmp}/finds-run-prove.XXXXXX")"
+trap 'rm -rf "$LOGS"' EXIT
 
 echo "################ A. no credential at all ################"
-run_daily a
-[ "$(cat "$CLUSTER/a.exit")" = 1 ] || fail "A should exit non-zero"
-expect "$CLUSTER/a.log" preflight BLOCKED
-expect "$CLUSTER/a.log" digest SKIPPED
-grep -q "NO DIGEST WAS SENT" "$CLUSTER/a.log" || fail "A should say no digest was sent"
+env -u SUPABASE_URL -u VITE_SUPABASE_URL -u SUPABASE_SERVICE_ROLE_KEY \
+    FINDS_RUN_DIR="$LOGS/a" node finds/run/daily.ts >"$LOGS/a.log" 2>&1
+echo "exit=$?" | tee -a "$LOGS/a.log"
+cat "$LOGS/a.log"
+expect "$LOGS/a.log" preflight BLOCKED
+expect "$LOGS/a.log" "ingest:uneed" SKIPPED
+expect "$LOGS/a.log" digest SKIPPED
+grep -q "NO DIGEST WAS SENT" "$LOGS/a.log" || fail "A should say no digest was sent"
+grep -qE "^exit=1$" "$LOGS/a.log" || fail "A should exit non-zero"
+echo "--> preflight BLOCKED on the credential NAME; no value printed anywhere."
 
 echo
-echo "################ B. database up, SOURCE DOWN ################"
-# The source is made unreachable without touching W2's module: Node's fetch is
-# pointed at a proxy that refuses connections. Postgres does not go through
-# fetch, so the database stays up -- which is the whole point of the test.
-run_daily b DATABASE_URL="$DB_URL" NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:1
-[ "$(cat "$CLUSTER/b.exit")" = 1 ] || fail "B should exit non-zero"
-expect "$CLUSTER/b.log" preflight OK
-expect "$CLUSTER/b.log" "ingest:hn" DOWN      # D3: reported, not fatal
-expect "$CLUSTER/b.log" census DOWN           # and the empty day is loud
-expect "$CLUSTER/b.log" digest BLOCKED
-grep -q "SKIPPED" "$CLUSTER/b.log" && fail "B should have run every stage, not skipped any"
-echo "-- and the DOWN state is durable, not just a log line:"
-psql -c "SELECT slug, status, consecutive_failures, last_error FROM finds_source_health;"
-[ "$(psql -tAc "SELECT status FROM finds_source_health WHERE slug='hn'")" = down ] \
-    || fail "B should have recorded source hn as down in finds_sources"
+echo "################ B. real project, INSUFFICIENT credential ################"
+# Uses whatever is already in the environment. Export the site's public anon
+# key as SUPABASE_SERVICE_ROLE_KEY to run this: it is a real key against the
+# real project, it is already public in the browser bundle, and it is exactly
+# the wrong key for the pipeline -- which is the point. preflight does only
+# HEAD reads, so this writes nothing.
+if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ] || [ -z "${SUPABASE_URL:-${VITE_SUPABASE_URL:-}}" ]; then
+    echo "SKIPPED: no SUPABASE_URL + key in the environment to test against."
+    echo "         Run with a real URL and the PUBLIC anon key to see this path."
+else
+    FINDS_RUN_DIR="$LOGS/b" node finds/run/daily.ts >"$LOGS/b.log" 2>&1
+    echo "exit=$?" | tee -a "$LOGS/b.log"
+    cat "$LOGS/b.log"
+    expect "$LOGS/b.log" preflight FAILED
+    expect "$LOGS/b.log" digest SKIPPED
+    grep -q "permission denied" "$LOGS/b.log" \
+        || fail "B should name permission denied, not just 'failed'"
+    echo "--> preflight reached the real project, was refused, and said WHICH"
+    echo "    kind of refusal -- 'wrong credential', not 'migrations missing'."
+fi
 
 echo
-echo "################ C. database up, source up ################"
-run_daily c DATABASE_URL="$DB_URL"
-[ "$(cat "$CLUSTER/c.exit")" = 1 ] || fail "C should still exit non-zero -- no digest was sent"
-expect "$CLUSTER/c.log" preflight OK
-expect "$CLUSTER/c.log" "ingest:hn" OK
-expect "$CLUSTER/c.log" census OK
-expect "$CLUSTER/c.log" verify MISSING
-expect "$CLUSTER/c.log" select MISSING
-expect "$CLUSTER/c.log" digest BLOCKED
-echo "-- real rows landed, and the source recovered:"
-psql -c "SELECT slug, status, consecutive_failures FROM finds_source_health;"
-psql -c "SELECT COUNT(*) AS candidates FROM finds_candidates;
-         SELECT COUNT(*) AS sightings FROM finds_candidate_sightings;"
-psql -c "SELECT name, product_url FROM finds_candidates ORDER BY first_seen_at LIMIT 5;"
-[ "$(psql -tAc "SELECT COUNT(*) FROM finds_candidates")" -gt 0 ] || fail "C ingested nothing"
-
-echo
-echo "################ D. the comment path can never be scheduled ################"
-node --input-type=module -e "
-import { assertNoCommentPath } from './finds/run/pipeline.ts';
-try {
-  assertNoCommentPath([{ id: 'oops', what: 'x', owner: 'W9', onFailure: 'continue',
-    command: { args: ['finds/comment/postComment.ts'], timeoutMs: 1 } }]);
-  console.error('FAIL: the runner accepted a comment stage'); process.exit(1);
-} catch (e) { console.log('refused, correctly: ' + e.message); }
-"
-
-echo
-echo "ALL SCENARIOS BEHAVED AS ASSERTED."
+echo "ALL AVAILABLE SCENARIOS BEHAVED AS ASSERTED."
+echo "Reminder: the datastore-UP path is still unproven -- no service-role key exists."

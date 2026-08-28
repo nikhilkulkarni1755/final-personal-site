@@ -28,7 +28,9 @@
     "verify:typecheck": "tsc --noEmit -p finds/verify/tsconfig.json",
     "verify:crawl": "node finds/verify/cli.ts",
     "run:daily": "node finds/run/daily.ts",
-    "run:typecheck": "tsc --noEmit -p finds/run/tsconfig.json"
+    "run:typecheck": "tsc --noEmit -p finds/run/tsconfig.json",
+    "run:test": "node --test finds/run/pipeline.test.ts",
+    "run:prove": "bash finds/run/prove-daily.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
