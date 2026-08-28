@@ -27,5 +27,10 @@ if (!inputPath) {
 const input = JSON.parse(readFileSync(resolve(inputPath), 'utf8')) as DigestInput;
 const rendered = renderDigest(input);
 
-await sendDigest(rendered);
+try {
+  await sendDigest(rendered);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+}
 console.log(`[SENT] "${rendered.subject}"`);
