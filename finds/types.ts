@@ -278,8 +278,16 @@ export type NewVerdict = Pick<
   'candidate_id' | 'evidence_run_id' | 'criterion' | 'score' | 'rationale' | 'scored_by'
 >;
 
-/** Contradicting evidence is a citation too: a score of 0 must point at it. */
-export type CitationStance = 'supports' | 'contradicts';
+/**
+ * Contradicting evidence is a citation too: a score of 0 must point at it.
+ *
+ * `inconclusive` is what a score of 1 cites -- evidence we looked at that
+ * settled nothing. Without it the only way to record a 1 was to mislabel its
+ * citations, which would make D7's audit trail lie in exactly the cases where
+ * nothing was proven, and `contradicts` would accuse a real company of
+ * something their own page does not show.
+ */
+export type CitationStance = 'supports' | 'contradicts' | 'inconclusive';
 
 /**
  * A row of `finds_verdict_evidence`. `candidate_id` is redundant on purpose --
