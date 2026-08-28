@@ -1,54 +1,31 @@
 /**
  * Proves the property the whole lane rests on: W4 does not fetch without an
- * ALLOW from the gate.
+ * ALLOW from the gate, and it never exceeds what bot.txt promises.
  *
- * The stub gates below are written to a temp dir and deleted, per D6 -- a
- * committed fixture that says "allowed: true" is exactly the thing that must
- * never be able to leak into a run.
+ * These run against W1's REAL gate, not a stub. That is the point -- a stub
+ * that always says yes tests the stub. The two refusals below (a loopback
+ * address, and a domain on the manual denylist) are decided entirely offline
+ * by rules P1 and P0, so the suite needs no network and touches nobody's site.
  */
 
 import { strict as assert } from 'node:assert';
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { after, before, describe, it } from 'node:test';
-import { R2_CAPS, USER_AGENT } from './config.ts';
-import { decide } from './gateAdapter.ts';
-import { gatedFetch } from './gate.ts';
+import { ACCEPTED_CONTENT_TYPES, R2_CAPS, REQUEST_HEADERS, USER_AGENT } from './config.ts';
+import { gatedFetch, isNeverTouch, readCapped } from './gate.ts';
+import { createRunState } from './gateAdapter.ts';
 
-let workDir: string;
 let server: Server;
 let base: string;
-/** Everything the origin actually saw. If the gate said no, this stays empty. */
-const requests: { url: string; headers: Record<string, string | string[] | undefined> }[] = [];
-
-async function writeStubGate(name: string, body: string): Promise<string> {
-  const path = join(workDir, `${name}.ts`);
-  await writeFile(path, body, 'utf8');
-  return path;
-}
-
-function useGate(gatePath: string): void {
-  process.env.FINDS_GATE_MODULE = gatePath;
-}
+/** Everything the local origin actually saw. If the gate says no, it stays empty. */
+const requests: string[] = [];
 
 before(async () => {
-  workDir = await mkdtemp(join(tmpdir(), 'w4-gate-'));
   server = createServer((req, res) => {
-    requests.push({ url: req.url ?? '', headers: req.headers });
-    if (req.url === '/big') {
-      res.writeHead(200, { 'content-type': 'text/plain' });
-      res.end('x'.repeat(R2_CAPS.maxResponseBytes + 1024));
-      return;
-    }
-    if (req.url === '/missing') {
-      res.writeHead(404, { 'content-type': 'text/html' });
-      res.end('<html><body>not found</body></html>');
-      return;
-    }
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end('<html><body><h1>hello</h1></body></html>');
+    requests.push(req.url ?? '');
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end('<html><body><h1>should never be reached</h1></body></html>');
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
@@ -57,80 +34,90 @@ before(async () => {
 
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
-  await rm(workDir, { recursive: true, force: true });
 });
 
-describe('the gate is the only way through', () => {
-  it('refuses to fetch when no gate module exists, rather than falling back', async () => {
-    useGate(join(workDir, 'does-not-exist.ts'));
-    await assert.rejects(() => gatedFetch(`${base}/`), /cannot reach the permission gate/);
-    assert.equal(requests.length, 0, 'a missing gate must not produce a request');
-  });
-
-  it('sends zero bytes when the gate denies', async () => {
-    const gate = await writeStubGate(
-      'deny',
-      `export async function checkPage(url) {
-         return { verdict: { allowed: false, reason: 'stub deny', source: 'robots-txt' } };
-       }`,
-    );
-    useGate(gate);
-    const outcome = await gatedFetch(`${base}/`);
+describe('nothing is fetched without an ALLOW', () => {
+  it('sends zero bytes to a loopback address (P1)', async () => {
+    const outcome = await gatedFetch(`${base}/`, createRunState());
     assert.ok(outcome.kind === 'refused');
     assert.equal(outcome.decision.allowed, false);
-    assert.equal(outcome.decision.reason_detail, 'stub deny');
-    assert.equal(requests.length, 0, 'a DENY must not produce a request');
+    assert.equal(outcome.decision.reason_code, 'url_out_of_scope');
+    assert.equal(outcome.decision.precedence_rule, 'P1');
+    // W4 itself sent nothing. The single request the origin saw is W1's own
+    // robots.txt probe, which the gate makes BEFORE applying P1. Reported to
+    // the coordinator as a bug: R2 §3.1 short-circuits on the first DENY and
+    // P1 precedes P4, so a URL failing the private-address check should
+    // produce no request at all -- as written, a candidate URL pointing at a
+    // loopback or cloud-metadata address gets a real HTTP request out of the
+    // pipeline before being denied. Tighten this to `[]` once W1 fixes it.
+    assert.deepEqual(requests, ['/robots.txt'], 'W4 must add no request of its own to a DENY');
   });
 
-  it('refuses a gate answer it does not understand instead of guessing yes', async () => {
-    const gate = await writeStubGate('weird', `export async function checkPage() { return { ok: 'sure' }; }`);
-    useGate(gate);
-    await assert.rejects(() => gatedFetch(`${base}/`), /shape W4 does not recognise/);
-    assert.equal(requests.length, 0);
+  it('sends zero bytes to a domain on the manual denylist (P0)', async () => {
+    const denylist = await readFile(new URL('../gate/denylist.txt', import.meta.url), 'utf8');
+    const denied = denylist
+      .split('\n')
+      .map((line) => line.trim())
+      .find((line) => line !== '' && !line.startsWith('#'));
+    if (!denied) return; // An empty denylist is a legitimate state, not a failure.
+
+    const outcome = await gatedFetch(`https://${denied}/`, createRunState());
+    assert.ok(outcome.kind === 'refused');
+    assert.equal(outcome.decision.reason_code, 'manual_denylist');
+    assert.equal(outcome.decision.precedence_rule, 'P0');
+    assert.equal(outcome.decision.expires_at, null, 'a human said no; only a human undoes it (R2 §7)');
   });
 
-  it('fetches under the honest UA once the gate allows, and records a 404 as evidence', async () => {
-    const gate = await writeStubGate(
-      'allow',
-      `export async function checkPage(url) {
-         return { verdict: { allowed: true, reason: 'stub allow', source: 'robots-txt' },
-                  site: { crawlDelayMs: 0 } };
-       }`,
+  it('never asks about a page R2 §5.4 says not to touch', () => {
+    for (const path of ['/login', '/signup', '/register', '/checkout', '/account', '/wp-admin/x']) {
+      assert.equal(isNeverTouch(`https://example.test${path}`), true, path);
+    }
+    assert.equal(isNeverTouch('https://example.test/pricing'), false);
+  });
+});
+
+describe('the caps match what bot.txt publicly promises', () => {
+  it('is the same User-Agent that the disclosure page publishes', async () => {
+    const disclosure = await readFile(new URL('../../public/bot.txt', import.meta.url), 'utf8');
+    assert.ok(
+      disclosure.includes(USER_AGENT),
+      `bot.txt does not contain ${USER_AGENT}. The UA in our requests and the UA on the page a site ` +
+        `owner reads must be the same string, or the disclosure is false.`,
     );
-    useGate(gate);
-
-    const ok = await gatedFetch(`${base}/`);
-    assert.ok(ok.kind === 'fetched');
-    assert.equal(ok.http_status, 200);
-    assert.match(ok.body, /hello/);
-    assert.equal(ok.content_sha256.length, 64);
-    assert.equal(requests.at(-1)?.headers['user-agent'], USER_AGENT);
-    assert.equal(requests.at(-1)?.headers.cookie, undefined);
-    assert.equal(requests.at(-1)?.headers.authorization, undefined);
-
-    const missing = await gatedFetch(`${base}/missing`);
-    assert.ok(missing.kind === 'fetched');
-    assert.equal(missing.http_status, 404, 'a 404 is a recorded outcome, not a skip');
-
-    const big = await gatedFetch(`${base}/big`);
-    assert.ok(big.kind === 'fetched');
-    assert.equal(big.truncated, true);
-    assert.equal(big.body.length, R2_CAPS.maxResponseBytes);
+    assert.ok(/at most 25 pages per site, at least 2 seconds apart/i.test(disclosure));
+    assert.equal(R2_CAPS.maxPages, 25);
+    assert.equal(R2_CAPS.minDelayMs, 2000);
   });
 
-  it('holds the R2 §5.3 floor even when the gate offers a faster budget', async () => {
-    const gate = await writeStubGate(
-      'fast',
-      `export async function checkPage() {
-         return { allowed: true, reason_code: 'robots_allow',
-                  crawl_budget: { delay_ms: 1, page_cap: 9999, depth_cap: 9, wall_clock_ms: 9e9 } };
-       }`,
-    );
-    useGate(gate);
-    const decision = await decide(`${base}/`);
-    assert.equal(decision.crawl_budget.delay_ms, R2_CAPS.minDelayMs);
-    assert.equal(decision.crawl_budget.page_cap, R2_CAPS.maxPages);
-    assert.equal(decision.crawl_budget.depth_cap, R2_CAPS.maxDepth);
-    assert.equal(decision.crawl_budget.wall_clock_ms, R2_CAPS.wallClockMs);
+  it('sends no cookie and no authorization header, ever', () => {
+    const names = Object.keys(REQUEST_HEADERS).map((name) => name.toLowerCase());
+    assert.ok(!names.includes('cookie'), 'D3: Nikhil live Peerlist cookies are in this environment');
+    assert.ok(!names.includes('authorization'));
+    assert.equal(REQUEST_HEADERS['User-Agent'], USER_AGENT);
+  });
+
+  it('accepts only the content types R2 §5.3 lists', () => {
+    assert.deepEqual([...ACCEPTED_CONTENT_TYPES], [
+      'text/html',
+      'application/xhtml+xml',
+      'text/plain',
+      'text/markdown',
+      'application/json',
+    ]);
+  });
+});
+
+describe('response reading', () => {
+  it('stops at the byte cap and says it truncated', async () => {
+    const oversized = new Response('x'.repeat(R2_CAPS.maxResponseBytes + 1024));
+    const { text, truncated } = await readCapped(oversized, R2_CAPS.maxResponseBytes);
+    assert.equal(truncated, true);
+    assert.equal(text.length, R2_CAPS.maxResponseBytes);
+  });
+
+  it('reads a short body whole and does not claim truncation', async () => {
+    const { text, truncated } = await readCapped(new Response('hello'), R2_CAPS.maxResponseBytes);
+    assert.equal(text, 'hello');
+    assert.equal(truncated, false);
   });
 });

@@ -9,7 +9,7 @@
  */
 
 import { crawlCandidate } from './crawl.ts';
-import { persistEvidence } from './persist.ts';
+import { persistCrawl } from './persist.ts';
 
 const args = process.argv.slice(2);
 const persist = args.includes('--persist');
@@ -34,14 +34,18 @@ if (!candidateId) {
 }
 
 console.error(`crawl_run_id ${result.crawlRunId}`);
-for (const decision of result.decisions) {
-  console.error(`  ${decision.allowed ? 'ALLOW' : 'DENY '} ${decision.url}  ${decision.reason_code ?? '(no reason_code)'} -- ${decision.reason_detail}`);
+for (const { decision } of result.records) {
+  const rule = [decision.precedence_rule, decision.reason_code].filter(Boolean).join(' ') || '(no reason_code)';
+  console.error(`  ${decision.allowed ? 'ALLOW' : 'DENY '} ${decision.url}  ${rule} -- ${decision.reason_detail}`);
 }
 console.error('');
 
 if (persist) {
-  const written = await persistEvidence(result.evidence);
-  console.error(`wrote ${written.inserted} evidence row(s) for crawl_run_id ${written.crawlRunId}`);
+  const written = await persistCrawl(candidateId!, result);
+  console.error(
+    `wrote ${written.verdicts} crawl verdict(s) and ${written.evidence} evidence row(s) ` +
+      `for crawl_run_id ${written.crawlRunId}`,
+  );
 } else {
-  console.log(JSON.stringify(result.evidence, null, 2));
+  console.log(JSON.stringify(result.records.map((record) => record.evidence), null, 2));
 }

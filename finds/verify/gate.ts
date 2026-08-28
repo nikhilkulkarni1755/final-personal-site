@@ -15,8 +15,9 @@
 
 import { createHash } from 'node:crypto';
 import { ACCEPTED_CONTENT_TYPES, NEVER_TOUCH_PATTERNS, R2_CAPS, REQUEST_HEADERS, USER_AGENT } from './config.ts';
-import { decide } from './gateAdapter.ts';
-import type { FetchOutcome, GateDecision } from './types.ts';
+import { decide, reportRefusal } from './gateAdapter.ts';
+import type { RunState } from './gateAdapter.ts';
+import type { FetchOutcome } from './types.ts';
 
 /** R2 §5.3: strictly serial per authority. Two parallel requests is a load test. */
 const lastRequestAt = new Map<string, number>();
@@ -64,7 +65,7 @@ export function isNeverTouch(url: string): boolean {
 }
 
 /** Read at most `limit` bytes, then abort the stream. R2 §5.3. */
-async function readCapped(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
+export async function readCapped(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
   const reader = response.body?.getReader();
   if (!reader) return { text: '', truncated: false };
   const chunks: Uint8Array[] = [];
@@ -88,12 +89,11 @@ async function readCapped(response: Response, limit: number): Promise<{ text: st
 }
 
 export interface GatedFetchOptions {
-  /**
-   * Reuse an already-obtained decision for this exact URL. The gate is still
-   * the authority -- this only avoids asking it twice in one pass.
-   */
-  decision?: GateDecision;
+  candidateId?: string;
 }
+
+/** R2 §3.6/§3.1 P3: statuses that deny the whole origin for the rest of the run. */
+const ORIGIN_REFUSAL_STATUSES = new Set([401, 403, 429, 451]);
 
 /**
  * Ask the gate about `url`, and fetch it only if the gate allowed it.
@@ -102,8 +102,10 @@ export interface GatedFetchOptions {
  * transport failure. It never throws for a normal HTTP result: a 404 on /docs
  * is a finding, not an error (W3's migration says so explicitly).
  */
-export async function gatedFetch(url: string, options: GatedFetchOptions = {}): Promise<FetchOutcome> {
-  const decision = options.decision ?? (await decide(url));
+export async function gatedFetch(url: string, runState: RunState, options: GatedFetchOptions = {}): Promise<FetchOutcome> {
+  // No injectable decision, deliberately: an options bag that accepts a
+  // hand-made ALLOW is a way around the gate, and there must not be one.
+  const decision = await decide(url, runState, options.candidateId);
   if (!decision.allowed) return { kind: 'refused', url, decision };
 
   const headers = { ...REQUEST_HEADERS };
@@ -122,6 +124,17 @@ export async function gatedFetch(url: string, options: GatedFetchOptions = {}): 
       redirect: 'follow',
       signal: controller.signal,
     });
+    // R2 §3.6: a page-level refusal denies the whole origin for the rest of
+    // this run. The gate cannot observe it -- W4 made the request -- so W4
+    // hands it back, and every remaining URL on this authority is refused.
+    if (ORIGIN_REFUSAL_STATUSES.has(response.status) || response.headers.get('cf-mitigated') === 'challenge') {
+      reportRefusal(
+        runState,
+        decision.authority,
+        response.status,
+        `GET ${url} returned ${response.status}; the origin refused us, so the rest of this run stops here.`,
+      );
+    }
     const contentType = response.headers.get('content-type');
     // A body we are not allowed to read is still a status code worth recording.
     const readable = response.ok && contentTypeAccepted(contentType);
