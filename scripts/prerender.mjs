@@ -186,16 +186,41 @@ async function waitForContent(page, expected) {
   );
 }
 
-/** Scroll the whole page so framer-motion `whileInView` sections reveal, then return to top. */
+/**
+ * Scroll the whole page so framer-motion `whileInView` sections play, then return
+ * to the top.
+ *
+ * Sweeping once at 60ms a step was too fast: elements were left at `opacity: 0`
+ * because the page grew as earlier sections revealed, so the later ones never
+ * entered view. That also made the output depend on timing — /projects came out
+ * 513 bytes different between sessions. Sweeping until the page stops growing
+ * settles every section, which is both the correct final state and a stable one.
+ */
 async function revealAll(page) {
   await page.evaluate(async () => {
-    const step = window.innerHeight;
-    for (let y = 0; y < document.body.scrollHeight; y += step) {
-      window.scrollTo(0, y);
-      await new Promise((r) => setTimeout(r, 60));
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    let previousHeight = -1;
+    for (let sweep = 0; sweep < 5 && document.body.scrollHeight !== previousHeight; sweep++) {
+      previousHeight = document.body.scrollHeight;
+      for (let y = 0; y <= document.body.scrollHeight; y += window.innerHeight / 2) {
+        window.scrollTo(0, y);
+        await pause(120);
+      }
+    }
+    // A uniform sweep still missed one section near the end of the longest page,
+    // leaving it at opacity 0 and making that page differ between builds. Walk
+    // whatever is still hidden into view directly; this converges on "nothing
+    // hidden" instead of depending on where the sweep happened to stop.
+    for (let pass = 0; pass < 6; pass++) {
+      const hidden = document.querySelectorAll('[style*="opacity: 0"]');
+      if (!hidden.length) break;
+      for (const el of hidden) {
+        el.scrollIntoView({ block: 'center' });
+        await pause(120);
+      }
     }
     window.scrollTo(0, 0);
-    await new Promise((r) => setTimeout(r, 120));
+    await pause(200);
   });
 }
 
