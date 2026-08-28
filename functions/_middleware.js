@@ -43,8 +43,26 @@ function notFound() {
   });
 }
 
+// W2's path contract (agent-ready-coord/lanes/W2.md): every route's markdown
+// twin lives at the same path with .md appended, homepage excepted.
+function markdownPathFor(pathname) {
+  return pathname === '/' ? '/index.md' : `${pathname}.md`;
+}
+
+function withVary(response) {
+  const headers = new Headers(response.headers);
+  const existing = headers.get('vary');
+  headers.set('vary', existing ? `${existing}, Accept` : 'Accept, Accept-Encoding');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export async function onRequest(context) {
-  const { pathname } = new URL(context.request.url);
+  const { request, env } = context;
+  const { pathname } = new URL(request.url);
 
   // No dot in the last segment => this looks like a client-side route, not a
   // file request. Reject it up front if it's not one src/App.tsx defines, so
@@ -55,6 +73,28 @@ export async function onRequest(context) {
     return notFound();
   }
 
+  if (looksLikeRoute) {
+    // Markdown content negotiation: an agent asking for text/markdown gets
+    // W2's hand-written .md twin for this route, if one exists yet. Falls
+    // through to the normal HTML response otherwise (pre-launch, or routes
+    // W2 excludes, e.g. /spearfishing/voice-agent's live-Supabase page).
+    if ((request.headers.get('accept') || '').includes('text/markdown')) {
+      const mdUrl = new URL(markdownPathFor(pathname), request.url);
+      const mdResponse = await env.ASSETS.fetch(new Request(mdUrl, request));
+      // env.ASSETS.fetch bypasses this middleware, so a missing .md file
+      // falls through _redirects to the SPA shell (200, text/html) rather
+      // than a real 404 — check for that instead of trusting mdResponse.ok.
+      const mdContentType = mdResponse.headers.get('content-type') || '';
+      if (mdResponse.ok && !mdContentType.includes('text/html')) {
+        const headers = new Headers(mdResponse.headers);
+        headers.set('content-type', 'text/markdown; charset=utf-8');
+        headers.set('vary', 'Accept, Accept-Encoding');
+        return new Response(mdResponse.body, { status: 200, headers });
+      }
+    }
+    return withVary(await context.next());
+  }
+
   // Otherwise defer to normal static asset resolution — real files
   // (including anything W1/W2/W4 add later) are served as-is. A path that
   // looked like a file request but still fell through to the SPA shell
@@ -62,7 +102,7 @@ export async function onRequest(context) {
   // known routes always resolve to genuine HTML, so this only catches
   // guessed/nonexistent file paths.
   const response = await context.next();
-  if (!looksLikeRoute && response.status === 200) {
+  if (response.status === 200) {
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
       return notFound();
