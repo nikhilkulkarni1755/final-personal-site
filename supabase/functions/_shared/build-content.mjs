@@ -67,6 +67,14 @@ const SKIP = new Set(['svg', 'path', 'circle', 'rect', 'line', 'g', 'defs', 'sty
   'script', 'input', 'textarea', 'select', 'canvas', 'polygon', 'polyline', 'ellipse',
   'linearGradient', 'stop', 'clipPath', 'mask', 'filter', 'text', 'tspan']);
 
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const decodeEntities = (s) =>
+  s.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, code) =>
+    code[0] === '#'
+      ? String.fromCodePoint(parseInt(code[1] === 'x' || code[1] === 'X' ? code.slice(2) : code.slice(1),
+          code[1] === 'x' || code[1] === 'X' ? 16 : 10))
+      : (ENTITIES[code.toLowerCase()] ?? m));
+
 function renderData(value, depth = 0) {
   const pad = '  '.repeat(depth);
   if (value === null || value === undefined) return '';
@@ -86,6 +94,14 @@ function renderData(value, depth = 0) {
   return `${pad}- ${value}`;
 }
 
+function defaultExportName(src) {
+  for (const st of src.statements) {
+    if (ts.isExportAssignment(st) && ts.isIdentifier(st.expression)) return st.expression.text;
+  }
+  return undefined;
+}
+
+const LOCALS = new Map();
 function extractPage(relPath) {
   const src = ts.createSourceFile(relPath, read(relPath), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const locals = new Map();
@@ -101,6 +117,7 @@ function extractPage(relPath) {
     ts.forEachChild(n, collect);
   };
   collect(src);
+  LOCALS.set(relPath, locals);
 
   // transient UI states ("Could not load…", spinners) are not site content
   const TRANSIENT = /\b(error|loading|isLoading|pending|notFound)\b/i;
@@ -111,7 +128,7 @@ function extractPage(relPath) {
       return;
     }
     if (ts.isJsxText(node)) {
-      const t = node.text.replace(/\s+/g, ' ');
+      const t = decodeEntities(node.text).replace(/[^\S\n]+/g, ' ');
       if (t.trim()) push(t);
       return;
     }
@@ -150,7 +167,8 @@ function extractPage(relPath) {
         const save = out.length;
         node.children.forEach(walk);
         inner.push(...out.splice(save));
-        push('\n```\n' + inner.join('').trim() + '\n```\n');
+        const code = inner.join('').trim();
+        if (code) push('\n```\n' + code + '\n```\n');
         return;
       }
       if (HEADING[tag]) {
@@ -174,7 +192,14 @@ function extractPage(relPath) {
     }
     ts.forEachChild(node, walk);
   };
-  walk(src);
+  // The page's own component carries the article; helper components defined
+  // above it (diagrams, callouts) render inside it, so lead with the article.
+  const main = src.statements.find((st) =>
+    ts.isVariableStatement(st) &&
+    st.declarationList.declarations.some((d) =>
+      ts.isIdentifier(d.name) && d.name.text === defaultExportName(src)));
+  if (main) walk(main);
+  for (const st of src.statements) if (st !== main) walk(st);
 
   return out.join('')
     .replace(/[ \t]+/g, ' ')
@@ -241,6 +266,28 @@ for (const d of documents) {
   if (d.text.length < 200) throw new Error(`${d.id}: extracted only ${d.text.length} chars`);
 }
 
+// Structured resume, assembled from About.tsx's own declarations plus the
+// Education block of its rendered prose. No values are authored here.
+const aboutLocals = LOCALS.get('src/pages/About.tsx');
+const aboutText = documents.find((d) => d.id === 'about').text;
+const section = (heading) => {
+  const start = aboutText.indexOf(`## ${heading}`);
+  if (start < 0) throw new Error(`About.tsx has no "${heading}" section`);
+  const rest = aboutText.slice(start + heading.length + 3);
+  const end = rest.indexOf('\n## ');
+  return (end < 0 ? rest : rest.slice(0, end)).trim();
+};
+for (const k of ['experiences', 'skills', 'certifications']) {
+  if (!aboutLocals.has(k)) throw new Error(`About.tsx no longer declares ${k}`);
+}
+const resume = {
+  experience: aboutLocals.get('experiences'),
+  education: section('Education'),
+  skills: aboutLocals.get('skills'),
+  certifications: aboutLocals.get('certifications'),
+  source: `${SITE}/about`,
+};
+
 const content = {
   generatedAt: new Date().toISOString().slice(0, 10),
   site: SITE,
@@ -250,6 +297,7 @@ const content = {
     site: SITE,
     links: json('src/data/social.json'),
   },
+  resume,
   documents,
   projects: json('src/data/projects.json'),
   contributions: json('src/data/contributions.json'),
