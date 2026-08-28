@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run prerender",
     "lint": "eslint .",
     "preview": "vite preview",
     "email:test": "node --test finds/email/*.test.ts",
@@ -37,7 +37,8 @@
     "publish:test": "node --test finds/publish/snapshot.test.ts",
     "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
     "publish:prove": "bash finds/publish/prove-publish.sh",
-    "publish:find": "node finds/publish/cli.ts"
+    "publish:find": "node finds/publish/cli.ts",
+    "prerender": "node scripts/prerender.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
