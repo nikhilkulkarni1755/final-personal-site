@@ -167,6 +167,16 @@ function injectMeta(html, meta) {
   if (meta.canonical) {
     out = setTag(out, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${escapeAttr(meta.canonical)}">`);
   }
+  // The markdown twin has to come through here for the same reason canonical does:
+  // one static tag in index.html would survive into all 11 snapshots pointing at
+  // /index.md, so every page would advertise the homepage's twin.
+  if (meta.markdownAlternate) {
+    out = setTag(
+      out,
+      /<link[^>]*rel="alternate"[^>]*type="text\/markdown"[^>]*>/,
+      `<link rel="alternate" type="text/markdown" href="${escapeAttr(meta.markdownAlternate)}">`
+    );
+  }
   for (const [key, value] of Object.entries(meta.og ?? {})) {
     out = setTag(out, propMeta(`og:${key}`), `<meta property="og:${key}" content="${escapeAttr(value)}">`);
   }
@@ -187,10 +197,13 @@ function injectMeta(html, meta) {
  * `<link rel="canonical" href="https://nikhilkulkarni1755.com/">`, which on any
  * other route points a crawler at the wrong page. A page that makes no claim is
  * correct here; inventing a canonical would be authoring metadata, which is W3's.
+ * Any markdown alternate goes too — D4 leaves this route without a twin, and R1
+ * found that advertising one that does not resolve is worse than advertising none.
  */
 function neutralShell(html) {
   return html
     .replace(/\n?\s*<link rel="canonical"[^>]*>/, '')
+    .replace(/\n?\s*<link[^>]*rel="alternate"[^>]*>/g, '')
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
 }
 

@@ -28,6 +28,11 @@ if (!routeMeta) console.log('src/data/routeMeta.ts not present — checking stru
 
 const all = (html, re) => [...html.matchAll(re)];
 const failures = [];
+const pendingAlternate = [];
+
+/** W2's path contract: every route's twin is the route with .md appended, homepage excepted. */
+const twinFor = (path) => (path === '/' ? '/index.md' : `${path}.md`);
+const ALTERNATE = /<link rel="alternate" type="text\/markdown" href="([^"]*)">/g;
 
 for (const { path } of ROUTES) {
   const file = join(DIST, path === '/' ? 'index.html' : `${path}.html`);
@@ -41,8 +46,26 @@ for (const { path } of ROUTES) {
   // Requiring exactly one only makes sense once routeMeta supplies the values.
   const canonicals = all(html, /<link rel="canonical" href="([^"]*)">/g);
   const blocks = all(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g);
+  const alternates = all(html, ALTERNATE);
   if (canonicals.length > 1) bad(`${canonicals.length} canonical tags, expected at most 1`);
   if (blocks.length > 1) bad(`${blocks.length} JSON-LD blocks, expected at most 1`);
+  if (alternates.length > 1) bad(`${alternates.length} markdown alternates, expected at most 1`);
+
+  // The markdown twin, checked against the file on disk rather than against
+  // routeMeta alone: R1 found an advertised twin that does not resolve is worse
+  // than none. Anchored on W2's path contract, so it also catches the case where
+  // W3's field is named something injectMeta does not read — the tag would simply
+  // never appear, which is exactly the kind of silence this is here to break.
+  const twin = twinFor(path);
+  if (alternates.length === 1) {
+    const href = new URL(alternates[0][1], 'https://nikhilkulkarni1755.com').pathname;
+    if (href !== twin) bad(`markdown alternate points at ${href}, expected ${twin}`);
+    else if (!existsSync(join(DIST, href))) bad(`markdown alternate ${href} does not resolve — no such file in dist/`);
+  } else if (meta) {
+    const stray = Object.entries(meta).find(([, v]) => typeof v === 'string' && v.endsWith('.md'));
+    if (stray) bad(`routeMeta has "${stray[0]}" = ${stray[1]}, which injectMeta does not read — agree the field name with W1`);
+    else if (existsSync(join(DIST, twin))) pendingAlternate.push(path);
+  }
 
   if (!meta) {
     console.log(`${path.padEnd(34)} canonical-tags=${canonicals.length} jsonld-blocks=${blocks.length} content=ok`);
@@ -72,7 +95,8 @@ for (const { path } of ROUTES) {
 
   console.log(
     `${path.padEnd(34)} canonical=${meta.canonical.replace('https://nikhilkulkarni1755.com', '')} ` +
-      `og:type=${meta.og.type} jsonld-blocks=${blocks.length} jsonld-nodes=${blocks.length === 1 ? JSON.parse(blocks[0][1])['@graph'].length : '?'}`
+      `og:type=${meta.og.type} jsonld-nodes=${blocks.length === 1 ? JSON.parse(blocks[0][1])['@graph'].length : '?'} ` +
+      `md=${alternates.length === 1 ? twin : 'none'}`
   );
 }
 
@@ -84,7 +108,17 @@ for (const path of UNRENDERED) {
   if (html === home) failures.push(`${path}: byte-identical to the homepage`);
   if (/<link rel="canonical"/.test(html)) failures.push(`${path}: claims a canonical it has no metadata for`);
   if (/ld\+json/.test(html)) failures.push(`${path}: carries JSON-LD from another page`);
-  console.log(`${path.padEnd(34)} neutral shell, ${html.length} bytes, no canonical, no JSON-LD`);
+  // D4 leaves this route without a markdown twin, so it must advertise none.
+  if (all(html, ALTERNATE).length) failures.push(`${path}: advertises a markdown twin it does not have`);
+  console.log(`${path.padEnd(34)} neutral shell, ${html.length} bytes, no canonical, no JSON-LD, no md alternate`);
+}
+
+if (pendingAlternate.length) {
+  console.log(
+    `\nNOT YET: ${pendingAlternate.length} route(s) have a markdown twin on disk but no ` +
+      `alternate tag. Waiting on W3 to add \`markdownAlternate\` to routeMeta; injectMeta ` +
+      `and these assertions are already in place for it.`
+  );
 }
 
 if (failures.length) {
