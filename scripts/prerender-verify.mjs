@@ -29,6 +29,35 @@ if (!routeMeta) console.log('src/data/routeMeta.ts not present — checking stru
 const all = (html, re) => [...html.matchAll(re)];
 const failures = [];
 
+// ROUTES is a hand-maintained mirror of src/App.tsx, and it drifted the first time
+// the other initiative added a page: /interesting-finds shipped with no snapshot and
+// nothing noticed. Read App.tsx as text — it is a React tree full of browser-only
+// code, so it cannot be imported here — and fail when the two disagree. Same
+// technique, and the same reason, as W5's functions/_lib/check-routes.mjs.
+const appSource = await readFile(join(ROOT, 'src/App.tsx'), 'utf8');
+const declared = [...appSource.matchAll(/path="([^"]+)"/g)].map((m) => m[1]);
+const covered = new Set([...ROUTES.map((r) => r.path), ...UNRENDERED]);
+for (const path of declared) {
+  // A dynamic segment has no single page to snapshot, and React Router ranks the
+  // three static blog routes above /blog/:slug anyway, so it never renders a real
+  // post (R2 A5).
+  if (path.includes(':')) continue;
+  if (!covered.has(path)) failures.push(`src/App.tsx declares ${path}, but the prerender pass does not cover it`);
+}
+for (const path of covered) {
+  if (!declared.includes(path)) failures.push(`the prerender pass covers ${path}, which src/App.tsx no longer declares`);
+}
+console.log(
+  `route coverage: ${declared.length} declared in src/App.tsx, ` +
+    `${ROUTES.length} prerendered, ${UNRENDERED.length} shell-only, ` +
+    `${declared.filter((p) => p.includes(':')).length} dynamic\n`
+);
+const pendingAlternate = [];
+
+/** W2's path contract: every route's twin is the route with .md appended, homepage excepted. */
+const twinFor = (path) => (path === '/' ? '/index.md' : `${path}.md`);
+const ALTERNATE = /<link rel="alternate" type="text\/markdown" href="([^"]*)">/g;
+
 for (const { path } of ROUTES) {
   const file = join(DIST, path === '/' ? 'index.html' : `${path}.html`);
   const html = await readFile(file, 'utf8');
