@@ -21,6 +21,7 @@
 
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { normalise, projectScope, withinScope } from './scope.ts';
 
 describe('a project that owns its domain', () => {
@@ -104,5 +105,42 @@ describe('a project living under a path on a host it shares', () => {
       assert.equal(withinScope(landlord, s), false, landlord);
       assert.ok(withinScope(own, s), own);
     }
+  });
+});
+
+
+describe('the gate gets the real project origin, so P1 is not comparing a value with itself', () => {
+  /**
+   * V2-C4: `checkPage` used to derive `candidateOrigin` from the URL's own
+   * origin on every pipeline call, so P1's same-site clause was `x === x` and
+   * only the private-address half of P1 ever did any work. W1 built the
+   * parameter; this is the input that makes it fire.
+   *
+   * Measured against the real gate, one fresh process per case because the
+   * verdict cache is keyed on URL alone:
+   *   no candidateOrigin  -> https://vercel.com/ ALLOW, P6 robots_wildcard_allow
+   *   candidateOrigin set -> https://vercel.com/ DENY,  P1 url_out_of_scope
+   *     "vercel.com is not on the candidate's own eTLD+1 (usesesame.app)"
+   *
+   * Asserted at the source rather than over the network: the property is that
+   * the crawl passes its scope, and a network test here would put load on a
+   * third party to prove a one-argument wiring.
+   */
+  it('passes ProjectScope.authority on the crawl path', async () => {
+    const crawl = await readFile(new URL('./crawl.ts', import.meta.url), 'utf8');
+    assert.match(crawl, /candidateOrigin: scope\.authority/);
+  });
+
+  it('carries it all the way through to checkPage', async () => {
+    const gate = await readFile(new URL('./gate.ts', import.meta.url), 'utf8');
+    const adapter = await readFile(new URL('./gateAdapter.ts', import.meta.url), 'utf8');
+    assert.match(gate, /candidateOrigin: options\.candidateOrigin/);
+    assert.match(adapter, /candidateOrigin: options\.candidateOrigin/);
+  });
+
+  it('records which URL actually served a quote when a redirect moved it', async () => {
+    const crawl = await readFile(new URL('./crawl.ts', import.meta.url), 'utf8');
+    assert.match(crawl, /kind: 'redirected'/);
+    assert.match(crawl, /attributed to the page that served it/);
   });
 });

@@ -149,8 +149,13 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
       ],
     };
   }
+  const redirected = outcome.final_url !== outcome.url;
   return {
     ...base,
+    // The URL the bytes actually came from, which is what a quote must be
+    // attributed to. The requested URL is kept in the observation below rather
+    // than dropped: tracing a quote back to the page that really served it is
+    // exactly what let V1 catch the github.com misattribution (D23).
     url: outcome.final_url,
     page_role: role,
     http_status: outcome.http_status,
@@ -160,9 +165,24 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
     observations: [
       {
         kind: 'fetched',
-        detail: `GET ${outcome.url} returned ${outcome.http_status} in ${outcome.elapsed_ms} ms${outcome.truncated ? ', body truncated at the 2 MB cap' : ''}`,
+        detail:
+          `GET ${outcome.url} returned ${outcome.http_status} in ${outcome.elapsed_ms} ms` +
+          `${redirected ? `, after redirecting to ${outcome.final_url}` : ''}` +
+          `${outcome.truncated ? ', body truncated at the 2 MB cap' : ''}`,
         value: outcome.http_status,
       },
+      ...(redirected
+        ? [
+            {
+              kind: 'redirected',
+              detail:
+                `Requested ${outcome.url}, served by ${outcome.final_url}. Every quote on this row is ` +
+                `attributed to the page that served it, not the one we asked for. Each hop was put ` +
+                `through the gate's own P0/P1/robots decision before its body was read.`,
+              value: outcome.final_url,
+            } satisfies EvidenceObservation,
+          ]
+        : []),
       describeUseRights(outcome.decision),
     ],
   };
@@ -249,7 +269,12 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   const scope = projectScope(homeUrl);
 
   const fetchAndRecord = async (url: string): Promise<FetchOutcome> => {
-    const outcome = await gatedFetch(url, runState, { candidateId: options.candidateId });
+    const outcome = await gatedFetch(url, runState, {
+      candidateId: options.candidateId,
+      // D23's scope, handed to the gate so P1's same-site clause has a real
+      // second opinion rather than comparing the URL with itself.
+      candidateOrigin: scope.authority,
+    });
     records.push({ decision: outcome.decision, evidence: evidenceFor(base, outcome) });
     return outcome;
   };

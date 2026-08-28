@@ -87,8 +87,28 @@ function adapt(verdict: GateVerdict): GateDecision {
 }
 
 /** Ask the gate about one URL, inside this crawl's run state. */
-export async function decide(url: string, runState: RunState, candidateId?: string): Promise<GateDecision> {
-  return adapt(await checkPage(url, { candidateId: candidateId ?? null, runState }));
+export interface DecideOptions {
+  candidateId?: string;
+  /**
+   * The project's own authority, for P1's same-site check (V2-C4, D23).
+   *
+   * This is the input that makes that half of P1 do any work. The gate falls
+   * back to the URL's own origin when it is omitted, which compares a value
+   * with itself and is always true -- honest as a standalone default, useless
+   * as a protection. W4 is the caller that has a real project to compare
+   * against, so W4 is the caller that must supply it.
+   */
+  candidateOrigin?: string;
+}
+
+export async function decide(url: string, runState: RunState, options: DecideOptions = {}): Promise<GateDecision> {
+  return adapt(
+    await checkPage(url, {
+      candidateId: options.candidateId ?? null,
+      candidateOrigin: options.candidateOrigin,
+      runState,
+    }),
+  );
 }
 
 /**
