@@ -521,15 +521,13 @@ export const routeMeta: Record<string, RouteMeta> = {
     // prerender pass strips any pre-existing JSON-LD before injecting this
     // block, so this CollectionPage node is what a crawler sees in the
     // static snapshot; the runtime ItemList only exists after client
-    // hydration re-runs in a live browser. Its markdown mirror has not
-    // landed yet (W2, in parallel) — hasMarkdownMirror: false so this route
-    // advertises no alternate rather than one that 404s; flip it on once
-    // /interesting-finds.md exists.
+    // hydration re-runs in a live browser. Markdown mirror (W2) has landed
+    // at public/interesting-finds.md — default hasMarkdownMirror (true)
+    // applies, same as every other route.
     ...meta('/interesting-finds', {
       title: 'Interesting Finds — Nikhil Kulkarni',
       description:
         'Product launches Nikhil Kulkarni found genuinely interesting: checked against four criteria — a verified claim, a rare problem solved, no gated access, and agent/MCP friendliness — before earning a spot.',
-      hasMarkdownMirror: false,
     }),
     jsonLd: graph(
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Interesting Finds', path: '/interesting-finds' }]),
