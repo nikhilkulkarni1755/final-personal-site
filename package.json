@@ -21,7 +21,7 @@
     "comment:verify": "node finds/comment/verifyFidelity.ts",
     "comment:dry-run": "node finds/comment/dry-run.ts",
     "comment:post": "node finds/comment/postComment.ts",
-    "score:test": "node --test finds/score/c1.test.ts finds/score/persist.test.ts finds/score/select.test.ts",
+    "score:test": "node --test finds/score/c1.test.ts finds/score/persist.test.ts finds/score/select.test.ts finds/score/c4.test.ts",
     "score:typecheck": "tsc --noEmit -p finds/score/tsconfig.json",
     "score:prove-d7": "bash finds/score/prove-d7.sh",
     "verify:test": "node --test finds/verify/*.test.ts",
