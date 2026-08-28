@@ -703,3 +703,71 @@ export interface WriteVerdictArgs {
   p_rubric_version: string;
   p_verdicts: WriteVerdictPayload[];
 }
+
+/* ========================================================================== */
+/* approvals -- the one thing that may cause a public page to appear (D29)     */
+/* ========================================================================== */
+
+/**
+ * D9: Telegram is the control surface and the digest email is read-only. One
+ * member on purpose, matching W11's `ApprovalChannel` -- an approval arriving
+ * by any other route is not representable, in the type or in the CHECK.
+ */
+export type ApprovalChannel = 'telegram';
+
+/**
+ * A row of `finds_approvals`. Private, service-role only, and append-only: an
+ * approval is a receipt for something a person said at a moment, and editing
+ * one would rewrite the record of consent that a public page about someone
+ * else's product rests on.
+ *
+ * A superset of W11's `FindApproval`, so a row can be handed straight to
+ * `assertApprovedByNikhil()`. That check must keep running: this table is a
+ * wider surface than a file, and the publish path should not trust that the
+ * writer validated `chat_id`.
+ *
+ * AN APPROVAL ENABLES A PUBLISH; IT NEVER TRIGGERS ONE. Publishing is not a
+ * scheduled stage and must not be called from `finds/run/**`. There is
+ * deliberately no view listing approved-but-unpublished finds -- that query is
+ * the missing ingredient for a cron that would turn a missed rejection into a
+ * live page, so a publisher writes it by hand, naming the find.
+ */
+export interface ApprovalRow {
+  id: string;
+  candidate_id: string;
+  /**
+   * The verdict generation he actually saw. An approval floating free of a
+   * generation would let a later re-score publish evidence he never read.
+   * A composite FK makes approving an unscored generation impossible.
+   */
+  evidence_run_id: string;
+  /** Pinned to 'C1'. Exists only to make that FK composite; never set it yourself. */
+  approved_criterion: 'C1';
+  channel: ApprovalChannel;
+  /** Re-check this against TELEGRAM_CHAT_ID at read time. Always. */
+  chat_id: string;
+  /** Bot API message id of his answer -- the receipt. */
+  message_id: number;
+  /** Provenance only. `(chat_id, message_id)` is the replay key, not this. */
+  telegram_update_id: number | null;
+  /** Verbatim. Non-empty by CHECK: silence is not consent. */
+  answer: string;
+  /** Prose he wrote, or null. Per D4 nothing generated is ever written here. */
+  why_interesting: string | null;
+  answered_at: Timestamp;
+  created_at: Timestamp;
+}
+
+/**
+ * What W8's poller inserts.
+ *
+ * Write it with `ON CONFLICT (chat_id, message_id) DO NOTHING`. That unique key
+ * absorbs a re-read of the same update after a runner restart, which is
+ * precisely why the getUpdates offset does not also need to be durable for
+ * publishing to be correct.
+ */
+export type NewApproval = Pick<
+  ApprovalRow,
+  'candidate_id' | 'evidence_run_id' | 'chat_id' | 'message_id' | 'answer' | 'answered_at'
+> &
+  Partial<Pick<ApprovalRow, 'channel' | 'telegram_update_id' | 'why_interesting'>>;

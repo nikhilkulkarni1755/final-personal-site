@@ -749,6 +749,95 @@ BEGIN
     ASSERT n >= 2, format('expected the unclassified and shared-host rows to be findable, saw %s', n);
 END $$;
 
+-- --------------------------------------------------------------------------
+-- finds_approvals: the durable record of Nikhil saying yes (D29)
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand     UUID;
+    run      UUID;
+    ev       UUID;
+    unscored UUID := gen_random_uuid();
+    n        INTEGER;
+BEGIN
+    SET CONSTRAINTS ALL DEFERRED;
+
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id, crawl_run_id INTO ev, run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    -- make sure this generation really is scored, so the FK has a target
+    PERFORM finds_write_verdict(cand, run, 'test/1', jsonb_build_array(
+        jsonb_build_object('criterion','C1','score',3,'rationale','r','scored_by','t',
+            'citations', jsonb_build_array(jsonb_build_object('evidence_id', ev)))));
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    -- silence is not consent
+    BEGIN
+        INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+                                     answer, answered_at)
+        VALUES (cand, run, '12345', 1, '   ', NOW());
+        RAISE EXCEPTION 'an empty answer was accepted as consent';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- approving a generation that was never scored is a foreign-key violation,
+    -- not a convention
+    BEGIN
+        INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+                                     answer, answered_at)
+        VALUES (cand, unscored, '12345', 2, 'Publish it', NOW());
+        RAISE EXCEPTION 'a never-scored generation was approved';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- the real approval
+    INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+                                 telegram_update_id, answer, why_interesting, answered_at)
+    VALUES (cand, run, '12345', 42, 900001, 'Publish it',
+            'Solved a problem I actually had.', NOW());
+
+    -- REPLAY: the poller re-reads the same update after a runner restart.
+    -- This is the guard W11's decoupling rests on -- it is why a durable
+    -- getUpdates offset is not needed for publishing to be correct.
+    INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+                                 telegram_update_id, answer, answered_at)
+    VALUES (cand, run, '12345', 42, 900001, 'Publish it', NOW())
+    ON CONFLICT (chat_id, message_id) DO NOTHING;
+
+    SELECT count(*) INTO n FROM finds_approvals WHERE candidate_id = cand;
+    ASSERT n = 1, format('replaying one update produced %s approvals, expected 1', n);
+
+    -- a resent digest answered from a different message must not approve twice
+    BEGIN
+        INSERT INTO finds_approvals (candidate_id, evidence_run_id, chat_id, message_id,
+                                     answer, answered_at)
+        VALUES (cand, run, '12345', 77, 'Publish it', NOW());
+        RAISE EXCEPTION 'the same find was approved twice for one generation';
+    EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+
+    -- an approval is a receipt: it cannot be rewritten afterwards
+    BEGIN
+        UPDATE finds_approvals SET answer = 'Actually no' WHERE candidate_id = cand;
+        RAISE EXCEPTION 'the record of consent was editable';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+    BEGIN
+        DELETE FROM finds_approvals WHERE candidate_id = cand;
+        RAISE EXCEPTION 'the record of consent was deletable';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+
+    -- Telegram is the only control surface (D9); the digest cannot approve
+    BEGIN
+        INSERT INTO finds_approvals (candidate_id, evidence_run_id, channel, chat_id,
+                                     message_id, answer, answered_at)
+        VALUES (cand, run, 'email', '12345', 78, 'yes', NOW());
+        RAISE EXCEPTION 'an approval arrived by a channel that cannot approve';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
