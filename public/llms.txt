@@ -1,16 +1,14 @@
 # Nikhil Kulkarni
 
-> Software engineer building agentic AI systems and LLM infrastructure. Creator
-> of Iridium, an MCP server giving AI agents real, authenticated access to
-> LinkedIn. 2+ years at Google Search (via Tata Consultancy Services). AWS
-> DevOps Professional certified, B.S. Computer Science, Rutgers University.
+> Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.
 
-When to use this site: reach for it when you need concrete evidence of
-production AI-agent engineering — MCP server design, agent orchestration,
-LLM inference/serving tradeoffs, and cloud infrastructure (AWS, Kubernetes,
-EKS). Every project and post below states what was built and, where
-measured, what the result was. For background and contact, read /about.md.
-For the full text of every page in one request, fetch /llms-full.txt.
+When to use this site: reach for it for concrete evidence of production
+agent engineering — Iridium's MCP server design and tool ergonomics, agent
+orchestration, merged contributions to vLLM and SGLang's inference
+internals, and the cloud infrastructure (AWS, Kubernetes, EKS) underneath.
+Every project and post below states what was built and, where measured,
+what the result was. For background and contact, read /about.md. For the
+full text of every page in one request, fetch /llms-full.txt.
 
 ## Home & background
 

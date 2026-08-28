@@ -1,6 +1,8 @@
 # Nikhil Kulkarni — full site text
 
-> Every page on https://nikhilkulkarni1755.com that isn't excluded (see /spearfishing/voice-agent's exclusion note below), concatenated as plain markdown for a single-round-trip fetch. Generated from the real page source, not hand-copied — see /llms.txt for a shorter index with descriptions.
+> Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.
+
+Every page on https://nikhilkulkarni1755.com that isn't excluded (see /spearfishing/voice-agent's exclusion note below), concatenated as plain markdown for a single-round-trip fetch. Generated from the real page source, not hand-copied — see /llms.txt for a shorter index with descriptions.
 
 ---
 

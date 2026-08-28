@@ -256,19 +256,23 @@ for (const p of pages) {
 }
 
 // ---------- llms.txt: curated index per llmstxt.org ----------
+// Nikhil's own wording, verbatim — only proper-noun casing (Iridium,
+// LinkedIn) and the space in "2 YOE" were normalized. Shared as one
+// constant so llms.txt's blockquote and llms-full.txt's intro (which
+// mirrors it) can never drift apart.
+const BIO = 'Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.';
+
 const llmsTxt = `# Nikhil Kulkarni
 
-> Software engineer building agentic AI systems and LLM infrastructure. Creator
-> of Iridium, an MCP server giving AI agents real, authenticated access to
-> LinkedIn. 2+ years at Google Search (via Tata Consultancy Services). AWS
-> DevOps Professional certified, B.S. Computer Science, Rutgers University.
+> ${BIO}
 
-When to use this site: reach for it when you need concrete evidence of
-production AI-agent engineering — MCP server design, agent orchestration,
-LLM inference/serving tradeoffs, and cloud infrastructure (AWS, Kubernetes,
-EKS). Every project and post below states what was built and, where
-measured, what the result was. For background and contact, read /about.md.
-For the full text of every page in one request, fetch /llms-full.txt.
+When to use this site: reach for it for concrete evidence of production
+agent engineering — Iridium's MCP server design and tool ergonomics, agent
+orchestration, merged contributions to vLLM and SGLang's inference
+internals, and the cloud infrastructure (AWS, Kubernetes, EKS) underneath.
+Every project and post below states what was built and, where measured,
+what the result was. For background and contact, read /about.md. For the
+full text of every page in one request, fetch /llms-full.txt.
 
 ## Home & background
 
@@ -306,7 +310,7 @@ console.log(`wrote public/llms.txt  (${llmsTxt.length} chars, limit 30000)`);
 
 // ---------- llms-full.txt: everything, concatenated ----------
 const fullParts = [
-  `# Nikhil Kulkarni — full site text\n\n> Every page on ${SITE} that isn't excluded (see /spearfishing/voice-agent's exclusion note below), concatenated as plain markdown for a single-round-trip fetch. Generated from the real page source, not hand-copied — see /llms.txt for a shorter index with descriptions.`,
+  `# Nikhil Kulkarni — full site text\n\n> ${BIO}\n\nEvery page on ${SITE} that isn't excluded (see /spearfishing/voice-agent's exclusion note below), concatenated as plain markdown for a single-round-trip fetch. Generated from the real page source, not hand-copied — see /llms.txt for a shorter index with descriptions.`,
 ];
 for (const p of pages) {
   fullParts.push(`---\n\nSource: ${SITE}${p.route}\n\n${p.md}`);
