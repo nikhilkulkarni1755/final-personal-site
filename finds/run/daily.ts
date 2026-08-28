@@ -65,14 +65,50 @@ const STAGES: Stage[] = [
     onFailure: 'abort',
   },
 
-  // D3: a source being unreachable is reported DOWN and the run carries on.
-  // run-hn.ts has already written the failure to finds_sources by the time it
-  // exits non-zero, so the DOWN state is durable, not just a log line.
+  // --- ingest. Four independent sources; D3 says one dying is a partial
+  // outcome, not a run-ending one, so every one of these is 'continue'.
+  // Each connector has already persisted its own failure to finds_sources by
+  // the time it exits non-zero, so a DOWN is durable, not just a log line.
+  // Ordered by R1's measured yield: Uneed is the completest daily record,
+  // Show HN the highest volume.
+  {
+    id: 'ingest:uneed',
+    what: 'pull today\'s Uneed launches (no credential, >=50/day)',
+    owner: 'W2',
+    command: { args: ['finds/sources/run-uneed.ts'], timeoutMs: 10 * 60_000, needsEnv: DB_ENV },
+    onFailure: 'continue',
+  },
   {
     id: 'ingest:hn',
     what: 'pull today\'s Show HN launches (no credential, ~134/day)',
     owner: 'W2',
     command: { args: ['finds/sources/run-hn.ts'], timeoutMs: 10 * 60_000, needsEnv: DB_ENV },
+    onFailure: 'continue',
+  },
+  {
+    id: 'ingest:github',
+    what: 'pull newly published GitHub projects',
+    owner: 'W2',
+    command: {
+      args: ['finds/sources/run-github.ts'],
+      timeoutMs: 10 * 60_000,
+      // Its own hard requirement -- reported BLOCKED here rather than left to
+      // crash inside the connector, so the summary says which secret is
+      // missing instead of showing a stack trace.
+      needsEnv: [...DB_ENV, 'GITHUB_TOKEN'],
+    },
+    onFailure: 'continue',
+  },
+  {
+    id: 'ingest:peerlist',
+    what: 'pull the Peerlist launch listing (headless Chromium, no credential)',
+    owner: 'W2',
+    // Run daily even though Peerlist is a Monday drop of ~286 (D10): the
+    // week's launches stay listed all week and the sighting upsert is
+    // idempotent, so a daily run costs one browser session and silently
+    // repairs a Monday the cron missed. A Monday-only schedule would lose
+    // the whole week to one bad run.
+    command: { args: ['finds/sources/run-peerlist.ts'], timeoutMs: 15 * 60_000, needsEnv: DB_ENV },
     onFailure: 'continue',
   },
 
@@ -88,8 +124,17 @@ const STAGES: Stage[] = [
     what: 'crawl each new candidate through the permission gate and record evidence',
     owner: 'W4 (through W1\'s gate)',
     command: null,
+    // W4's crawler HAS merged, and its gate wiring is right -- but
+    // finds/verify/cli.ts takes ONE product URL and an optional candidate id.
+    // A daily run needs an entry point that selects the day's new candidates
+    // and crawls each through the gate, honouring the per-authority delay and
+    // wall-clock budgets in GATE_CONFIG. Composing that here would mean
+    // writing W4's batch logic inside W10, which is exactly the lane-boundary
+    // violation this pipeline avoids. RAISED WITH THE COORDINATOR.
     missingBecause:
-      'finds/verify/** is not wired into the daily run yet.',
+      'finds/verify/ has merged, but only as a single-URL CLI (cli.ts <product-url> ' +
+      '[candidate-id] [--persist]). A daily stage needs a batch entry point that ' +
+      'selects new candidates and crawls each through the gate. Asked W4 for one.',
     onFailure: 'continue',
   },
   {
