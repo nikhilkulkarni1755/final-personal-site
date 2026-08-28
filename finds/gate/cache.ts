@@ -1,7 +1,10 @@
 // Small in-memory TTL cache. Used to avoid re-fetching robots.txt (and, one
 // day, sitemaps) on every check within a run. TTL is a policy value and
 // lives in config.ts, not here -- this module only knows how to expire
-// entries once told when.
+// entries once told when. A per-entry TTL override is supported because
+// R2's rubric (§7) assigns a different TTL per verdict class (e.g. a DENY
+// from a bot challenge is cached 7 days, an ALLOW only 6 hours) -- the
+// caller decides which, this class just enforces whichever it's given.
 
 interface Entry<V> {
   value: V;
@@ -26,8 +29,8 @@ export class TtlCache<V> {
     return entry.value;
   }
 
-  set(key: string, value: V): void {
-    this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
+  set(key: string, value: V, ttlMsOverride?: number): void {
+    this.store.set(key, { value, expiresAt: Date.now() + (ttlMsOverride ?? this.ttlMs) });
   }
 
   /** Fetch from cache, or compute + store on miss/expiry. */
