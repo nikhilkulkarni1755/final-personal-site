@@ -10,8 +10,11 @@ interface Entry<V> {
 
 export class TtlCache<V> {
   private readonly store = new Map<string, Entry<V>>();
+  private readonly ttlMs: number;
 
-  constructor(private readonly ttlMs: number) {}
+  constructor(ttlMs: number) {
+    this.ttlMs = ttlMs;
+  }
 
   get(key: string): V | undefined {
     const entry = this.store.get(key);
