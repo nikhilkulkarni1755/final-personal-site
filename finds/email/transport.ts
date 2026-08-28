@@ -27,24 +27,58 @@ function readCredentials(): { user: string; pass: string } {
 }
 
 /**
+ * The single recipient a real send would use. Exposed so a caller can record
+ * it (finds_digests.recipient) before attempting the send -- resolving it
+ * also doubles as the same credential check sendDigest does, so a caller
+ * fails before writing anything if creds are absent.
+ */
+export function resolveRecipient(): string {
+  const { user } = readCredentials();
+  return process.env.DIGEST_TO?.trim() || user;
+}
+
+/**
+ * Strips every credential this lane holds out of a string before it is
+ * logged or stored -- finds_digests.error is a log column (per its
+ * migration comment) and D2 forbids the app password appearing in any log;
+ * the same discipline applies to the Supabase service role key record.ts
+ * uses. Every error that might reach that column -- or a console -- goes
+ * through this first.
+ */
+export function redactSecrets(message: string): string {
+  for (const secret of [process.env.GMAIL_APP_PASSWORD, process.env.SUPABASE_SERVICE_ROLE_KEY]) {
+    if (secret) message = message.split(secret).join('[redacted]');
+  }
+  return message;
+}
+
+export interface SendResult {
+  /** Whatever nodemailer's transport returned. Evidence a send really
+   * happened, for finds_digests.provider_message_id. */
+  providerMessageId: string | undefined;
+}
+
+/**
  * Sends the rendered digest to exactly one recipient. Defaults to sending
  * to the sending account itself (GMAIL_USER); set DIGEST_TO to override.
  * Only ever a single address -- never a list.
  */
-export async function sendDigest(digest: RenderedDigest): Promise<void> {
+export async function sendDigest(digest: RenderedDigest): Promise<SendResult> {
   const { user, pass } = readCredentials();
-  const to = process.env.DIGEST_TO?.trim() || user;
+  const to = resolveRecipient();
 
   const transport = nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass },
   });
 
-  await transport.sendMail({
+  const info = await transport.sendMail({
     from: user,
     to,
     subject: digest.subject,
     html: digest.html,
     text: digest.text,
   });
+
+  return { providerMessageId: info.messageId };
 }
