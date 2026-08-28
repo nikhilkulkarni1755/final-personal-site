@@ -1,0 +1,50 @@
+Interesting Finds Bot -- disclosure
+Last updated: 2026-08-28
+Human-readable version: https://nikhilkulkarni1755.com/bot
+
+WHO
+Operated by Nikhil Kulkarni (nikhilkulkarni1755@gmail.com) for his own
+personal site, https://nikhilkulkarni1755.com. One person's pipeline, not
+a company and not a third-party crawling service.
+
+WHAT IT DOES AND WHY
+Every day this pipeline pulls a short list of newly-launched products from
+public sources (Peerlist, Show HN, GitHub, and similar). For each one it
+reads the product's own homepage and a handful of sub-pages -- pricing,
+docs, about -- to check whether what the product advertises is actually
+true, whether it solves a real problem, whether anyone can use it, and
+whether it is agent/MCP friendly. Only products that pass are published,
+by hand, at https://nikhilkulkarni1755.com/interesting-finds with a link
+back to the maker's own site. Nothing fetched is used to train a model.
+
+USER-AGENT
+  InterestingFindsBot/1.0 (+https://nikhilkulkarni1755.com/bot.txt)
+Sent byte-for-byte on every request this bot makes, robots.txt included.
+Releases bump only the version number; the product token never changes,
+and a second User-Agent is never sent after a block.
+
+HOW TO BLOCK IT
+Add this to your robots.txt:
+  User-agent: InterestingFindsBot
+  Disallow: /
+robots.txt is re-read on every run, so a block takes effect on our very
+next visit.
+
+WHAT IT WILL NOT DO
+  - GET and HEAD requests only. Never POST, PUT, PATCH, or DELETE.
+  - Never logs in, signs up, checks out, or submits a form.
+  - Never sends a cookie, an Authorization header, or an API key.
+  - Never spoofs a browser User-Agent or claims to be anything else.
+  - At most 25 pages per site, at least 2 seconds apart.
+
+SIGNALS IT HONOURS
+robots.txt (including Crawl-delay), X-Robots-Tag, <meta name="robots">,
+Content-Signal, Content-Usage, and TDM-reservation headers. When a site's
+own signals say no, this bot does not fetch that page. Full stop.
+
+OPT OUT OR COMPLAIN
+Email nikhilkulkarni1755@gmail.com. Any request lands your domain on a
+permanent denylist, no argument -- in addition to, not instead of, an
+ordinary robots.txt block.
+
+Last updated: 2026-08-28
