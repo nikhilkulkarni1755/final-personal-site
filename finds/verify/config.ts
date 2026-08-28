@@ -18,42 +18,25 @@
  */
 export const USER_AGENT = 'InterestingFindsBot/1.0 (+https://nikhilkulkarni1755.com/bot.txt)';
 
-/** R2 §2.3. No Cookie, no Authorization, ever -- asserted in gate.ts. */
-export const REQUEST_HEADERS: Readonly<Record<string, string>> = Object.freeze({
-  'User-Agent': USER_AGENT,
-  Accept:
-    'text/html, application/xhtml+xml, text/markdown;q=0.9, text/plain;q=0.9, application/json;q=0.5, */*;q=0.1',
-  'Accept-Language': 'en',
-});
-
 /**
- * R2 §5.3 -- and these exact numbers are now a public promise. bot.txt says
- * "at most 25 pages per site, at least 2 seconds apart" under Nikhil's name and
- * his email address. Raising one would make him a liar to the people whose
- * sites we read, so they are ceilings and never targets.
+ * R2 §5.3 -- and these exact numbers are a public promise. bot.txt says "at
+ * most 25 pages per site, at least 2 seconds apart" under Nikhil's name and his
+ * email address. Raising one would make him a liar to the people whose sites we
+ * read, so they are ceilings and never targets.
+ *
+ * D22 moved ENFORCEMENT of the cap and the delay into W1's gate, because only
+ * the module that makes the requests can count or space them. What is left here
+ * is what W4 still decides for itself: how deep to go, how many URLs are worth
+ * asking about, and when to stop a candidate altogether.
  */
 export const R2_CAPS = {
   minDelayMs: 2000,
   maxPages: 25,
   maxDepth: 2,
   wallClockMs: 300_000,
-  /** Per response, then the stream is aborted. */
-  maxResponseBytes: 2 * 1024 * 1024,
-  /** Across the whole candidate. */
-  maxCandidateBytes: 20 * 1024 * 1024,
-  connectTimeoutMs: 10_000,
+  /** Playwright's navigation timeout; the only network knob left in this lane. */
   totalTimeoutMs: 30_000,
-  maxRedirects: 5,
 } as const;
-
-/** R2 §5.3. Anything else -- images, PDF, video, archives -- is never fetched. */
-export const ACCEPTED_CONTENT_TYPES = [
-  'text/html',
-  'application/xhtml+xml',
-  'text/plain',
-  'text/markdown',
-  'application/json',
-] as const;
 
 /**
  * R2 §5.4. Not fetched, whatever robots.txt says, because none of it is

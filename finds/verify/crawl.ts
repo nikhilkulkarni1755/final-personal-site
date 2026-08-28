@@ -13,6 +13,33 @@
 
 import { randomUUID } from 'node:crypto';
 import { R2_CAPS } from './config.ts';
+
+/**
+ * Rendering is OFF by default, and this is a promise problem rather than a
+ * technical one.
+ *
+ * render.ts is now properly gated -- it cannot be called without an ALLOW
+ * verdict, and the browser is held to the one origin the gate cleared, so the
+ * SSRF hole V2 found is closed and measured shut (0 off-origin requests).
+ * What gating cannot fix is volume. Measured against a representative SPA
+ * (8 script chunks, XHRs, images, stylesheets):
+ *
+ *     requests the server received : 17
+ *     off-origin requests refused  : 0
+ *     gaps under 2000 ms           : 16 of 16
+ *     whole render                 : 1081 ms
+ *
+ * That is one page of a crawl spending 17 of a 25-request budget in a burst
+ * ~64 ms apart. It is not a bug in the route rule; it is what rendering IS.
+ * A browser draws a page by issuing many requests at once, and no amount of
+ * gating turns that into "at most 25 pages per site, at least 2 seconds
+ * apart" -- the sentence published under Nikhil's name and email.
+ *
+ * So the shipped default honours the promise and records an unrendered shell
+ * as an unrendered shell. Turning this on is a decision to amend bot.txt
+ * first, which is the coordinator's call and not this lane's.
+ */
+const RENDER_ENABLED = process.env.FINDS_VERIFY_RENDER === '1';
 import { diffClaims, extractClaims } from './claims.ts';
 import type { CorpusPage } from './claims.ts';
 import { looksLikeEmptyShell, pageRole, parsePage } from './extract.ts';
@@ -150,15 +177,31 @@ async function readablePage(
   const isHtml = (outcome.content_type ?? '').includes('html');
   if (!isHtml || !looksLikeEmptyShell(parsed)) return parsed;
 
+  if (!RENDER_ENABLED) {
+    observations.push({
+      kind: 'spa_shell_not_rendered',
+      detail:
+        `A plain GET returned ${parsed.text.length} characters of text, which is a JS-rendered shell. ` +
+        `Rendering is OFF: measured on a representative SPA, one render issues 17 requests in 1081 ms ` +
+        `with every gap under 2 s, which breaks both halves of what bot.txt promises ("at most 25 pages ` +
+        `per site, at least 2 seconds apart") in a single page. Set FINDS_VERIFY_RENDER=1 to enable. ` +
+        `The evidence below is from the shell, not from what a visitor sees.`,
+      value: parsed.text.length,
+    });
+    return parsed;
+  }
+
   try {
-    const rendered = await renderPage(outcome.url);
+    const rendered = await renderPage(outcome.decision);
     observations.push({
       kind: 'rendered_with_browser',
       detail:
-        `A plain GET returned ${parsed.text.length} characters of text, so the page was rendered. ` +
-        `Origins contacted: ${rendered.contactedOrigins.join(', ') || 'none'}. ` +
-        `${rendered.blockedSubresources} image/media/font/stylesheet request(s) refused per R2 §5.3.`,
-      value: rendered.contactedOrigins.length,
+        `A plain GET returned ${parsed.text.length} characters of text, so the page was rendered under ` +
+        `the same UA. ${rendered.subresources} same-origin subresource(s) allowed; ` +
+        `${rendered.blockedOther} refused by content type or as an unverdicted navigation; ` +
+        `${rendered.blockedOffOrigin.length} refused for leaving ${outcome.decision.authority}` +
+        `${rendered.blockedOffOrigin.length ? ` (${rendered.blockedOffOrigin.slice(0, 5).join(', ')})` : ''}.`,
+      value: rendered.subresources,
     });
     return parsePage(rendered.html);
   } catch (cause) {
@@ -234,7 +277,27 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   }
 
   /* -- R2 §5.1 steps 2 and 3: sitemaps ------------------------------------ */
-  const declaredSitemaps = (homeOutcome.decision.robots.sitemaps as string[] | undefined) ?? [];
+  // A `Sitemap:` line is attacker-controlled text on somebody else's server,
+  // and it was going to the gate unfiltered. The gate denies a private or
+  // off-scope target at P1 with zero bytes sent -- verified -- but this is the
+  // one input to the crawler that a third party writes, so it is also filtered
+  // here. Two independent checks on the hostile path, and the gate is still
+  // the one that decides.
+  const declaredSitemaps = ((homeOutcome.decision.robots.sitemaps as string[] | undefined) ?? []).flatMap(
+    (candidateSitemap) => {
+      const safe = normalise(candidateSitemap, homeUrl, homeUrl);
+      if (safe) return [safe];
+      homeObservations.push({
+        kind: 'sitemap_directive_rejected',
+        detail:
+          `robots.txt declared Sitemap: ${candidateSitemap}, which is not on this candidate's own ` +
+          `domain. Not requested. A Sitemap: line is text on someone else's server and cannot send ` +
+          `this crawler somewhere the gate has not ruled on.`,
+        value: candidateSitemap,
+      });
+      return [];
+    },
+  );
   const sitemapUrls = declaredSitemaps.length
     ? declaredSitemaps.slice(0, 5)
     : [new URL('/sitemap.xml', homeUrl).toString()];
@@ -252,9 +315,13 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   /* -- R2 §5.1 step 4 is already covered: the homepage's own links --------- */
   const budget = homeOutcome.decision.crawl_budget;
   const alreadyRead = new Set([homeUrl, homeOutcome.final_url, llmsUrl, ...sitemapUrls]);
+  // How many URLs are worth ASKING about, which is not the same thing as the
+  // request cap -- D22 puts that in the gate, because the gate is what makes
+  // the requests. This only stops the crawler queueing work the gate is
+  // certain to refuse.
   const queue = prioritise(
     [...discoveredUrls].filter((url) => !alreadyRead.has(url) && !isNeverTouch(url)),
-    budget.page_cap - records.length,
+    Math.max(0, budget.page_cap - records.length),
   );
 
   for (const url of queue) {

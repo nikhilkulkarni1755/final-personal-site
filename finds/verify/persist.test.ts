@@ -32,6 +32,8 @@ async function realDecision(): Promise<GateDecision> {
     gate_version: verdict.gate_version,
     decided_at: verdict.decided_at,
     expires_at: verdict.expires_at,
+    gate_requests: verdict.evidence.length,
+    page: null,
   };
 }
 

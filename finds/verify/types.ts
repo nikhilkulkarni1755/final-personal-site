@@ -73,6 +73,41 @@ export interface GateDecision {
   gate_version: string;
   decided_at: string;
   expires_at: string | null;
+
+  /**
+   * How many HTTP requests the gate issued to reach this decision, from the
+   * evidence entries it reports. W4 does not enforce anything with this --
+   * D22 puts the cap in the gate -- it is recorded so a crawl's real cost to a
+   * site is visible in the evidence rather than inferred.
+   */
+  gate_requests: number;
+
+  /**
+   * The page body the gate already fetched, when it hands it over.
+   *
+   * The gate MUST fetch the page itself to read X-Robots-Tag, meta robots and
+   * tdm-reservation -- those signals only exist in the response. So when W4
+   * fetched it a second time for the body, every URL was requested twice, ~170
+   * ms apart, inside a 2 s sleep that only spaced the pairs. Null means the
+   * gate did not hand a body over and W4 must fetch it, which is the old
+   * two-request behaviour and is reported as such.
+   */
+  page: GatePageBody | null;
+}
+
+/** A response the gate already has, so nobody fetches it twice. */
+export interface GatePageBody {
+  final_url: string;
+  http_status: number;
+  content_type: string | null;
+  /** Empty when `body_read` is false. Never a substitute for the real body. */
+  body: string;
+  /** False when the gate did not read the body (unaccepted content type). */
+  body_read: boolean;
+  sha256: string | null;
+  truncated: boolean;
+  fetched_at: string;
+  elapsed_ms: number;
 }
 
 /**
