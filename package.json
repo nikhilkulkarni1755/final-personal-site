@@ -14,7 +14,11 @@
     "email:send": "node finds/email/send.ts",
     "sources:typecheck": "tsc --noEmit -p finds/sources/tsconfig.json",
     "sources:ingest:hn": "node finds/sources/run-hn.ts",
-    "sources:ingest:peerlist": "node finds/sources/run-peerlist.ts"
+    "sources:ingest:peerlist": "node finds/sources/run-peerlist.ts",
+    "comment:typecheck": "tsc --noEmit -p finds/comment/tsconfig.json",
+    "comment:verify": "node finds/comment/verifyFidelity.ts",
+    "comment:dry-run": "node finds/comment/dry-run.ts",
+    "comment:post": "node finds/comment/postComment.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
