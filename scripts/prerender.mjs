@@ -374,7 +374,13 @@ async function main() {
     for (const route of ROUTES) {
       const page = await context.newPage();
       try {
-        await page.goto(origin + route.path, { waitUntil: 'networkidle', timeout: 30000 });
+        // 'domcontentloaded', not 'networkidle'. index.html pulls Google Fonts, so
+        // networkidle gated every navigation on an external round-trip finishing —
+        // the homepage timed out at 30s on roughly one build in three here, and a
+        // CI box with slower or rate-limited egress would fail the same way. The
+        // real readiness contract is below: the per-route content assertions and
+        // the byte-stability check, neither of which cares about idle sockets.
+        await page.goto(origin + route.path, { waitUntil: 'domcontentloaded', timeout: 30000 });
         await waitForContent(page, route.expect);
         await revealAll(page);
         await waitForStableDom(page);
