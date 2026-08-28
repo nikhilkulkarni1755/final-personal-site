@@ -13,7 +13,8 @@
 import { gunzipSync } from 'node:zlib';
 import { GATE_CONFIG } from './config.ts';
 import { safeFetch } from './safeFetch.ts';
-import { isSameSite } from './scope.ts';
+import { isDenylisted } from './denylist.ts';
+import { checkUrlScope, isSameSite } from './scope.ts';
 
 const LOC_RE = /<loc>\s*([^<\s][^<]*?)\s*<\/loc>/gi;
 
@@ -60,7 +61,32 @@ interface FetchedSitemap {
   truncated: boolean;
 }
 
-async function fetchOneSitemap(url: string): Promise<FetchedSitemap> {
+/**
+ * SECURITY (same class of bug fixed in access.ts's decideAccess): a
+ * `Sitemap:` line, or a <loc> inside a sitemap-index, is attacker-controlled
+ * content from the audited site's own robots.txt/sitemap -- it can point
+ * anywhere, including a private/loopback/CGNAT address. P0 (denylist) and
+ * P1 (URL scope) are enforced here, before any network call, for exactly
+ * the reason they are enforced in decideAccess: this path is reachable
+ * from checkSite/cli today, not from the main pipeline, but a latent SSRF
+ * is still a real one the moment something calls checkSite on
+ * attacker-influenced input.
+ */
+async function fetchOneSitemap(url: string, candidateOrigin: string): Promise<FetchedSitemap> {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return { fetched: false, isIndex: false, locs: [], truncated: false };
+  }
+  if (isDenylisted(hostname)) {
+    return { fetched: false, isIndex: false, locs: [], truncated: false };
+  }
+  const scope = await checkUrlScope(url, candidateOrigin);
+  if (!scope.inScope) {
+    return { fetched: false, isIndex: false, locs: [], truncated: false };
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GATE_CONFIG.connectTimeoutMs);
   try {
@@ -127,7 +153,7 @@ export async function enumerateSitemaps(rootUrls: string[], candidateOrigin: str
   const childCandidates: string[] = [];
 
   for (const url of roots) {
-    const result = await fetchOneSitemap(url);
+    const result = await fetchOneSitemap(url, candidateOrigin);
     if (!result.fetched) continue;
     sitemapsFetched.push(url);
     truncated = truncated || result.truncated;
@@ -147,7 +173,7 @@ export async function enumerateSitemaps(rootUrls: string[], candidateOrigin: str
   // another index to recurse into, even if it claims to be one.
   for (const url of new Set(childCandidates)) {
     if (sitemapsFetched.includes(url)) continue;
-    const result = await fetchOneSitemap(url);
+    const result = await fetchOneSitemap(url, candidateOrigin);
     if (!result.fetched) continue;
     sitemapsFetched.push(url);
     truncated = truncated || result.truncated;
