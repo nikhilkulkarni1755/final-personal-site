@@ -17,7 +17,18 @@
  * Every JSON-LD block was validated structurally and against the live
  * schema.org vocabulary (types + property domains, including subclass
  * inheritance) before this file was committed.
+ *
+ * Every count and enumeration below (project list, blog list, weave
+ * engineer/window numbers, social links) is computed from src/data/*.json
+ * at module load, not hand-typed — so it cannot silently drift from the
+ * source data the way a prose-authored count can.
  */
+
+import projectsData from './projects.json';
+import blogsData from './blogs.json';
+import appsData from './apps.json';
+import socialData from './social.json';
+import weaveData from './weave-data.json';
 
 export const SITE_URL = 'https://nikhilkulkarni1755.com';
 export const SITE_NAME = 'Nikhil Kulkarni';
@@ -25,6 +36,62 @@ export const SITE_NAME = 'Nikhil Kulkarni';
 const DEFAULT_OG_IMAGE = `${SITE_URL}/videos/iridium-feature-demo.jpg`;
 const PERSON_ID = `${SITE_URL}/#person`;
 const personRef = { '@id': PERSON_ID };
+
+interface ProjectRecord {
+  id: number;
+  title: string;
+  description: string;
+  techStack: string[];
+  liveUrl?: string;
+  github?: string;
+}
+const projects = projectsData as ProjectRecord[];
+
+interface BlogRecord {
+  id: number;
+  title: string;
+  slug: string;
+  subtitle: string;
+  publishDate: string;
+  readTime: number;
+  tags: string[];
+}
+const blogs = blogsData as BlogRecord[];
+function findBlog(slug: string): BlogRecord {
+  const post = blogs.find((b) => b.slug === slug);
+  if (!post) throw new Error(`routeMeta: no blogs.json record for slug "${slug}"`);
+  return post;
+}
+
+interface AppRecord {
+  id: number;
+  title: string;
+  description: string;
+  techStack: string[];
+  appStoreLink: string;
+}
+const apps = appsData as AppRecord[];
+const progressApp = apps[0];
+
+interface SocialRecord {
+  name: string;
+  url: string;
+  icon: string;
+}
+const social = socialData as SocialRecord[];
+/** sameAs wants identity/profile pages, not a mailto: link — that goes on Person.email instead. */
+const socialProfileUrls = social.filter((s) => !s.url.startsWith('mailto:')).map((s) => s.url);
+const socialEmail = social.find((s) => s.url.startsWith('mailto:'))?.url ?? '';
+
+interface WeaveData {
+  generated_at: string;
+  window_days: number;
+  repo: string;
+  engineers: Record<string, unknown>;
+}
+const weave = weaveData as unknown as WeaveData;
+const weaveEngineerCount = Object.keys(weave.engineers).length;
+const weaveGeneratedDate = weave.generated_at.slice(0, 10);
 
 export interface OpenGraph {
   title: string;
@@ -108,7 +175,7 @@ const person = {
   '@id': PERSON_ID,
   name: 'Nikhil Kulkarni',
   url: SITE_URL,
-  email: 'mailto:nikhilkulkarni1755@gmail.com',
+  email: socialEmail,
   jobTitle: 'Software Engineer',
   description:
     'Software engineer building AI agents in production. Creator of Iridium, an MCP server giving AI agents real access to LinkedIn. Contributor to vLLM and SGLang.',
@@ -122,12 +189,9 @@ const person = {
     'Agent Orchestration',
     'Cloud Infrastructure',
   ],
-  // Real social profiles from src/data/social.json — earns json-ld entity linking.
-  sameAs: [
-    'https://github.com/nikhilkulkarni1755',
-    'https://linkedin.com/in/nikhilkulkarni1755',
-    'https://x.com/nsk1755',
-  ],
+  // Real social profiles from src/data/social.json (mailto: excluded, see socialEmail
+  // above) — earns json-ld entity linking.
+  sameAs: socialProfileUrls,
   // Defensible, unembellished "open to work" signal — no invented start date.
   seeks: {
     '@type': 'Demand',
@@ -162,105 +226,40 @@ export const routeMeta: Record<string, RouteMeta> = {
     ...meta('/projects', {
       title: 'Projects — Nikhil Kulkarni',
       description:
-        'Seven shipped projects: Iridium (an MCP server for live LinkedIn agent access), a vLLM inference deployment on EKS, a multi-tenant Kubernetes platform, and more — with source, demos, and tech stack for each.',
+        `${projects.length} shipped projects: Iridium (an MCP server for live LinkedIn agent access), a vLLM inference deployment on EKS, a multi-tenant Kubernetes platform, and more — with source, demos, and tech stack for each.`,
     }),
     jsonLd: graph(
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Projects', path: '/projects' }]),
       {
         '@type': 'ItemList',
         name: 'Nikhil Kulkarni — Projects',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            item: {
-              '@type': 'SoftwareApplication',
-              name: 'Iridium',
-              description:
-                'Agent-native LinkedIn access. An MCP server giving any agent live profile and post data plus real actions — comments, DMs, connection requests, scheduled posts. 50+ tools across prospecting, inbox triage, commenting, and content, with user approval required before anything sends, server-side rate limits, and a full activity log.',
-              url: 'https://iridiumhqmcp.com',
-              applicationCategory: 'DeveloperApplication',
-              keywords: 'MCP, Agent Orchestration, Human-in-the-Loop, Tool-Calling Design, OAuth, Multi-Tenant, FastAPI, PostgreSQL, Evals',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'Iridium Agent',
-              description:
-                'Open-source chat agent that drives Iridium over MCP. Two states driven by the live connection: unauthenticated it can only describe the toolset and hand back a signup link, never pretending to act; once the server reports ready, every live tool flows in automatically.',
-              codeRepository: 'https://github.com/nikhilkulkarni1755/iridium-agent',
-              programmingLanguage: 'TypeScript',
-              keywords: 'Cloudflare Agents, MCP Client, Durable Objects, Workers AI, OAuth, TypeScript',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 3,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'vLLM on EKS',
-              description:
-                'Fully observable, multi-tenant, scalable inference deployment of vLLM on EKS. Per-tenant isolation with GPU scheduling and metrics wired end to end.',
-              codeRepository: 'https://github.com/nikhilkulkarni1755/vllm-eks-deployment',
-              keywords: 'vLLM, LLM Inference, EKS, Multi-Tenant, Observability, Terraform',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 4,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'Linkedin Agent',
-              description: 'Agent which finds possible connections and sends them cold connection requests.',
-              codeRepository: 'https://github.com/nikhilkulkarni1755/linkedin-agent',
-              keywords: 'LangGraph, LangChain, Linkedin API, LMStudio',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 5,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'Skim Research Papers Agent',
-              description: 'RAG agent which helps summarize 100+ page research papers. Built with AWS CI/CD in mind.',
-              codeRepository: 'https://github.com/MacAndPC/chat-app',
-              keywords: 'Pinecone, AWS Lambda, AWS S3, Qwen LLM',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 6,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'Multi Tenant Kubernetes',
-              description:
-                'Kubernetes hosting system which allows each user a private secure namespace, serving a common product while keeping private data namespaced.',
-              codeRepository: 'https://github.com/nikhilkulkarni1755/multi-tenant-k8',
-              keywords: 'Kubernetes, Docker, Prometheus, Grafana, Terraform, AWS',
-              author: personRef,
-            },
-          },
-          {
-            '@type': 'ListItem',
-            position: 7,
-            item: {
-              '@type': 'SoftwareSourceCode',
-              name: 'Terminal Tweet',
-              description: 'Tweet from the terminal — create a server or just tweet with the CLI.',
-              codeRepository: 'https://github.com/nikhilkulkarni1755/twitter-oauth2',
-              keywords: 'Uvicorn, OAuth 2.0 (PKCE), X API',
-              author: personRef,
-            },
-          },
-        ],
+        numberOfItems: projects.length,
+        // Generated directly from projects.json, in its own array order (the same
+        // order src/pages/Projects.tsx renders) — see the coordinator note in
+        // agent-ready-coord/lanes/W3.md about why this used to be hand-typed and
+        // silently dropped a project.
+        itemListElement: projects.map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: p.liveUrl
+            ? {
+                '@type': 'SoftwareApplication',
+                name: p.title,
+                description: p.description,
+                url: p.liveUrl,
+                applicationCategory: 'DeveloperApplication',
+                keywords: p.techStack.join(', '),
+                author: personRef,
+              }
+            : {
+                '@type': 'SoftwareSourceCode',
+                name: p.title,
+                description: p.description,
+                codeRepository: p.github,
+                keywords: p.techStack.join(', '),
+                author: personRef,
+              },
+        })),
       },
     ),
   },
@@ -279,125 +278,118 @@ export const routeMeta: Record<string, RouteMeta> = {
         name: 'Nikhil Kulkarni — Blog',
         url: `${SITE_URL}/blog`,
         author: personRef,
-        blogPost: [
-          { '@type': 'BlogPosting', headline: 'From Matrices to Minds', url: `${SITE_URL}/blog/matmul-to-ai` },
-          { '@type': 'BlogPosting', headline: 'Cold Outreach Agent', url: `${SITE_URL}/blog/linkedin-agent` },
-          {
-            '@type': 'BlogPosting',
-            headline: 'Your Agentic Coding Tool is Reading Your Secrets',
-            url: `${SITE_URL}/blog/docker-secrets-injection`,
-          },
-        ],
+        // Generated from blogs.json, same array order src/pages/Blog.tsx renders.
+        blogPost: blogs.map((b) => ({
+          '@type': 'BlogPosting',
+          headline: b.title,
+          url: `${SITE_URL}/blog/${b.slug}`,
+        })),
       },
     ),
   },
 
-  '/blog/matmul-to-ai': {
-    ...meta('/blog/matmul-to-ai', {
-      title: 'From Matrices to Minds — Nikhil Kulkarni',
-      description:
-        'How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.',
-      type: 'article',
-    }),
-    jsonLd: graph(
-      breadcrumb([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
-        { name: 'From Matrices to Minds', path: '/blog/matmul-to-ai' },
-      ]),
-      {
-        '@type': 'BlogPosting',
-        '@id': `${SITE_URL}/blog/matmul-to-ai#post`,
-        headline: 'From Matrices to Minds',
-        description:
-          'How a grid of numbers — multiplied together billions of times — became the engine of modern intelligence.',
-        url: `${SITE_URL}/blog/matmul-to-ai`,
-        mainEntityOfPage: `${SITE_URL}/blog/matmul-to-ai`,
-        datePublished: '2026-03-05',
-        timeRequired: 'PT25M',
-        keywords: ['Linear Algebra', 'Neural Networks', 'Transformers', 'GPUs'],
-        author: personRef,
-        isPartOf: { '@id': `${SITE_URL}/blog#blog` },
-        inLanguage: 'en-US',
-      },
-    ),
-  },
+  '/blog/matmul-to-ai': (() => {
+    const post = findBlog('matmul-to-ai');
+    const path = `/blog/${post.slug}`;
+    return {
+      ...meta(path, {
+        title: `${post.title} — Nikhil Kulkarni`,
+        description: post.subtitle,
+        type: 'article',
+      }),
+      jsonLd: graph(
+        breadcrumb([{ name: 'Home', path: '/' }, { name: 'Blog', path: '/blog' }, { name: post.title, path }]),
+        {
+          '@type': 'BlogPosting',
+          '@id': `${SITE_URL}${path}#post`,
+          headline: post.title,
+          description: post.subtitle,
+          url: `${SITE_URL}${path}`,
+          mainEntityOfPage: `${SITE_URL}${path}`,
+          datePublished: post.publishDate,
+          timeRequired: `PT${post.readTime}M`,
+          keywords: post.tags,
+          author: personRef,
+          isPartOf: { '@id': `${SITE_URL}/blog#blog` },
+          inLanguage: 'en-US',
+        },
+      ),
+    };
+  })(),
 
-  '/blog/linkedin-agent': {
-    ...meta('/blog/linkedin-agent', {
-      title: 'Cold Outreach Agent — Nikhil Kulkarni',
-      description:
-        'Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.',
-      type: 'article',
-    }),
-    jsonLd: graph(
-      breadcrumb([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
-        { name: 'Cold Outreach Agent', path: '/blog/linkedin-agent' },
-      ]),
-      {
-        '@type': 'BlogPosting',
-        '@id': `${SITE_URL}/blog/linkedin-agent#post`,
-        headline: 'Cold Outreach Agent',
-        description: 'Profile analysis, 6-stage LLM drafting, and reply handling — with me as the final quality gate.',
-        url: `${SITE_URL}/blog/linkedin-agent`,
-        mainEntityOfPage: `${SITE_URL}/blog/linkedin-agent`,
-        datePublished: '2026-04-23',
-        timeRequired: 'PT12M',
-        keywords: ['Profile Analysis', 'LLM Pipeline', 'Claude Sonnet', 'PostgreSQL', 'FastAPI'],
-        author: personRef,
-        isPartOf: { '@id': `${SITE_URL}/blog#blog` },
-        inLanguage: 'en-US',
-      },
-    ),
-  },
+  '/blog/linkedin-agent': (() => {
+    const post = findBlog('linkedin-agent');
+    const path = `/blog/${post.slug}`;
+    return {
+      ...meta(path, {
+        title: `${post.title} — Nikhil Kulkarni`,
+        description: post.subtitle,
+        type: 'article',
+      }),
+      jsonLd: graph(
+        breadcrumb([{ name: 'Home', path: '/' }, { name: 'Blog', path: '/blog' }, { name: post.title, path }]),
+        {
+          '@type': 'BlogPosting',
+          '@id': `${SITE_URL}${path}#post`,
+          headline: post.title,
+          description: post.subtitle,
+          url: `${SITE_URL}${path}`,
+          mainEntityOfPage: `${SITE_URL}${path}`,
+          datePublished: post.publishDate,
+          timeRequired: `PT${post.readTime}M`,
+          keywords: post.tags,
+          author: personRef,
+          isPartOf: { '@id': `${SITE_URL}/blog#blog` },
+          inLanguage: 'en-US',
+        },
+      ),
+    };
+  })(),
 
-  '/blog/docker-secrets-injection': {
-    ...meta('/blog/docker-secrets-injection', {
-      title: 'Your Agentic Coding Tool is Reading Your Secrets — Nikhil Kulkarni',
-      description: 'Why your coding agent should never see your secrets — and how Docker makes that possible.',
-      type: 'article',
-    }),
-    jsonLd: graph(
-      breadcrumb([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
-        { name: 'Your Agentic Coding Tool is Reading Your Secrets', path: '/blog/docker-secrets-injection' },
-      ]),
-      {
-        '@type': 'BlogPosting',
-        '@id': `${SITE_URL}/blog/docker-secrets-injection#post`,
-        headline: 'Your Agentic Coding Tool is Reading Your Secrets',
-        description: 'Why your coding agent should never see your secrets — and how Docker makes that possible.',
-        url: `${SITE_URL}/blog/docker-secrets-injection`,
-        mainEntityOfPage: `${SITE_URL}/blog/docker-secrets-injection`,
-        datePublished: '2026-05-20',
-        timeRequired: 'PT3M',
-        keywords: ['Docker', 'Security', 'LLM Agents', 'Vibe Coding', 'DevOps'],
-        author: personRef,
-        isPartOf: { '@id': `${SITE_URL}/blog#blog` },
-        inLanguage: 'en-US',
-      },
-    ),
-  },
+  '/blog/docker-secrets-injection': (() => {
+    const post = findBlog('docker-secrets-injection');
+    const path = `/blog/${post.slug}`;
+    return {
+      ...meta(path, {
+        title: `${post.title} — Nikhil Kulkarni`,
+        description: post.subtitle,
+        type: 'article',
+      }),
+      jsonLd: graph(
+        breadcrumb([{ name: 'Home', path: '/' }, { name: 'Blog', path: '/blog' }, { name: post.title, path }]),
+        {
+          '@type': 'BlogPosting',
+          '@id': `${SITE_URL}${path}#post`,
+          headline: post.title,
+          description: post.subtitle,
+          url: `${SITE_URL}${path}`,
+          mainEntityOfPage: `${SITE_URL}${path}`,
+          datePublished: post.publishDate,
+          timeRequired: `PT${post.readTime}M`,
+          keywords: post.tags,
+          author: personRef,
+          isPartOf: { '@id': `${SITE_URL}/blog#blog` },
+          inLanguage: 'en-US',
+        },
+      ),
+    };
+  })(),
 
   '/apps': {
     ...meta('/apps', {
       title: 'Apps — Nikhil Kulkarni',
-      description:
-        'The Progress App: an iOS and Android app that helps people build difficult habits with friends, built with React Native, Firebase, and WebSockets.',
+      description: `${progressApp.title}: an iOS and Android app that helps people build difficult habits with friends, built with ${progressApp.techStack.slice(0, 3).join(', ')}.`,
     }),
     jsonLd: graph(
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Apps', path: '/apps' }]),
       {
         '@type': 'SoftwareApplication',
-        name: 'The Progress App',
-        description: 'Build difficult habits with like-minded people.',
-        url: 'https://apps.apple.com/us/app/the-progress-app/id6503723392',
+        name: progressApp.title,
+        description: progressApp.description,
+        url: progressApp.appStoreLink,
         operatingSystem: 'iOS, Android',
         applicationCategory: 'LifestyleApplication',
-        keywords: 'React Native, Firebase, In App Purchases, Websockets, Node.js',
+        keywords: progressApp.techStack.join(', '),
         author: personRef,
       },
     ),
@@ -478,7 +470,7 @@ export const routeMeta: Record<string, RouteMeta> = {
     ...meta('/take-homes/weave', {
       title: 'PostHog Engineering Impact — Weave Take-Home — Nikhil Kulkarni',
       description:
-        'A take-home analysis of 59 engineers across posthog/posthog over a 90-day window: feature owners, reviewers, and infra specialists, ranked and explained.',
+        `A take-home analysis of ${weaveEngineerCount} engineers across ${weave.repo} over a ${weave.window_days}-day window: feature owners, reviewers, and infra specialists, ranked and explained.`,
       type: 'article',
     }),
     jsonLd: graph(
@@ -490,10 +482,10 @@ export const routeMeta: Record<string, RouteMeta> = {
         '@type': 'Article',
         headline: 'PostHog Engineering Impact',
         description:
-          'A take-home analysis of 59 engineers across posthog/posthog over a 90-day window: feature owners, reviewers, and infra specialists, ranked and explained.',
+          `A take-home analysis of ${weaveEngineerCount} engineers across ${weave.repo} over a ${weave.window_days}-day window: feature owners, reviewers, and infra specialists, ranked and explained.`,
         url: `${SITE_URL}/take-homes/weave`,
         mainEntityOfPage: `${SITE_URL}/take-homes/weave`,
-        datePublished: '2026-03-15',
+        datePublished: weaveGeneratedDate,
         keywords: ['Engineering Analytics', 'PostHog', 'Take-Home'],
         author: personRef,
         inLanguage: 'en-US',
