@@ -78,7 +78,37 @@ This path doesn't exist on nikhilkulkarni1755.com.
 - [Home](/)
 `;
 
-function notFound() {
+const NOT_FOUND_HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>404 Not Found</title>
+</head>
+<body>
+<h1>404 Not Found</h1>
+<p>This path doesn't exist on nikhilkulkarni1755.com.</p>
+<ul>
+<li><a href="/sitemap.xml">Sitemap</a></li>
+<li><a href="/llms.txt">llms.txt</a></li>
+<li><a href="/">Home</a></li>
+</ul>
+</body>
+</html>
+`;
+
+// A person's browser sends Accept: text/html (among other things); serve
+// that a real page, not raw markdown. Anything else — an explicit
+// Accept: text/markdown, or no meaningful Accept header at all (curl's
+// default */*, an agent that doesn't set one) — gets the markdown body.
+// Either way the status stays a real 404.
+function notFound(request) {
+  const accept = request.headers.get('accept') || '';
+  if (accept.includes('text/html')) {
+    return new Response(NOT_FOUND_HTML, {
+      status: 404,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
+  }
   return new Response(NOT_FOUND_BODY, {
     status: 404,
     headers: { 'content-type': 'text/markdown; charset=utf-8' },
@@ -107,13 +137,24 @@ function canonicalRoute(pathname) {
   return route || '/';
 }
 
+// D4 (agent-ready-coord/DECISIONS.md): /spearfishing/voice-agent renders a
+// hardcoded MOCK_DRUGS fallback when Supabase is empty/unreachable. It stays
+// in STATIC_ROUTES so it's still browsable for humans and doesn't false-404,
+// but every agent-facing surface excludes it so an agent is never pointed at
+// fabricated data as fact. W2 deliberately generates no markdown twin for it
+// either, so it's excluded here rather than left in with a broken promise.
+const AGENT_EXCLUDED_ROUTES = new Set(['/spearfishing/voice-agent']);
+
 // ora `agent-mode-view`: "a structured, machine-readable view with API
 // endpoints, authentication info, and key capabilities instead of marketing
-// HTML." Pages listed here are the real STATIC_ROUTES map plus blog posts
-// pulled from the same src/data/blogs.json src/App.tsx renders from —
-// nothing here is invented.
+// HTML." Pages listed here are the real STATIC_ROUTES map (minus the D4
+// exclusion above) plus blog posts pulled from the same src/data/blogs.json
+// src/App.tsx renders from — nothing here is invented, and every path listed
+// has a real W2 markdown twin (agent-ready-coord/lanes/W2.md's file list).
 function agentModeView() {
-  const pages = [...STATIC_ROUTES.entries()].map(([path, title]) => ({ path, title }));
+  const pages = [...STATIC_ROUTES.entries()]
+    .filter(([path]) => !AGENT_EXCLUDED_ROUTES.has(path))
+    .map(([path, title]) => ({ path, title }));
   for (const post of blogs) {
     pages.push({ path: `/blog/${post.slug}`, title: post.title });
   }
@@ -174,7 +215,7 @@ export async function onRequest(context) {
   const lastSegment = canonical.slice(canonical.lastIndexOf('/') + 1);
   const looksLikeRoute = !lastSegment.includes('.');
   if (looksLikeRoute && !isKnownRoute(canonical)) {
-    return notFound();
+    return notFound(request);
   }
 
   if (looksLikeRoute) {
@@ -209,7 +250,7 @@ export async function onRequest(context) {
   if (response.status === 200) {
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-      return notFound();
+      return notFound(request);
     }
   }
   return response;
