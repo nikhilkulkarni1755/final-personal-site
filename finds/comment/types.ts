@@ -11,9 +11,13 @@ export interface PostCommentInput {
   /** The Peerlist project id ("PRJ..."), e.g. finds_candidate_sightings.external_id. */
   activityId: string;
   /**
-   * Nikhil's exact string, byte for byte. Never trimmed, wrapped, escaped,
-   * or otherwise transformed before it reaches the wire -- see payload.ts
-   * and verifyFidelity.ts, which exist to prove that.
+   * Nikhil's exact string, as he wrote it. Never rewritten, reworded,
+   * trimmed, padded, or case-changed. It IS HTML-escaped and paragraph/
+   * line-break wrapped before it reaches the wire, per DECISIONS D13 --
+   * Peerlist's comment field is HTML, so sending this unescaped would
+   * corrupt what a reader sees rather than preserve it. See
+   * finds/comment/htmlEncode.ts (the one place that happens) and
+   * verifyFidelity.ts, which proves the RENDERED result is unchanged.
    */
   comment: string;
   /** Parent comment id ("CH..."), to reply instead of top-level. */
