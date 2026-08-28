@@ -160,3 +160,28 @@ export function citeRows(
     note: `${count} ${label} recorded against ${row.url} (${row.page_role})`,
   }));
 }
+
+/**
+ * Combine citation lists that may name the same evidence row twice.
+ *
+ * A verdict can legitimately cite one page for two reasons -- a pricing page
+ * that offers a free tier AND demands a terminal -- but `finds_verdict_evidence`
+ * is keyed on (verdict_id, evidence_id), so the row may appear once. Stance
+ * precedence is contradicts > supports > inconclusive: the strongest claim
+ * about a row is the one worth recording, and a row that argues against a
+ * criterion must never be softened by also having supported it.
+ */
+export function mergeCitations(...lists: ScoreCitation[][]): ScoreCitation[] {
+  const rank: Record<ScoreCitation['stance'], number> = { contradicts: 2, supports: 1, inconclusive: 0 };
+  const byEvidence = new Map<string, ScoreCitation>();
+  for (const citation of lists.flat()) {
+    const seen = byEvidence.get(citation.evidence_id);
+    if (!seen) {
+      byEvidence.set(citation.evidence_id, { ...citation });
+      continue;
+    }
+    seen.note = `${seen.note}; ${citation.note}`;
+    if (rank[citation.stance] > rank[seen.stance]) seen.stance = citation.stance;
+  }
+  return [...byEvidence.values()];
+}

@@ -71,3 +71,22 @@ test('one plan can carry several criteria, each with its own citations', () => {
     ['C1', 'C1', 'C4', 'C4'],
   );
 });
+
+test('one evidence row cited twice is refused before Postgres sees it', () => {
+  // finds_verdict_evidence is keyed on (verdict_id, evidence_id). Two citations
+  // of one row would fail on the primary key; mergeCitations() is the fix and
+  // this is the guard that says so.
+  assert.throws(
+    () =>
+      buildVerdictWrite(CANDIDATE, RUN, [
+        {
+          ...cited,
+          citations: [
+            { evidence_id: EVIDENCE, stance: 'supports', note: 'a free tier' },
+            { evidence_id: EVIDENCE, stance: 'contradicts', note: 'and a terminal' },
+          ],
+        },
+      ]),
+    /more than once/,
+  );
+});
