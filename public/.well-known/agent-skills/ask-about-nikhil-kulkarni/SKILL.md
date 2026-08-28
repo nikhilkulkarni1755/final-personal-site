@@ -39,6 +39,13 @@ you HTML with a 200, so use the prefix:
 - `/api/open-source`, `/api/resume`, `/api/posts`, `/api/apps`
 - `/api` — the index, which lists all of the above
 
+## Content served live
+
+`/interesting-finds` describes how a launch earns a place on the list, and those
+four criteria are in the corpus. The list itself is read from a table when the
+page loads, so it is not — and its length is not knowable from these tools.
+Absent from the corpus does not mean empty; fetch the page to see what is on it.
+
 ## What is not here
 
 `/spearfishing/voice-agent` is deliberately excluded. It renders a hardcoded

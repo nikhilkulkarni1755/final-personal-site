@@ -14,6 +14,9 @@ const json = (p) => JSON.parse(read(p));
 
 // ── literal evaluator: only plain JSON-able literals, never identifiers ──
 function literal(node) {
+  // `as const`, `satisfies T` and parentheses wrap the literal we want.
+  while (node && (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) ||
+         ts.isParenthesizedExpression(node))) node = node.expression;
   if (!node) return undefined;
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isNumericLiteral(node)) return Number(node.text);
@@ -102,9 +105,10 @@ function defaultExportName(src) {
 }
 
 const LOCALS = new Map();
-function extractPage(relPath) {
+function extractPage(relPath, inlines = {}) {
   const src = ts.createSourceFile(relPath, read(relPath), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const locals = new Map();
+  const inlined = new Set();
   const out = [];
   const push = (s) => { if (s) out.push(s); };
 
@@ -161,6 +165,13 @@ function extractPage(relPath) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = tagName(node);
       if (SKIP.has(tag)) return;
+      // Splice a child component's prose in where the page actually renders it,
+      // so it lands under the heading it belongs to rather than at the end.
+      if (inlines[tag] && !inlined.has(tag)) {
+        inlined.add(tag);
+        push('\n\n' + inlines[tag] + '\n\n');
+        return;
+      }
       if (ts.isJsxSelfClosingElement(node)) { if (tag === 'br') push('\n'); return; }
       if (CODEBLOCK.has(tag)) {
         const inner = [];
@@ -225,6 +236,20 @@ const PAGES = [
     records: ['src/data/apps.json'] },
   { id: 'privacy-policy', route: '/privacy-policy', title: 'Privacy Policy', kind: 'page',
     file: 'src/pages/Privacy.tsx' },
+  // The page's chrome and its four verification criteria are static and real.
+  // The finds themselves come from the `finds_published` table at page load,
+  // so they are not extractable here — and the build cannot know what the table
+  // holds. useFinds.ts is fail-closed (missing table, RLS error and genuinely
+  // empty all resolve to an empty list, never stub rows), so this page gets the
+  // same treatment as any other; D4's exclusion is still voice-agent alone.
+  { id: 'interesting-finds', route: '/interesting-finds', kind: 'page',
+    title: 'Interesting Finds', file: 'src/pages/InterestingFinds.tsx',
+    also: ['src/components/finds/CriteriaLegend.tsx'],
+    liveContent:
+      'The list of finds on this page is read live from Supabase when the page loads, so it ' +
+      'is not part of this corpus and its length is unknown here — this is not a statement ' +
+      'that the list is empty. Fetch https://nikhilkulkarni1755.com/interesting-finds to see ' +
+      'the current entries.' },
   { id: 'spearfishing-fireworks-ai', route: '/spearfishing/fireworks-ai', kind: 'page',
     title: 'Fireworks AI — disaggregated vs colocated inference', file: 'src/pages/FireworksAI.tsx',
     also: ['src/components/fireworks/Writeup.tsx', 'src/components/fireworks/LiveRunPanel.tsx'] },
@@ -246,10 +271,19 @@ for (const p of PAGES) {
   const records = (p.records ?? [])
     .map((f) => renderData(json(f).map(({ content: _c, ...r }) => r)))
     .join('\n\n');
-  const prose = [p.file, ...(p.also ?? [])].map(extractPage).join('\n\n');
+  const inlines = Object.fromEntries((p.also ?? []).map((f) =>
+    [f.slice(f.lastIndexOf('/') + 1).replace(/\.tsx$/, ''), extractPage(f)]));
+  let prose = extractPage(p.file, inlines);
+  // Anything the page never renders directly is appended rather than dropped.
+  for (const [tag, text] of Object.entries(inlines)) {
+    if (!prose.includes(text)) prose += '\n\n' + text;
+  }
   documents.push({
     id: p.id, route: p.route, url: SITE + p.route, title: p.title, kind: p.kind,
     tags: [], date: null, text: (prose + (records ? '\n\n' + records : '')).trim(),
+    // Declares what this document provably does NOT cover, so a reader never
+    // mistakes "not in the corpus" for "does not exist".
+    ...(p.liveContent ? { liveContent: p.liveContent } : {}),
   });
 }
 for (const p of POSTS) {

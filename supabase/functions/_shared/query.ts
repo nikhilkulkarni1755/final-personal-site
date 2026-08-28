@@ -43,9 +43,15 @@ function snippet(text: string, ts: string[], width = 320): string {
   return (start > 0 ? '…' : '') + raw + (start + width < text.length ? '…' : '');
 }
 
+/** Some pages render part of their content from a live table at page load. The
+ *  corpus cannot see it, and saying nothing would let a reader mistake "absent
+ *  from the corpus" for "does not exist". */
+export const liveContentOf = (d: Doc): string | undefined =>
+  'liveContent' in d ? d.liveContent : undefined;
+
 export interface SearchHit {
   id: string; title: string; url: string; route: string; kind: string;
-  score: number; snippet: string;
+  score: number; snippet: string; liveContent?: string;
 }
 
 export function search(query: string, limit = 5): SearchHit[] {
@@ -68,6 +74,7 @@ export function search(query: string, limit = 5): SearchHit[] {
       hits.push({
         id: d.id, title: d.title, url: d.url, route: d.route, kind: d.kind,
         score, snippet: snippet(d.text, ts),
+        ...(liveContentOf(d) ? { liveContent: liveContentOf(d) } : {}),
       });
     }
   }
@@ -84,6 +91,7 @@ export function listDocuments() {
   return content.documents.map((d) => ({
     id: d.id, route: d.route, url: d.url, title: d.title, kind: d.kind,
     tags: d.tags, date: d.date, chars: d.text.length,
+    ...(liveContentOf(d) ? { liveContent: liveContentOf(d) } : {}),
   }));
 }
 

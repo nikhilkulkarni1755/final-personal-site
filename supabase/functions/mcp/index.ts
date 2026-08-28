@@ -5,7 +5,8 @@
 // Read-only and unauthenticated by design: there is no user data and no side
 // effects, so there is nothing to authorise (R1 §5.3).
 import {
-  content, getDocument, getProject, listDocuments, listProjects, openSource, search,
+  content, getDocument, getProject, listDocuments, listProjects, liveContentOf,
+  openSource, search,
 } from '../_shared/query.ts';
 import { TOOLS } from '../_shared/tools.ts';
 
@@ -63,9 +64,17 @@ function callTool(name: string, args: Record<string, unknown>) {
         throw new Error(
           `no document "${args.id}". Available ids: ${listDocuments().map((d) => d.id).join(', ')}`);
       }
+      const live = liveContentOf(doc);
       return {
-        id: doc.id, title: doc.title, url: doc.url, text: doc.text,
-        metadata: { route: doc.route, kind: doc.kind, tags: doc.tags, date: doc.date },
+        id: doc.id, title: doc.title, url: doc.url,
+        // Appended to the text, not merged into it: the corpus stays purely
+        // extracted, while a model reading only `text` still learns that part
+        // of this page is served live and is not represented here.
+        text: live ? `${doc.text}\n\n---\n**Live content:** ${live}` : doc.text,
+        metadata: {
+          route: doc.route, kind: doc.kind, tags: doc.tags, date: doc.date,
+          ...(live ? { liveContent: live } : {}),
+        },
       };
     }
     case 'list_projects':

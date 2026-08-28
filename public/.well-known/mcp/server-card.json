@@ -146,6 +146,11 @@
       "mimeType": "text/markdown"
     },
     {
+      "uri": "site://interesting-finds",
+      "name": "Interesting Finds",
+      "mimeType": "text/markdown"
+    },
+    {
       "uri": "site://spearfishing-fireworks-ai",
       "name": "Fireworks AI — disaggregated vs colocated inference",
       "mimeType": "text/markdown"
