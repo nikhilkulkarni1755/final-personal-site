@@ -41,3 +41,17 @@ export interface DigestInput {
   date: string;
   finds: EmailFind[];
 }
+
+/**
+ * What a real run hands to the CLIs: the render input, plus the real
+ * `finds_candidates.id` for each entry in `digest.finds`, aligned by index.
+ * dry-run.ts only reads `.digest` (candidate ids are irrelevant to a
+ * render-only preview); send.ts needs both, because writing to
+ * finds_digest_items and enforcing "never send the same find twice"
+ * (finds_digests, migration 20260828210500) requires the real candidate id.
+ */
+export interface DigestSelection {
+  digest: DigestInput;
+  /** Same length and order as `digest.finds`. */
+  candidateIds: string[];
+}
