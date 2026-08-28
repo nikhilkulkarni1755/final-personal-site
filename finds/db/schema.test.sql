@@ -182,8 +182,8 @@ BEGIN
 
     -- The check is deferred to COMMIT, so a subtransaction is what proves it.
     BEGIN
-        INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
-        VALUES (cand, run, 'C4', 3, 'feels agentic', 'test');
+        INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
+        VALUES (cand, run, 'C4', 3, 'feels agentic', 'test', 'test/1');
         -- force the deferred constraint to fire without ending the outer txn
         SET CONSTRAINTS ALL IMMEDIATE;
         RAISE EXCEPTION 'an uncited score was accepted';
@@ -204,8 +204,8 @@ BEGIN
     SELECT id INTO cand FROM finds_candidates LIMIT 1;
     SELECT id, crawl_run_id INTO ev, run FROM finds_evidence LIMIT 1;
 
-    INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
-    VALUES (cand, run, 'C1', 3, 'pricing page states free tier; quoted', 'test')
+    INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
+    VALUES (cand, run, 'C1', 3, 'pricing page states free tier; quoted', 'test', 'test/1')
     RETURNING id INTO v;
     INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
     VALUES (v, ev, cand, 'supports');
@@ -446,6 +446,194 @@ BEGIN
         DELETE FROM finds_crawl_verdicts WHERE id = denied;
         RAISE EXCEPTION 'a verdict row was deleted -- it is the audit trail';
     EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+END $$;
+
+-- --------------------------------------------------------------------------
+-- A citation may say "we looked and could not tell"
+-- --------------------------------------------------------------------------
+-- Score 1 means "no evidence either way". Without this stance the only way to
+-- record a 1 was to mislabel its citations as supporting or contradicting,
+-- which would make D7's audit trail lie in exactly the cases where nothing was
+-- proven -- and 'contradicts' would accuse a real company of something their
+-- own page does not show.
+DO $$
+DECLARE
+    cand UUID;
+    run  UUID;
+    ev   UUID;
+    v    UUID;
+BEGIN
+    SET CONSTRAINTS ALL DEFERRED;
+
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id, crawl_run_id INTO ev, run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score,
+                                rationale, scored_by, rubric_version)
+    VALUES (cand, run, 'C3', 1, 'docs never say whether an account is required',
+            'test', 'test/1')
+    RETURNING id INTO v;
+
+    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
+    VALUES (v, ev, cand, 'inconclusive');
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    -- and the enum is still closed
+    BEGIN
+        UPDATE finds_verdict_evidence SET stance = 'probably' WHERE verdict_id = v;
+        RAISE EXCEPTION 'an arbitrary stance was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+END $$;
+
+-- --------------------------------------------------------------------------
+-- A verdict records the rubric that produced it
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand UUID;
+    run  UUID;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT crawl_run_id INTO run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    BEGIN
+        INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score,
+                                    rationale, scored_by, rubric_version)
+        VALUES (cand, run, 'C2', 2, 'niche', 'test', '   ');
+        RAISE EXCEPTION 'a blank rubric_version was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+END $$;
+
+-- --------------------------------------------------------------------------
+-- finds_write_verdict: the D7/D17 bridge
+-- --------------------------------------------------------------------------
+-- The point of these is that each call is ONE statement, which is what one
+-- PostgREST request gives you. If the function needed a second statement to
+-- satisfy the deferred trigger it would fail here exactly as the two-call
+-- client sequence does.
+DO $$
+DECLARE
+    cand    UUID;
+    run     UUID;
+    ev      UUID;
+    other   UUID;
+    other_e UUID;
+    n       INTEGER;
+    got     SMALLINT;
+    stance  TEXT;
+    rubric  TEXT;
+BEGIN
+    -- an earlier block left constraints IMMEDIATE; the deferred trigger is the
+    -- whole point of these cases, so put them back.
+    SET CONSTRAINTS ALL DEFERRED;
+
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id, crawl_run_id INTO ev, run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    -- one statement writes four verdicts and their citations
+    SELECT finds_write_verdict(cand, run, 'R2-scoring/1.1', jsonb_build_array(
+        jsonb_build_object('criterion','C1','score',3,'rationale','quoted from pricing',
+            'scored_by','test','citations', jsonb_build_array(
+                jsonb_build_object('evidence_id', ev, 'stance','supports'))),
+        jsonb_build_object('criterion','C2','score',2,'rationale','narrow audience',
+            'scored_by','test','citations', jsonb_build_array(
+                jsonb_build_object('evidence_id', ev, 'stance','supports'))),
+        jsonb_build_object('criterion','C3','score',1,'rationale','could not tell',
+            'scored_by','test','citations', jsonb_build_array(
+                jsonb_build_object('evidence_id', ev, 'stance','inconclusive'))),
+        -- stance omitted on purpose: the column default must apply
+        jsonb_build_object('criterion','C4','score',0,'rationale','no API mentioned',
+            'scored_by','test','citations', jsonb_build_array(
+                jsonb_build_object('evidence_id', ev)))
+    )) INTO n;
+    ASSERT n = 4, format('finds_write_verdict wrote %s verdicts, expected 4', n);
+
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    SELECT count(*) INTO n FROM finds_verdicts
+     WHERE candidate_id = cand AND rubric_version = 'R2-scoring/1.1';
+    ASSERT n = 4, format('%s verdicts carry the rubric version, expected 4', n);
+
+    SELECT ve.stance INTO stance FROM finds_verdict_evidence ve
+      JOIN finds_verdicts vv ON vv.id = ve.verdict_id
+     WHERE vv.criterion = 'C4' AND vv.candidate_id = cand;
+    ASSERT stance = 'supports',
+           format('a citation with no stance stored %s, expected the column default', stance);
+
+    -- Re-scoring replaces both the score and its citations -- and note the
+    -- constraints are IMMEDIATE right now, from the assertion above. The
+    -- function must defer them itself, because its delete-then-insert leaves
+    -- the verdict briefly uncited.
+    SELECT finds_write_verdict(cand, run, 'R2-scoring/1.2', jsonb_build_array(
+        jsonb_build_object('criterion','C1','score',0,'rationale','claim disproved',
+            'scored_by','test','citations', jsonb_build_array(
+                jsonb_build_object('evidence_id', ev, 'stance','contradicts')))
+    )) INTO n;
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    SELECT score INTO got FROM finds_verdicts
+     WHERE candidate_id = cand AND evidence_run_id = run AND criterion = 'C1';
+    ASSERT got = 0, format('re-score left score at %s, expected 0', got);
+
+    SELECT count(*) INTO n FROM finds_verdict_evidence ve
+      JOIN finds_verdicts vv ON vv.id = ve.verdict_id
+     WHERE vv.criterion = 'C1' AND vv.candidate_id = cand;
+    ASSERT n = 1, format('re-score left %s citations on C1, expected 1', n);
+
+    SELECT rubric_version INTO rubric FROM finds_verdicts
+     WHERE candidate_id = cand AND evidence_run_id = run AND criterion = 'C1';
+    ASSERT rubric = 'R2-scoring/1.2',
+           format('re-score left rubric_version at %s, expected R2-scoring/1.2', rubric);
+END $$;
+
+-- The function refuses what the constraint refuses.
+DO $$
+DECLARE
+    cand    UUID;
+    run     UUID;
+    other   UUID;
+    other_e UUID;
+    n       INTEGER;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT crawl_run_id INTO run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    SET CONSTRAINTS ALL DEFERRED;
+
+    -- an uncited score, named by criterion
+    BEGIN
+        SELECT finds_write_verdict(cand, run, 'R2-scoring/1.1', jsonb_build_array(
+            jsonb_build_object('criterion','C2','score',3,'rationale','vibes',
+                'scored_by','test','citations', '[]'::jsonb))) INTO n;
+        RAISE EXCEPTION 'the RPC accepted an uncited score';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+
+    -- a missing rubric version
+    BEGIN
+        SELECT finds_write_verdict(cand, run, '', jsonb_build_array(
+            jsonb_build_object('criterion','C2','score',3,'rationale','x',
+                'scored_by','test','citations', jsonb_build_array(
+                    jsonb_build_object('evidence_id',
+                        (SELECT id FROM finds_evidence WHERE candidate_id = cand LIMIT 1)))))) INTO n;
+        RAISE EXCEPTION 'the RPC accepted a blank rubric version';
+    EXCEPTION WHEN invalid_parameter_value THEN NULL;
+    END;
+
+    -- another product's evidence, smuggled in via the payload. candidate_id is
+    -- taken from the argument, so the composite FK still refuses it.
+    SELECT id INTO other FROM finds_candidates WHERE name = 'Other';
+    SELECT id INTO other_e FROM finds_evidence WHERE candidate_id = other LIMIT 1;
+    BEGIN
+        SELECT finds_write_verdict(cand, run, 'R2-scoring/1.1', jsonb_build_array(
+            jsonb_build_object('criterion','C2','score',3,'rationale','x',
+                'scored_by','test','citations', jsonb_build_array(
+                    jsonb_build_object('evidence_id', other_e, 'stance','supports'))))) INTO n;
+        RAISE EXCEPTION 'the RPC cited another product''s evidence';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
     END;
 END $$;
 
