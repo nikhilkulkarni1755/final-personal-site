@@ -24,7 +24,8 @@ async function main(): Promise<void> {
     console.log(`\nallowed pages (${result.allowed.length}${result.truncated ? ', truncated' : ''}):`);
     for (const v of result.allowed) {
       const use = v.use_rights ? ` [llm_ingest=${v.use_rights.llm_ingest} publish_excerpt=${v.use_rights.publish_excerpt} publish_link=${v.use_rights.publish_link}]` : '';
-      console.log(`  ALLOW    ${v.url}  (${v.reason_code})${use}`);
+      const page = v.page.kind === 'fetched' ? ` (page: ${v.page.http_status}, ${v.page.body.length}B${v.page.truncated ? ' truncated' : ''})` : v.page.kind === 'not_fetched' ? ' (page: not fetched)' : ` (page error: ${v.page.error})`;
+      console.log(`  ALLOW    ${v.url}  (${v.reason_code})${use}${page}`);
     }
     console.log(`\ndisallowed pages (${result.disallowed.length}):`);
     for (const v of result.disallowed) console.log(`  DISALLOW ${v.url}  -- ${v.reason_code}: ${v.reason_detail}`);
@@ -32,7 +33,18 @@ async function main(): Promise<void> {
   }
 
   const verdict = await checkPage(url);
-  console.log(JSON.stringify(verdict, null, 2));
+  // D21: `page.body` can be the whole page; print it separately, truncated,
+  // rather than burying it (and every other field) in one giant JSON blob.
+  const { page, ...verdictWithoutBody } = verdict;
+  console.log(JSON.stringify(verdictWithoutBody, null, 2));
+  if (page.kind === 'fetched') {
+    console.log(`\npage: ${page.http_status} ${page.content_type ?? '(no content-type)'} -- ${page.body.length} bytes${page.truncated ? ' (truncated)' : ''}, sha256 ${page.content_sha256}`);
+    console.log(page.body.slice(0, 500) + (page.body.length > 500 ? '\n... (truncated for display)' : ''));
+  } else if (page.kind === 'error') {
+    console.log(`\npage fetch error: ${page.error}`);
+  } else {
+    console.log('\npage: not fetched (verdict was not allowed, or the run\'s page budget was already spent)');
+  }
 }
 
 main().catch((err) => {
