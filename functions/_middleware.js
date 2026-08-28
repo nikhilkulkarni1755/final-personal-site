@@ -68,6 +68,16 @@ const STATIC_ROUTES = new Map([
 
 const BLOG_SLUGS = new Set(blogs.map((post) => post.slug));
 
+// Every :param route App.tsx defines, each with the one-line decision about
+// how it's handled below — an explicit acknowledgment, not just a regex
+// that happens to match. functions/_lib/check-routes.mjs fails the build
+// if App.tsx gains a parameterised route not listed here, naming it, so the
+// next dynamic route becomes a build failure instead of a silent 404.
+const DYNAMIC_ROUTES = [
+  { path: '/blog/:slug', reason: 'enumerated from src/data/blogs.json — a fake slug still 404s' },
+  { path: '/interesting-finds/:slug', reason: 'passed through unchecked — D38 forbids reading the Supabase table these slugs live in from this lane' },
+];
+
 function isKnownRoute(pathname) {
   if (STATIC_ROUTES.has(pathname)) return true;
   const blogSlug = pathname.match(/^\/blog\/([^/]+)$/);
