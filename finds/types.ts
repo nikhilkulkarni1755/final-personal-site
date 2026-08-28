@@ -302,21 +302,30 @@ export type NewVerdict = Pick<
 export type CitationStance = 'supports' | 'contradicts' | 'inconclusive';
 
 /**
- * A row of `finds_verdict_evidence`. `candidate_id` is redundant on purpose --
- * it is what lets both foreign keys be composite, making a citation of another
- * product's evidence a foreign-key violation rather than a review catch.
+ * A row of `finds_verdict_evidence`. `candidate_id` and `evidence_run_id` are
+ * both redundant on purpose -- they are what let the foreign keys be composite,
+ * so citing another product's evidence, or evidence from a crawl generation
+ * this score did not read, is a foreign-key violation rather than a review
+ * catch.
+ *
+ * The run matters because evidence is append-only: several generations of the
+ * same page coexist, and citing across them would reintroduce exactly the drift
+ * immutability buys. A re-crawl that fixed a 404 would otherwise let a stale
+ * score keep citing the 404.
  */
 export interface VerdictEvidenceRow {
   verdict_id: string;
   evidence_id: string;
   candidate_id: string;
+  /** Must equal the verdict's `evidence_run_id` and the evidence's `crawl_run_id`. */
+  evidence_run_id: string;
   stance: CitationStance;
   created_at: Timestamp;
 }
 
 export type NewVerdictEvidence = Pick<
   VerdictEvidenceRow,
-  'verdict_id' | 'evidence_id' | 'candidate_id'
+  'verdict_id' | 'evidence_id' | 'candidate_id' | 'evidence_run_id'
 > &
   Partial<Pick<VerdictEvidenceRow, 'stance'>>;
 
@@ -650,10 +659,11 @@ export interface WriteVerdictPayload {
  * it uncited, and the transaction aborts -- correctly. One function call is one
  * transaction, so it can satisfy the constraint that two calls cannot.
  *
- * Every guarantee still holds at COMMIT: the deferred trigger runs, and
- * `candidate_id` for each citation is taken from `p_candidate_id` rather than
- * from the payload, so the composite FK still makes citing another product's
- * evidence impossible.
+ * Every guarantee still holds at COMMIT: the deferred trigger runs, and both
+ * `candidate_id` and `evidence_run_id` for each citation are taken from the
+ * arguments rather than from the payload -- so the composite FKs make citing
+ * another product's evidence, or evidence from a generation this score did not
+ * read, impossible even if the payload asks for it.
  *
  * Service role only -- EXECUTE is revoked from anon and authenticated, because
  * PostgREST exposes every function as an endpoint and this one writes.
