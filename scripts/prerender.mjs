@@ -131,7 +131,9 @@ async function main() {
   });
   const origin = server.resolvedUrls.local[0].replace(/\/$/, '');
 
-  const browser = await chromium.launch();
+  // --no-sandbox: CI build containers run as root, where Chromium's sandbox refuses to
+  // start. The only page this browser ever opens is our own freshly built dist/.
+  const browser = await chromium.launch({ args: ['--no-sandbox'] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 
   // A build is not a visitor. Without this, every prerender run inserts a page_view row
