@@ -12,6 +12,8 @@
 #     anon while it is drafted, invisible while it is scheduled, visible once
 #     the timestamp passes, and invisible again after an unpublish -- with RLS
 #     on and the anon role really set, which is exactly what W7's useFinds gets;
+#   * a re-crawled candidate is published from the generation it was last
+#     SCORED on, score and quote together, never a mix of two;
 #   * the DECISIONS D23 case is refused: a tenant on a shared host whose
 #     evidence includes a page the host wrote never reaches the table at all.
 #
@@ -57,10 +59,22 @@ unset PGOPTIONS
 #              /pricing -- a page the HOST wrote. This is D23's mechanism, and
 #              it is the shape 45% of one real day's candidates had.
 #
+# TWO NAMED GENERATIONS, defined once and never spelled out again. Evidence is
+# append-only, so a candidate really does accumulate them: GEN_A is one crawl
+# pass over BOTH candidates (a pass covers many), and GEN_B is a later re-crawl
+# of w11-own alone. Every insert below takes the generation as an argument, so
+# no literal run id survives outside these two lines and a citation cannot be
+# pointed at the wrong generation by accident -- it would have to be asked for.
+# That is W5's shape, adopted after its fixture hit the same constraint: a
+# fixture that does not model the invariant the production code maintains will
+# eventually assert something production would never do.
+#
 # One transaction, because D7's constraint trigger is DEFERRABLE INITIALLY
 # DEFERRED: a verdict and its citations must commit together or not at all.
 # ---------------------------------------------------------------------------
 psql >/dev/null <<'SETUP'
+\set GEN_A 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+\set GEN_B 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 BEGIN;
 INSERT INTO finds_sources (slug, display_name, homepage_url) VALUES
   ('w11_proof', 'W11 Proof Source', 'https://w11-source.invalid/');
@@ -96,33 +110,51 @@ SELECT '1.1', 'w11-publish-proof', c.id, p.url,
  WHERE (p.owner = 'own'  AND c.product_url = 'https://w11-own.invalid/')
     OR (p.owner = 'host' AND c.product_url = 'https://w11-host.invalid/maker/w11-tool');
 
-INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role, http_status, quotes)
-SELECT v.candidate_id, v.id,
-       CASE WHEN c.product_url = 'https://w11-own.invalid/'
-            THEN '11111111-1111-4111-8111-111111111111'::uuid
-            ELSE '22222222-2222-4222-8222-222222222222'::uuid END,
-       v.url,
+-- The crawl itself, once per generation. The quote carries its generation's
+-- label so the published page can be checked against the run it came from.
+INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role,
+       http_status, fetched_at, quotes)
+SELECT v.candidate_id, v.id, g.run::uuid, v.url,
        CASE WHEN v.url LIKE '%/docs' THEN 'docs'
             WHEN v.url LIKE '%/pricing' THEN 'pricing'
             WHEN v.url LIKE '%/legal' THEN 'other'
             ELSE 'homepage' END,
-       200,
+       200, NOW() - g.age,
        CASE WHEN v.url = 'https://w11-host.invalid/pricing'
-            THEN '[{"text":"Start a free 30 day trial today"}]'::jsonb
-            ELSE ('[{"text":"quoted from ' || v.url || '"}]')::jsonb END
-  FROM finds_crawl_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id;
+            THEN ('[{"text":"' || g.label || ': Start a free 30 day trial today"}]')::jsonb
+            ELSE ('[{"text":"' || g.label || ': quoted from ' || v.url || '"}]')::jsonb END
+  FROM finds_crawl_verdicts v
+  JOIN finds_candidates c ON c.id = v.candidate_id
+  CROSS JOIN LATERAL (VALUES
+    (:'GEN_A', 'first crawl', INTERVAL '2 days'),
+    (:'GEN_B', 're-crawl',    INTERVAL '1 hour')
+  ) AS g(run, label, age)
+ WHERE g.run = :'GEN_A' OR c.product_url = 'https://w11-own.invalid/';
 
--- Four criteria per candidate, each citing a page. On the hosted candidate C1
--- cites the HOST's pricing page as a contradiction: that is the exact
--- fabrication V1 found in a real run.
-INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
-SELECT e.candidate_id, e.crawl_run_id, k.criterion, k.score,
-       'proof rationale for ' || k.criterion, 'rubric', '1.0'
+-- Four criteria per GENERATION, not per candidate: a re-crawl is re-scored.
+-- created_at is explicit because every row in one transaction shares NOW(),
+-- and db.ts picks the most recently scored generation -- so without a real gap
+-- there would be nothing to pick between. GEN_A's scores are deliberately 0 so
+-- the published numbers can be traced to the generation they came from.
+-- On the hosted candidate C1 cites the HOST's pricing page as a contradiction:
+-- that is the exact fabrication V1 found in a real run.
+INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale,
+       scored_by, rubric_version, created_at)
+SELECT e.candidate_id, e.crawl_run_id, k.criterion,
+       CASE WHEN e.crawl_run_id::text = :'GEN_A' THEN 0 ELSE k.score END,
+       'proof rationale for ' || k.criterion, 'rubric', '1.0',
+       NOW() - CASE WHEN e.crawl_run_id::text = :'GEN_A'
+                    THEN INTERVAL '2 days' ELSE INTERVAL '1 hour' END
   FROM (SELECT DISTINCT candidate_id, crawl_run_id FROM finds_evidence) e
   CROSS JOIN (VALUES ('C1', 2), ('C2', 1), ('C3', 2), ('C4', 3)) AS k(criterion, score);
 
-INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
-SELECT v.id, e.id, v.candidate_id,
+-- THE GENERATION IS THE JOIN KEY, not an afterthought. A citation is scoped to
+-- the run its verdict scored -- the same narrowing loadGeneration() performs in
+-- production, and what migration 20260828211000's three-column foreign key now
+-- enforces. evidence_run_id is taken from the verdict for the same reason
+-- finds_write_verdict takes it from its argument: never from the citation.
+INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, evidence_run_id, stance)
+SELECT v.id, e.id, v.candidate_id, v.evidence_run_id,
        CASE WHEN e.url = 'https://w11-host.invalid/pricing' THEN 'contradicts' ELSE 'supports' END
   FROM finds_verdicts v
   JOIN finds_evidence e ON e.candidate_id = v.candidate_id AND e.crawl_run_id = v.evidence_run_id
@@ -239,7 +271,17 @@ command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
 command psql "$DB" -X -q -v ON_ERROR_STOP=1 -c \
   "SET ROLE anon;
    SELECT jsonb_pretty(citations) FROM finds_published;"
-echo "PASS  the site can read it"
+psql -c "DO \$\$ BEGIN
+  ASSERT (SELECT bool_and(j->>'quote' LIKE 're-crawl:%')
+            FROM finds_published, jsonb_array_elements(citations) j WHERE j ? 'quote'),
+         'a published quote must come from the generation the published score was read from';
+  ASSERT (SELECT score_agentic_friendly FROM finds_published) = 3,
+         'the published score must come from the newest scored generation, not the first crawl';
+  ASSERT NOT EXISTS (SELECT 1 FROM finds_published, jsonb_array_elements(citations) j
+                      WHERE j->>'url' LIKE '%/legal' AND j ? 'quote'),
+         'a noindex page may be linked and not excerpted';
+END \$\$;" >/dev/null
+echo "PASS  the site can read it, from the generation it was last scored on"
 
 echo
 echo "=== 5. unpublish: published_at = NULL, the row stays ==="
