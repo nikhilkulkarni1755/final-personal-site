@@ -24,7 +24,7 @@ import { scoreCandidate } from './score.ts';
 import type { ScoreInput } from './score.ts';
 import { selectForDay } from './select.ts';
 import type { SelectionCandidate } from './select.ts';
-import { toDigestInput } from './digest.ts';
+import { toDigestSelection } from './digest.ts';
 
 const mode = process.argv[2];
 const input = JSON.parse(await new Response(process.stdin).text()) as unknown;
@@ -43,7 +43,7 @@ if (mode === 'score') {
 } else if (mode === 'select') {
   const { date, candidates } = input as { date: string; candidates: SelectionCandidate[] };
   const selection = selectForDay(date, candidates);
-  console.log(JSON.stringify({ selection, digest: toDigestInput(selection) }));
+  console.log(JSON.stringify({ selection, digest: toDigestSelection(selection) }));
 } else {
   console.error('usage: node finds/score/offline.ts score|select  < input.json');
   process.exit(2);

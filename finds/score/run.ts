@@ -8,10 +8,11 @@
  * `finds_undigested_candidates` for exactly the reason this prints instead:
  * a selection is not a send, and only a send may consume a candidate.
  *
- * With an output path, `select` writes W6's DigestInput there -- the handoff
- * W10's daily runner passes to finds/email/send.ts. Nothing else writes that
- * file, and it is NOT written on a day with no picks: an empty day must not
- * become an empty digest.
+ * With an output path, `select` writes W6's DigestSelection there -- the handoff
+ * W10's daily runner passes to finds/email/send.ts, carrying the render input
+ * and the real candidate ids send.ts needs for finds_digest_items. Nothing else
+ * writes that file, and it is NOT written on a day with no picks: an empty day
+ * must not become an empty digest.
  *
  * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (D17). Absent, W2's
  * getSupabaseClient() fails loud and this exits non-zero rather than
@@ -23,7 +24,7 @@ import { buildVerdictWrite } from './persist.ts';
 import { candidatesToScore, getSupabaseClient, latestGeneration, loadGeneration, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
-import { toDigestInput } from './digest.ts';
+import { toDigestSelection } from './digest.ts';
 
 async function score(): Promise<number> {
   const db = getSupabaseClient();
@@ -85,12 +86,12 @@ async function select(date: string, outputPath?: string): Promise<number> {
   // empty day must not become an empty digest, and W10's stage reports the
   // absent file rather than W6 mailing nothing.
   if (outputPath) {
-    const input = toDigestInput(selection);
-    if (input === null) {
+    const handoff = toDigestSelection(selection);
+    if (handoff === null) {
       console.log(`\nNo digest written to ${outputPath}: nothing was selected.`);
     } else {
-      writeFileSync(outputPath, `${JSON.stringify(input, null, 2)}\n`);
-      console.log(`\nDigest input written to ${outputPath} (${input.finds.length} find(s)).`);
+      writeFileSync(outputPath, `${JSON.stringify(handoff, null, 2)}\n`);
+      console.log(`\nDigest selection written to ${outputPath} (${handoff.digest.finds.length} find(s)).`);
     }
   }
   return 0;

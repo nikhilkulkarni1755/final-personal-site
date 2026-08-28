@@ -227,10 +227,13 @@ let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
   const dropped = selection.rejected.find(r => r.name.includes("design canvas"));
   if (!dropped) fail("a waitlisted product was not rejected");
   if (dropped.reason !== "contradicted" || !dropped.detail.startsWith("C3 scored 0")) fail("rejected, but not for the waitlist");
-  if (!digest || digest.finds.length !== 1) fail("the digest handoff was not produced");
-  const c1 = digest.finds[0].criteria.find(c => c.id === "C1");
-  if (c1.score === undefined) fail("the digest must carry the 0-3 score alongside the boolean");
-  if (digest.finds[0].criteria.length !== 4) fail("the digest needs all four criteria");
+  if (!digest || digest.digest.finds.length !== 1) fail("the digest handoff was not produced");
+  const find = digest.digest.finds[0];
+  if (find.criteria.length !== 4) fail("the digest needs all four criteria");
+  const c1 = find.criteria.find(c => c.id === "C1");
+  if (c1.score === undefined || c1.status === undefined) fail("C1 must carry both its score and its three-way status");
+  if (find.criteria.some(c => "verdict" in c)) fail("the flattening boolean must be gone");
+  if (digest.candidateIds.length !== digest.digest.finds.length) fail("candidate ids must align with finds");
 });' <<<"$RESULT"
 echo "PASS  selection picked the usable product, rejected the waitlisted one by criterion, and produced W6's handoff"
 
