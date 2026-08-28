@@ -16,27 +16,26 @@
  * which generation it scored; overwriting would make every citation ambiguous.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../sources/db.ts';
 import type { CrawlRecord, CrawlResult } from './crawl.ts';
 import { registrableDomain } from './scope.ts';
 import type { GateDecision, NewCrawlVerdict, NewEvidence } from './types.ts';
 
 /**
- * DECISIONS D17 fixes these names for every lane. SUPABASE_URL falls back to
- * VITE_SUPABASE_URL because the site already defines that one; the service-role
- * key has no VITE_ fallback and must never get one -- a VITE_ prefix ships it
- * to every browser, and it bypasses RLS.
+ * The datastore let us down, as opposed to a site or a candidate doing so.
+ *
+ * The batch runner needs to tell these apart and it cannot do it by reading
+ * message text. D3's shape is that one bad candidate must not kill the run,
+ * while a database that is refusing writes must -- carrying on would mean
+ * crawling another 40 sites and throwing every row away, which is real load on
+ * real people's servers in exchange for nothing.
  */
-function requireEnv(name: string, fallback?: string): string {
-  const value = process.env[name] ?? (fallback ? process.env[fallback] : undefined);
-  if (!value) {
-    throw new Error(
-      `${name} is not set. W4 cannot write evidence without it and will not pretend it did. ` +
-        `finds_evidence and finds_crawl_verdicts REVOKE anon and authenticated, so the service ` +
-        `role is required (DECISIONS D17).`,
-    );
+export class DatastoreError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'DatastoreError';
   }
-  return value;
 }
 
 /**
@@ -90,17 +89,21 @@ export interface PersistResult {
   evidence: number;
 }
 
-export async function persistCrawl(candidateId: string, result: CrawlResult): Promise<PersistResult> {
+export async function persistCrawl(
+  candidateId: string,
+  result: CrawlResult,
+  /**
+   * D17/D19: one database credential for the whole initiative, through the
+   * client every other lane already uses. Injectable only so the batch runner
+   * can be driven over real sites without a datastore -- there is no second
+   * credential path and no default other than this one.
+   */
+  supabase: SupabaseClient = getSupabaseClient(),
+): Promise<PersistResult> {
   const records: readonly CrawlRecord[] = result.records;
   if (records.length === 0) {
     throw new Error('Refusing to record a crawl pass that produced no rows; even a refusal produces one.');
   }
-
-  const supabase = createClient(
-    requireEnv('SUPABASE_URL', 'VITE_SUPABASE_URL'),
-    requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
-    { auth: { persistSession: false } },
-  );
 
   // Verdicts first, including the DENYs: those rows are the proof we behaved,
   // and R2 §6.3 says a refusal produces a row exactly as a fetch does.
@@ -109,9 +112,9 @@ export async function persistCrawl(candidateId: string, result: CrawlResult): Pr
     .from('finds_crawl_verdicts')
     .insert(verdictRows)
     .select('id');
-  if (verdictError) throw new Error(`finds_crawl_verdicts insert failed: ${verdictError.message}`);
+  if (verdictError) throw new DatastoreError(`finds_crawl_verdicts insert failed: ${verdictError.message}`);
   if (verdicts?.length !== records.length) {
-    throw new Error(`Expected ${records.length} verdict ids back, got ${verdicts?.length ?? 0}.`);
+    throw new DatastoreError(`Expected ${records.length} verdict ids back, got ${verdicts?.length ?? 0}.`);
   }
 
   // Evidence only for what we were allowed to fetch. A refusal's proof is its
@@ -127,7 +130,7 @@ export async function persistCrawl(candidateId: string, result: CrawlResult): Pr
     .from('finds_evidence')
     .insert(evidenceRows)
     .select('id');
-  if (evidenceError) throw new Error(`finds_evidence insert failed: ${evidenceError.message}`);
+  if (evidenceError) throw new DatastoreError(`finds_evidence insert failed: ${evidenceError.message}`);
 
   return { crawlRunId: result.crawlRunId, verdicts: verdicts.length, evidence: evidence?.length ?? 0 };
 }

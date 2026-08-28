@@ -32,7 +32,8 @@
     "run:test": "node --test finds/run/pipeline.test.ts",
     "run:prove": "bash finds/run/prove-daily.sh",
     "score:prove-pipeline": "bash finds/score/prove-pipeline.sh",
-    "score:run": "node finds/score/run.ts"
+    "score:run": "node finds/score/run.ts",
+    "verify:daily": "node finds/verify/daily.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
