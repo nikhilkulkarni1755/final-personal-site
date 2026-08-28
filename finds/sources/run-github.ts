@@ -1,10 +1,8 @@
-import { getSupabaseClient } from './db.ts';
-import { ensureSource, recordFailure, recordSuccess } from './health.ts';
-import { upsertCandidate, upsertSighting } from './ingest.ts';
 import { fetchNewGithubRepos } from './github.ts';
 
 // Daily GitHub ingest. Usage:
 //   GITHUB_TOKEN=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-github.ts
+// Dry run (fetch only, never touches the database): GITHUB_TOKEN=... node finds/sources/run-github.ts --dry
 //
 // `created:>=` is day-granular (GitHub has no time-of-day filter), so the
 // window is "yesterday and today" -- a day of overlap against a missed cron
@@ -12,6 +10,25 @@ import { fetchNewGithubRepos } from './github.ts';
 // (source_id, external_id) uniqueness absorbs the overlap.
 
 const GITHUB_LOOKBACK_DAYS = Number(process.env.GITHUB_LOOKBACK_DAYS ?? 1);
+const DRY = process.argv.includes('--dry');
+
+const since = new Date(Date.now() - GITHUB_LOOKBACK_DAYS * 24 * 3600 * 1000);
+const launches = await fetchNewGithubRepos(since);
+console.log(`[github] fetched ${launches.length} repo(s) created on/after ${since.toISOString().slice(0, 10)}`);
+
+if (DRY) {
+  // See run-hn.ts: db.ts/health.ts/ingest.ts are never imported in dry mode,
+  // so there is structurally no credential read and no write possible here.
+  for (const launch of launches) {
+    console.log(`[github] [DRY] ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+  }
+  console.log(`[github] [DRY RUN -- FETCH ONLY, NOT PERSISTED] ${launches.length} repo(s), nothing written`);
+  process.exit(0);
+}
+
+const { getSupabaseClient } = await import('./db.ts');
+const { ensureSource, recordFailure, recordSuccess } = await import('./health.ts');
+const { upsertCandidate, upsertSighting } = await import('./ingest.ts');
 
 const client = getSupabaseClient();
 const sourceId = await ensureSource(client, {
@@ -22,10 +39,6 @@ const sourceId = await ensureSource(client, {
 });
 
 try {
-  const since = new Date(Date.now() - GITHUB_LOOKBACK_DAYS * 24 * 3600 * 1000);
-  const launches = await fetchNewGithubRepos(since);
-  console.log(`[github] fetched ${launches.length} repo(s) created on/after ${since.toISOString().slice(0, 10)}`);
-
   let newSightings = 0;
   for (const launch of launches) {
     const candidateId = await upsertCandidate(client, {
