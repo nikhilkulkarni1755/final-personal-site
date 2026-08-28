@@ -217,3 +217,76 @@ export type NewEvidence = Pick<
       'http_status' | 'content_type' | 'content_sha256' | 'fetched_at' | 'claims' | 'quotes' | 'observations'
     >
   >;
+
+/* ========================================================================== */
+/* verdicts                                                                    */
+/* ========================================================================== */
+
+/**
+ * The four criteria.
+ *   C1 what is advertised is actually true
+ *   C2 solves a rare problem
+ *   C3 usable by any person
+ *   C4 agentic / MCP friendly
+ */
+export type Criterion = 'C1' | 'C2' | 'C3' | 'C4';
+
+/**
+ * How well the evidence supports the criterion. The scale is about evidential
+ * support rather than about the product, which is what keeps one scale
+ * meaningful across all four criteria.
+ *   0 the evidence contradicts it
+ *   1 no evidence either way
+ *   2 partially supported
+ *   3 clearly supported by quoted or measured evidence
+ */
+export type VerdictScore = 0 | 1 | 2 | 3;
+
+/**
+ * A row of `finds_verdicts`. Private.
+ *
+ * Insert one of these WITHOUT also inserting `finds_verdict_evidence` rows in
+ * the same transaction and the COMMIT aborts: a deferred constraint trigger
+ * enforces DECISIONS D7. `rationale` does not satisfy it -- prose is
+ * supplementary to the citations, never a substitute.
+ */
+export interface VerdictRow {
+  id: string;
+  candidate_id: string;
+  /** Which crawl generation was scored. Matches the cited rows' crawl_run_id. */
+  evidence_run_id: string;
+  criterion: Criterion;
+  score: VerdictScore;
+  rationale: string;
+  /** Model id, or 'human'. Needed to compare rubric revisions honestly. */
+  scored_by: string;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export type NewVerdict = Pick<
+  VerdictRow,
+  'candidate_id' | 'evidence_run_id' | 'criterion' | 'score' | 'rationale' | 'scored_by'
+>;
+
+/** Contradicting evidence is a citation too: a score of 0 must point at it. */
+export type CitationStance = 'supports' | 'contradicts';
+
+/**
+ * A row of `finds_verdict_evidence`. `candidate_id` is redundant on purpose --
+ * it is what lets both foreign keys be composite, making a citation of another
+ * product's evidence a foreign-key violation rather than a review catch.
+ */
+export interface VerdictEvidenceRow {
+  verdict_id: string;
+  evidence_id: string;
+  candidate_id: string;
+  stance: CitationStance;
+  created_at: Timestamp;
+}
+
+export type NewVerdictEvidence = Pick<
+  VerdictEvidenceRow,
+  'verdict_id' | 'evidence_id' | 'candidate_id'
+> &
+  Partial<Pick<VerdictEvidenceRow, 'stance'>>;
