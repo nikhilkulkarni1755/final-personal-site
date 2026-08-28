@@ -16,8 +16,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import type { GateUseRights } from '../types.ts';
-import type { FindApproval } from './approval.ts';
+import type { ApprovalRow, GateUseRights } from '../types.ts';
 import { buildSnapshot, slugify, type PublishOptions } from './snapshot.ts';
 import type { CandidateCitation, PublishSource } from './types.ts';
 
@@ -25,6 +24,7 @@ const CHAT = '11223344';
 process.env.TELEGRAM_CHAT_ID = CHAT;
 
 const CANDIDATE = '00000000-0000-4000-8000-00000000000a';
+const RUN = '00000000-0000-4000-8000-00000000000b';
 
 const OPEN: GateUseRights = {
   llm_ingest: true,
@@ -37,13 +37,21 @@ const OPEN: GateUseRights = {
   reserved_by: [],
 };
 
-const approval = (over: Partial<FindApproval> = {}): FindApproval => ({
+// A row of finds_approvals as W8's poller writes it (D29). Built inline and
+// thrown away, like every other shape here.
+const approval = (over: Partial<ApprovalRow> = {}): ApprovalRow => ({
+  id: '00000000-0000-4000-8000-00000000000c',
   candidate_id: CANDIDATE,
+  evidence_run_id: RUN,
+  approved_criterion: 'C1',
   channel: 'telegram',
   chat_id: CHAT,
   message_id: 42,
+  telegram_update_id: 900001,
   answered_at: '2026-08-28T21:00:00.000Z',
+  created_at: '2026-08-28T21:00:01.000Z',
   answer: 'publish it',
+  why_interesting: null,
   ...over,
 });
 
@@ -66,7 +74,7 @@ function source(productUrl: string, citations: CandidateCitation[], name = 'Ghos
       first_seen_at: '2026-08-28T09:00:00.000Z',
     },
     source_labels: ['GitHub'],
-    evidence_run_id: '00000000-0000-4000-8000-00000000000b',
+    evidence_run_id: RUN,
     scores: [
       { criterion: 'C1', score: 2 },
       { criterion: 'C2', score: 1 },
@@ -227,6 +235,20 @@ test('an approval for another find is refused', () => {
         options({ approval: approval({ candidate_id: '00000000-0000-4000-8000-0000000000ff' }) }),
       ),
     /never transferable/,
+  );
+});
+
+test('an approval for a generation he did not see is refused', () => {
+  // He approves on the strength of what the digest showed him. If the candidate
+  // is re-crawled and re-scored afterwards, publishing the new generation under
+  // the old approval puts evidence he never read on the page under his name.
+  assert.throws(
+    () =>
+      buildSnapshot(
+        source('https://w11-own.invalid/', allFour('https://w11-own.invalid')),
+        options({ approval: approval({ evidence_run_id: '00000000-0000-4000-8000-0000000000ee' }) }),
+      ),
+    /he approved crawl generation .* and this publish is built from/,
   );
 });
 

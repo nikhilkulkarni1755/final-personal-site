@@ -18,47 +18,42 @@
  * than anywhere else in the pipeline. Defence in depth, same posture as
  * scope.ts.
  *
- * WHAT IS STILL MISSING, and this lane does not paper over it: W8's offset and
- * pending state are file-backed, so an approval given in Telegram does not
- * survive an ephemeral GitHub Actions runner (W8 says so itself; W10
- * deliberately left Telegram out of the daily run for that reason). Until an
- * approval is durable, there is no unattended path from "Nikhil said yes" to a
- * published row, and this module will not invent one. The proposed durable
- * design is written up in finds-coord/lanes/W11.md for the coordinator.
+ * WHERE AN APPROVAL NOW LIVES: `finds_approvals` (D29, W3's migration
+ * 20260828211200). W8's poller writes a row; this reads one. The lane's own
+ * `FindApproval` shape is gone -- W3 shipped `ApprovalRow` and a local
+ * duplicate would be a second thing to drift.
+ *
+ * Two of W3's sharpenings matter to the code below:
+ *   * the replay key is `(chat_id, message_id)`, not `(candidate_id,
+ *     message_id)` -- message_id is Telegram's PER-CHAT counter, not a global
+ *     id. That key is what makes the durable-approval / disposable-offset split
+ *     work at all, so it had to be right.
+ *   * `evidence_run_id` records WHICH EVIDENCE HE SAW, and a composite FK makes
+ *     approving a never-scored generation impossible. Asserted here too: he
+ *     approves a find on the strength of what the digest showed him, and a
+ *     re-crawl afterwards must not slip evidence he never read onto the page.
+ *
+ * THERE IS NO revoked_at, and this module does not check for one. W3 declined
+ * the column on the grounds that a revocation no reader consults looks like a
+ * safeguard while being none, and the takedown path already holds a change of
+ * mind. Agreed: an approval is a receipt for something a person said at a
+ * moment, and the honest place for "I changed my mind" is
+ * `published_at = NULL`, which takes the page down whether or not the publish
+ * has already happened.
  */
 
-/** Telegram only. D9: the digest email is read-only and cannot approve. */
-export type ApprovalChannel = 'telegram';
-
-export interface FindApproval {
-  /** Exactly which find. An approval is never transferable to another. */
-  candidate_id: string;
-  channel: ApprovalChannel;
-  /** The chat the answer came from. Must be Nikhil's allowlisted chat. */
-  chat_id: string;
-  /** Bot API message id of his answer -- the receipt, so an approval is traceable. */
-  message_id: number;
-  answered_at: string;
-  /**
-   * Exactly what he sent, an inline-keyboard label or free text. Stored as the
-   * receipt; never rewritten, never parsed for intent beyond being non-empty.
-   */
-  answer: string;
-  /**
-   * Prose he wrote for the page, verbatim, or absent. Per D4 the system never
-   * authors words in his name, so this is carried separately from `answer`: an
-   * option label he tapped is not something he wrote about the product, and
-   * must never end up rendered as his opinion.
-   */
-  why_interesting?: string;
-}
+import type { ApprovalRow } from '../types.ts';
 
 /**
- * Throws unless this approval is Nikhil's, for this find. Every failure is a
- * hard stop with a specific message -- per D6 there is no degraded mode in
- * which something gets published anyway.
+ * Throws unless this approval is Nikhil's, for this find, on this generation.
+ * Every failure is a hard stop with a specific message -- per D6 there is no
+ * degraded mode in which something gets published anyway.
  */
-export function assertApprovedByNikhil(approval: FindApproval, candidateId: string): void {
+export function assertApprovedByNikhil(
+  approval: ApprovalRow,
+  candidateId: string,
+  evidenceRunId: string,
+): void {
   if (approval.channel !== 'telegram') {
     throw new Error(
       `Refusing to publish: approval channel is ${JSON.stringify(approval.channel)}. ` +
@@ -83,6 +78,13 @@ export function assertApprovedByNikhil(approval: FindApproval, candidateId: stri
     throw new Error(
       `Refusing to publish: the approval is for candidate ${approval.candidate_id}, not ` +
         `${candidateId}. Approval is per-find and is never transferable.`,
+    );
+  }
+  if (approval.evidence_run_id !== evidenceRunId) {
+    throw new Error(
+      `Refusing to publish: he approved crawl generation ${approval.evidence_run_id} and this ` +
+        `publish is built from ${evidenceRunId}. He approves a find on the strength of the ` +
+        `evidence the digest showed him; a re-crawl since then is something he has to see.`,
     );
   }
   if (approval.answer.trim() === '') {
