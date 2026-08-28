@@ -24,7 +24,11 @@ pg_ctl -D "$CLUSTER/data" \
        -o "-k $CLUSTER -c listen_addresses=127.0.0.1 -p $PGPORT" \
        -l "$CLUSTER/pg.log" -w start >/dev/null
 
-psql() { command psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 "$@"; }
+# client-min-messages=warning: the migrations are idempotent (DROP ... IF
+# EXISTS), so applying them to a fresh cluster emits ~30 "does not exist,
+# skipping" NOTICEs that bury the output this script exists to show.
+psql() { PGOPTIONS='--client-min-messages=warning' \
+         command psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 "$@"; }
 psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
          GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;"
