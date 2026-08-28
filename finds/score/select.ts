@@ -29,6 +29,7 @@
 import type { Criterion, VerdictScore } from '../types.ts';
 import type { C1Status } from './types.ts';
 import { RUBRIC_VERSION } from './rubric.ts';
+import { c1StatusFromScore } from './c1.ts';
 
 /** The most a digest may carry. Not a target -- a ceiling. */
 export const MAX_PICKS = 3;
@@ -92,7 +93,12 @@ export interface SelectionCandidate {
    * its reason recorded, rather than ranked as if it had lost.
    */
   scores: Partial<Record<Criterion, VerdictScore>>;
-  c1_status?: C1Status;
+  /**
+   * Each criterion's rationale, keyed the same way. This is what D7 actually
+   * puts in front of Nikhil -- the digest cannot say WHY without it -- so it
+   * travels with the score rather than being re-fetched at render time.
+   */
+  rationales?: Partial<Record<Criterion, string>>;
   first_seen_at: string;
 }
 
@@ -124,7 +130,8 @@ export interface Pick {
   evidence_run_id: string;
   source_slugs: string[];
   scores: Record<Criterion, VerdictScore>;
-  c1_status?: C1Status;
+  rationales: Partial<Record<Criterion, string>>;
+  c1_status: C1Status;
   /** Why this one, in one line. */
   why: string;
 }
@@ -273,9 +280,13 @@ export function selectForDay(date: string, candidates: readonly SelectionCandida
       evidence_run_id: candidate.evidence_run_id,
       source_slugs: candidate.source_slugs,
       scores,
-      c1_status: candidate.c1_status,
+      rationales: candidate.rationales ?? {},
+      // Derived here rather than carried: the C1 score and its three-way
+      // status are 1:1 by construction, so one place computes it and no
+      // caller can supply a status that disagrees with the score beside it.
+      c1_status: c1StatusFromScore(scores.C1),
       why:
-        `C1 ${candidate.c1_status ?? 'unknown'} (${scores.C1}), C2 ${scores.C2}, C3 ${scores.C3}, ` +
+        `C1 ${c1StatusFromScore(scores.C1)} (${scores.C1}), C2 ${scores.C2}, C3 ${scores.C3}, ` +
         `C4 ${scores.C4} -- total ${total(scores)} of 12 on evidential support.`,
     });
   }

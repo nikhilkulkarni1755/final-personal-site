@@ -1,9 +1,10 @@
 /**
  * The write boundary, in isolation from any database.
  *
- * DECISIONS D7 is enforced by the schema (finds/score/prove-d7.sh watches it
- * abort a real COMMIT). These tests cover the layer above it: that W5 fails
- * early and readably rather than sending Postgres something it will refuse,
+ * DECISIONS D7 is enforced by the schema and by finds_write_verdict
+ * (finds/score/prove-d7.sh watches both refuse a real COMMIT). These tests
+ * cover the layer above: that W5 fails early and readably rather than sending
+ * the database something it will refuse,
  * and -- the one that matters -- that a verdict it cannot state honestly is
  * not stated at all.
  *
@@ -28,22 +29,27 @@ const cited: CriterionScore = {
   rubric_version: '1.0',
 };
 
-test('a write plan is one transaction carrying both the verdict and its citations', () => {
-  const plan = buildVerdictWrite(CANDIDATE, RUN, [cited]);
-  assert.equal(plan[0].text, 'BEGIN');
-  assert.equal(plan.at(-1)?.text, 'COMMIT');
-  assert.match(plan[1].text, /DELETE FROM finds_verdict_evidence/);
-  assert.match(plan[2].text, /INSERT INTO finds_verdict_evidence/);
-  assert.deepEqual(plan[2].values.slice(0, 4), [CANDIDATE, RUN, 'C1', 3]);
-  assert.deepEqual(plan[2].values[6], [EVIDENCE]);
-  assert.deepEqual(plan[2].values[7], ['supports']);
+test('the payload names the candidate, the generation, and every citation', () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [cited]);
+  assert.equal(args.p_candidate_id, CANDIDATE);
+  assert.equal(args.p_evidence_run_id, RUN);
+  assert.equal(args.p_verdicts.length, 1);
+  assert.equal(args.p_verdicts[0].criterion, 'C1');
+  assert.equal(args.p_verdicts[0].score, 3);
+  assert.deepEqual(args.p_verdicts[0].citations, [{ evidence_id: EVIDENCE, stance: 'supports' }]);
+});
+
+test('the payload is JSON-serialisable, because that is how it crosses the wire', () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [cited]);
+  assert.deepEqual(JSON.parse(JSON.stringify(args)), args);
 });
 
 test('the rubric version travels with every verdict', () => {
-  const plan = buildVerdictWrite(CANDIDATE, RUN, [cited]);
-  assert.match(String(plan[2].values[5]), /^rubric\/\d+\.\d+$/);
-  const withModel = buildVerdictWrite(CANDIDATE, RUN, [cited], 'claude-opus-5');
-  assert.match(String(withModel[2].values[5]), /^claude-opus-5\+rubric\/\d+\.\d+$/);
+  assert.match(buildVerdictWrite(CANDIDATE, RUN, [cited]).p_verdicts[0].scored_by, /^rubric\/\d+\.\d+$/);
+  assert.match(
+    buildVerdictWrite(CANDIDATE, RUN, [cited], 'claude-opus-5').p_verdicts[0].scored_by,
+    /^claude-opus-5\+rubric\/\d+\.\d+$/,
+  );
 });
 
 test('an uncited score cannot even be turned into a write plan', () => {
@@ -63,13 +69,10 @@ test("an inconclusive citation is refused rather than written as 'supports'", ()
   );
 });
 
-test('one plan can carry several criteria, each with its own citations', () => {
-  const plan = buildVerdictWrite(CANDIDATE, RUN, [cited, { ...cited, criterion: 'C4', score: 2 }]);
-  assert.equal(plan.length, 6);
-  assert.deepEqual(
-    plan.filter((s) => s.values.length > 0).map((s) => s.values[2]),
-    ['C1', 'C1', 'C4', 'C4'],
-  );
+test('one payload can carry several criteria, each with its own citations', () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [cited, { ...cited, criterion: 'C4', score: 2 }]);
+  assert.deepEqual(args.p_verdicts.map((v) => v.criterion), ['C1', 'C4']);
+  assert.deepEqual(args.p_verdicts.map((v) => v.score), [3, 2]);
 });
 
 test('one evidence row cited twice is refused before Postgres sees it', () => {

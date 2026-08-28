@@ -1,25 +1,33 @@
 /**
  * The lane's CLI. Two verbs, both read-only about the world:
  *
- *   node finds/score/run.ts score           score every crawled candidate
- *   node finds/score/run.ts select [DATE]   pick the day's digest, print it
+ *   node finds/score/run.ts score                        score every crawled candidate
+ *   node finds/score/run.ts select [DATE] [OUT.json]     pick the day's digest
  *
  * `select` writes NOTHING. The digest tables are W6's, and W6 selects from
  * `finds_undigested_candidates` for exactly the reason this prints instead:
  * a selection is not a send, and only a send may consume a candidate.
  *
- * Needs DATABASE_URL. Absent, W2's getPool() fails loud and this exits
- * non-zero rather than pretending it scored nothing (D6).
+ * With an output path, `select` writes W6's DigestInput there -- the handoff
+ * W10's daily runner passes to finds/email/send.ts. Nothing else writes that
+ * file, and it is NOT written on a day with no picks: an empty day must not
+ * become an empty digest.
+ *
+ * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (D17). Absent, W2's
+ * getSupabaseClient() fails loud and this exits non-zero rather than
+ * pretending it scored nothing (D6).
  */
 
+import { writeFileSync } from 'node:fs';
 import { buildVerdictWrite, partitionPersistable } from './persist.ts';
-import { candidatesToScore, getPool, latestGeneration, loadGeneration, loadSelectionCandidates, markStatus, refusedUrlCount, runPlan } from './db.ts';
+import { candidatesToScore, getSupabaseClient, latestGeneration, loadGeneration, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
+import { toDigestInput } from './digest.ts';
 
 async function score(): Promise<number> {
-  const pool = getPool();
-  const candidates = await candidatesToScore(pool);
+  const db = getSupabaseClient();
+  const candidates = await candidatesToScore(db);
   if (candidates.length === 0) {
     console.log('Nothing to score: no candidate is in status "crawled".');
     return 0;
@@ -30,13 +38,13 @@ async function score(): Promise<number> {
   let blockedVerdicts = 0;
 
   for (const candidate of candidates) {
-    const crawlRunId = await latestGeneration(pool, candidate.id);
+    const crawlRunId = await latestGeneration(db, candidate.id);
     const outcome = scoreCandidate({
       candidate_id: candidate.id,
       candidate_status: candidate.status,
       evidence_run_id: crawlRunId ?? '',
-      rows: crawlRunId ? await loadGeneration(pool, candidate.id, crawlRunId) : [],
-      urls_refused: await refusedUrlCount(pool, candidate.id),
+      rows: crawlRunId ? await loadGeneration(db, candidate.id, crawlRunId) : [],
+      urls_refused: await refusedUrlCount(db, candidate.id),
     });
 
     if (outcome.kind === 'unscoreable') {
@@ -51,8 +59,8 @@ async function score(): Promise<number> {
       console.log(`  ${candidate.id}  NOT PERSISTED: ${reason}`);
     }
     if (persistable.length > 0) {
-      await runPlan(pool, buildVerdictWrite(candidate.id, outcome.evidence_run_id, persistable));
-      await markStatus(pool, candidate.id, 'scored');
+      await writeVerdicts(db, buildVerdictWrite(candidate.id, outcome.evidence_run_id, persistable));
+      await markStatus(db, candidate.id, 'scored');
       scored += 1;
       console.log(
         `  ${candidate.id}  ${persistable.map((s) => `${s.criterion}=${s.score}`).join(' ')}` +
@@ -68,8 +76,8 @@ async function score(): Promise<number> {
   return 0;
 }
 
-async function select(date: string): Promise<number> {
-  const selection = selectForDay(date, await loadSelectionCandidates(getPool()));
+async function select(date: string, outputPath?: string): Promise<number> {
+  const selection = selectForDay(date, await loadSelectionCandidates(getSupabaseClient()));
   console.log(selection.summary);
   for (const pick of selection.picks) {
     console.log(`\n  ${pick.name}  ${pick.product_url}`);
@@ -84,19 +92,27 @@ async function select(date: string): Promise<number> {
       console.log(`  ${rejection.name}: ${rejection.reason} -- ${rejection.detail}`);
     }
   }
+  // The handoff to the send. Written ONLY when something was selected: an
+  // empty day must not become an empty digest, and W10's stage reports the
+  // absent file rather than W6 mailing nothing.
+  if (outputPath) {
+    const input = toDigestInput(selection);
+    if (input === null) {
+      console.log(`\nNo digest written to ${outputPath}: nothing was selected.`);
+    } else {
+      writeFileSync(outputPath, `${JSON.stringify(input, null, 2)}\n`);
+      console.log(`\nDigest input written to ${outputPath} (${input.finds.length} find(s)).`);
+    }
+  }
   return 0;
 }
 
-const [verb, argument] = process.argv.slice(2);
+const [verb, argument, outputPath] = process.argv.slice(2);
 const today = new Date().toISOString().slice(0, 10);
 
 if (verb !== 'score' && verb !== 'select') {
-  console.error('usage: node finds/score/run.ts score | select [YYYY-MM-DD]');
+  console.error('usage: node finds/score/run.ts score | select [YYYY-MM-DD] [digest-input.json]');
   process.exit(2);
 }
 
-try {
-  process.exitCode = verb === 'score' ? await score() : await select(argument ?? today);
-} finally {
-  await getPool().end();
-}
+process.exitCode = verb === 'score' ? await score() : await select(argument ?? today, outputPath);

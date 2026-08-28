@@ -2,60 +2,82 @@
  * The database side of scoring: read a crawl generation, write the verdicts,
  * read back what selection needs.
  *
- * The connection itself is W2's `getPool()` (finds/sources/db.ts, merged),
+ * D17: privileged access is supabase-js with SUPABASE_URL +
+ * SUPABASE_SERVICE_ROLE_KEY, and the client is W2's `getSupabaseClient()`,
  * imported rather than reimplemented -- one place in the pipeline decides what
- * happens when DATABASE_URL is absent, and it already fails loud per D6.
+ * happens when the credential is absent, and it already fails loud per D6.
  *
- * Two rules this file exists to hold:
+ * THE WRITE IS AN RPC, AND THAT IS NOT A STYLE CHOICE. D7's constraint trigger
+ * is DEFERRABLE INITIALLY DEFERRED, so a verdict and its citations must commit
+ * together. PostgREST gives one transaction per request, so writing them as two
+ * `.insert()` calls would commit the verdict alone and the deferred trigger
+ * would abort it, correctly, for being uncited. `finds_write_verdict`
+ * (finds/score/verdict-rpc.sql, proposed to W3) is one request and therefore
+ * one transaction. Until that function is migrated this path fails loudly with
+ * the reason -- it does not fall back to a two-request write that cannot work.
  *
- *   ONE TRANSACTION, ONE CLIENT. buildVerdictWrite() emits a plan beginning
- *   with BEGIN and ending with COMMIT. Run over a Pool, each statement could
- *   land on a different connection and the deferred D7 trigger would fire
- *   against an empty transaction -- the check would pass while the citations
- *   went somewhere else entirely. So the plan is pinned to one checked-out
- *   client, and a failure rolls back before the client is released.
- *
- *   THE NEVER-TWICE RULE LIVES IN ONE PLACE. Selection reads from
- *   `finds_undigested_candidates`, never from finds_candidates with a
- *   hand-rolled NOT EXISTS. That view excludes a candidate only once it is in
- *   a SENT digest, so a failed send does not burn finds Nikhil never saw.
+ * THE NEVER-TWICE RULE LIVES IN ONE PLACE. Selection reads
+ * `finds_undigested_candidates`, never finds_candidates with a hand-rolled NOT
+ * EXISTS. That view excludes a candidate only once it is in a SENT digest, so
+ * a failed send does not burn finds Nikhil never saw.
  */
 
-import type { Pool } from 'pg';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CandidateStatus, Criterion, EvidenceRow, VerdictScore } from '../types.ts';
-import type { SqlStatement } from './persist.ts';
+import type { VerdictRpcArgs } from './persist.ts';
 import type { SelectionCandidate } from './select.ts';
-import { c1StatusFromScore } from './c1.ts';
 
-export { getPool } from '../sources/db.ts';
+export { getSupabaseClient } from '../sources/db.ts';
+
+/** Every read and write here goes through one place, so a PostgREST error
+ *  surfaces as the operation that caused it rather than as `{}`. */
+function fail(what: string, error: { message: string; hint?: string | null } | null): void {
+  if (!error) return;
+  throw new Error(`${what}: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+}
+
+/** Candidates whose evidence has been collected and not yet scored. */
+export async function candidatesToScore(
+  db: SupabaseClient,
+  status: CandidateStatus = 'crawled',
+  limit = 500,
+): Promise<{ id: string; status: CandidateStatus }[]> {
+  const { data, error } = await db
+    .from('finds_candidates')
+    .select('id,status')
+    .eq('status', status)
+    .order('first_seen_at')
+    .limit(limit);
+  fail('reading candidates to score', error);
+  return (data ?? []) as { id: string; status: CandidateStatus }[];
+}
 
 /** The most recent crawl generation for a candidate, or null if never crawled. */
-export async function latestGeneration(pool: Pool, candidateId: string): Promise<string | null> {
-  const { rows } = await pool.query<{ crawl_run_id: string }>(
-    `SELECT crawl_run_id FROM finds_evidence
-      WHERE candidate_id = $1
-      ORDER BY fetched_at DESC, created_at DESC
-      LIMIT 1`,
-    [candidateId],
-  );
-  return rows[0]?.crawl_run_id ?? null;
+export async function latestGeneration(db: SupabaseClient, candidateId: string): Promise<string | null> {
+  const { data, error } = await db
+    .from('finds_evidence')
+    .select('crawl_run_id')
+    .eq('candidate_id', candidateId)
+    .order('fetched_at', { ascending: false })
+    .limit(1);
+  fail('reading the latest crawl generation', error);
+  return (data?.[0] as { crawl_run_id: string } | undefined)?.crawl_run_id ?? null;
 }
 
 /** Every evidence row of one generation. JSONB arrives already parsed. */
 export async function loadGeneration(
-  pool: Pool,
+  db: SupabaseClient,
   candidateId: string,
   crawlRunId: string,
 ): Promise<EvidenceRow[]> {
-  const { rows } = await pool.query<EvidenceRow>(
-    `SELECT id, candidate_id, crawl_verdict_id, crawl_run_id, url, page_role, http_status,
-            content_type, content_sha256, fetched_at, claims, quotes, observations, created_at
-       FROM finds_evidence
-      WHERE candidate_id = $1 AND crawl_run_id = $2
-      ORDER BY url, id`,
-    [candidateId, crawlRunId],
-  );
-  return rows;
+  const { data, error } = await db
+    .from('finds_evidence')
+    .select('*')
+    .eq('candidate_id', candidateId)
+    .eq('crawl_run_id', crawlRunId)
+    .order('url');
+  fail('reading an evidence generation', error);
+  return (data ?? []) as EvidenceRow[];
 }
 
 /**
@@ -66,119 +88,111 @@ export async function loadGeneration(
  * this number a rationale cannot tell "unsubstantiated after eight pages" from
  * "unsubstantiated after one".
  */
-export async function refusedUrlCount(pool: Pool, candidateId: string): Promise<number> {
-  const { rows } = await pool.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM finds_crawl_verdicts
-      WHERE candidate_id = $1 AND allowed = false`,
-    [candidateId],
-  );
-  return rows[0]?.n ?? 0;
+export async function refusedUrlCount(db: SupabaseClient, candidateId: string): Promise<number> {
+  const { count, error } = await db
+    .from('finds_crawl_verdicts')
+    .select('id', { count: 'exact', head: true })
+    .eq('candidate_id', candidateId)
+    .eq('allowed', false);
+  fail('counting refused URLs', error);
+  return count ?? 0;
 }
 
-/**
- * Run a statement plan as one transaction on one connection.
- *
- * The plan carries its own BEGIN and COMMIT because the deferred D7 trigger
- * only means anything if the COMMIT is the same COMMIT. On failure we roll
- * back explicitly rather than relying on the client being discarded: a pooled
- * connection returned mid-transaction poisons whoever picks it up next.
- */
-export async function runPlan(pool: Pool, plan: readonly SqlStatement[]): Promise<void> {
-  const client = await pool.connect();
-  try {
-    for (const statement of plan) {
-      await client.query(statement.text, statement.values);
-    }
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
-  } finally {
-    client.release();
+/** One transaction, on the database's side. See the header. */
+export async function writeVerdicts(db: SupabaseClient, args: VerdictRpcArgs): Promise<void> {
+  const { error } = await db.rpc('finds_write_verdict', args);
+  if (error) {
+    const missing = /function .*finds_write_verdict|could not find the function|PGRST202/i.test(
+      `${error.message} ${error.code ?? ''}`,
+    );
+    throw new Error(
+      `writing verdicts for candidate ${args.p_candidate_id}: ${error.message}` +
+        (missing
+          ? '\n\nfinds_write_verdict is not in the database. D7\'s citation check is a DEFERRED ' +
+            'constraint trigger, so a verdict and its citations must commit together, and PostgREST ' +
+            'gives one transaction per request -- there is no two-call version of this write that ' +
+            'works. Apply finds/score/verdict-rpc.sql (proposed to W3 for migration) and re-run.'
+          : ''),
+    );
   }
 }
 
-/** Candidates whose evidence has been collected and not yet scored. */
-export async function candidatesToScore(
-  pool: Pool,
-  status: CandidateStatus = 'crawled',
-  limit = 500,
-): Promise<{ id: string; status: CandidateStatus }[]> {
-  const { rows } = await pool.query<{ id: string; status: CandidateStatus }>(
-    `SELECT id, status FROM finds_candidates
-      WHERE status = $1
-      ORDER BY first_seen_at
-      LIMIT $2`,
-    [status, limit],
-  );
-  return rows;
-}
-
 /** The work-queue marker only. The verdict rows are the record of what happened. */
-export async function markStatus(pool: Pool, candidateId: string, status: CandidateStatus): Promise<void> {
-  await pool.query('UPDATE finds_candidates SET status = $2 WHERE id = $1', [candidateId, status]);
-}
-
-interface SelectionRow {
-  id: string;
-  name: string;
-  tagline: string | null;
-  product_url: string;
-  first_seen_at: string;
-  evidence_run_id: string;
-  scores: Record<string, number>;
-  source_slugs: string[];
+export async function markStatus(
+  db: SupabaseClient,
+  candidateId: string,
+  status: CandidateStatus,
+): Promise<void> {
+  const { error } = await db.from('finds_candidates').update({ status }).eq('id', candidateId);
+  fail(`marking candidate ${candidateId} as ${status}`, error);
 }
 
 /**
  * Everything selection needs, for candidates not already in a SENT digest.
  *
- * `DISTINCT ON` takes each candidate's most recently scored generation, so a
- * re-crawled product is judged on its current evidence rather than on a mix of
- * generations. Scores arrive as a criterion->score object; a criterion that was
- * unscoreable is simply absent, which is what makes selection able to set the
- * candidate aside rather than rank it as though it had lost.
+ * Assembled in JS rather than in SQL because PostgREST has no jsonb_object_agg:
+ * three flat reads, joined here. The grouping rule is the one that matters and
+ * it is unchanged -- each candidate is judged on its MOST RECENTLY SCORED
+ * generation, so a re-crawled product is never scored against a mix of two.
+ * A criterion that was unscoreable is simply absent, which is what lets
+ * selection set the candidate aside rather than rank it as though it had lost.
  */
-export async function loadSelectionCandidates(pool: Pool): Promise<SelectionCandidate[]> {
-  const { rows } = await pool.query<SelectionRow>(
-    `WITH latest AS (
-        SELECT DISTINCT ON (candidate_id) candidate_id, evidence_run_id
-          FROM finds_verdicts
-         ORDER BY candidate_id, created_at DESC
-     )
-     SELECT c.id, c.name, c.tagline, c.product_url, c.first_seen_at,
-            l.evidence_run_id,
-            jsonb_object_agg(v.criterion, v.score) AS scores,
-            COALESCE(
-              (SELECT array_agg(DISTINCT s.slug)
-                 FROM finds_candidate_sightings sg
-                 JOIN finds_sources s ON s.id = sg.source_id
-                WHERE sg.candidate_id = c.id),
-              ARRAY[]::text[]
-            ) AS source_slugs
-       FROM finds_undigested_candidates c
-       JOIN latest l ON l.candidate_id = c.id
-       JOIN finds_verdicts v
-         ON v.candidate_id = c.id AND v.evidence_run_id = l.evidence_run_id
-      GROUP BY c.id, c.name, c.tagline, c.product_url, c.first_seen_at, l.evidence_run_id`,
-  );
+export async function loadSelectionCandidates(db: SupabaseClient): Promise<SelectionCandidate[]> {
+  const [candidates, verdicts, sightings, sources] = await Promise.all([
+    db.from('finds_undigested_candidates').select('id,name,tagline,product_url,first_seen_at'),
+    db.from('finds_verdicts').select('candidate_id,evidence_run_id,criterion,score,rationale,created_at'),
+    db.from('finds_candidate_sightings').select('candidate_id,source_id'),
+    db.from('finds_sources').select('id,slug'),
+  ]);
+  fail('reading undigested candidates', candidates.error);
+  fail('reading verdicts', verdicts.error);
+  fail('reading sightings', sightings.error);
+  fail('reading sources', sources.error);
 
-  return rows.map((row) => {
-    const scores: Partial<Record<Criterion, VerdictScore>> = {};
-    for (const [criterion, score] of Object.entries(row.scores)) {
-      scores[criterion as Criterion] = score as VerdictScore;
+  const slugOf = new Map((sources.data ?? []).map((s) => [s.id as string, s.slug as string]));
+  const slugsFor = new Map<string, Set<string>>();
+  for (const sighting of sightings.data ?? []) {
+    const slug = slugOf.get(sighting.source_id as string);
+    if (!slug) continue;
+    const set = slugsFor.get(sighting.candidate_id as string) ?? new Set<string>();
+    set.add(slug);
+    slugsFor.set(sighting.candidate_id as string, set);
+  }
+
+  // The most recently created verdict names the generation to judge on.
+  const newestRun = new Map<string, { run: string; at: string }>();
+  for (const verdict of verdicts.data ?? []) {
+    const seen = newestRun.get(verdict.candidate_id as string);
+    if (!seen || (verdict.created_at as string) > seen.at) {
+      newestRun.set(verdict.candidate_id as string, {
+        run: verdict.evidence_run_id as string,
+        at: verdict.created_at as string,
+      });
     }
-    return {
-      candidate_id: row.id,
-      name: row.name,
-      tagline: row.tagline,
-      product_url: row.product_url,
-      evidence_run_id: row.evidence_run_id,
-      source_slugs: row.source_slugs,
+  }
+
+  const out: SelectionCandidate[] = [];
+  for (const candidate of candidates.data ?? []) {
+    const latest = newestRun.get(candidate.id as string);
+    if (!latest) continue; // never scored: not a rejection, just not ready
+    const scores: Partial<Record<Criterion, VerdictScore>> = {};
+    const rationales: Partial<Record<Criterion, string>> = {};
+    for (const verdict of verdicts.data ?? []) {
+      if (verdict.candidate_id !== candidate.id || verdict.evidence_run_id !== latest.run) continue;
+      scores[verdict.criterion as Criterion] = verdict.score as VerdictScore;
+      rationales[verdict.criterion as Criterion] = verdict.rationale as string;
+    }
+    out.push({
+      candidate_id: candidate.id as string,
+      name: candidate.name as string,
+      tagline: (candidate.tagline as string | null) ?? null,
+      product_url: candidate.product_url as string,
+      evidence_run_id: latest.run,
+      source_slugs: [...(slugsFor.get(candidate.id as string) ?? [])].sort(),
       scores,
-      // Not a stored column: the C1 score and its status are 1:1 by
-      // construction, so this is the exact inverse rather than a guess.
-      c1_status: scores.C1 === undefined ? undefined : c1StatusFromScore(scores.C1),
-      first_seen_at: new Date(row.first_seen_at).toISOString(),
-    };
-  });
+      rationales,
+      first_seen_at: new Date(candidate.first_seen_at as string).toISOString(),
+    });
+  }
+  return out;
 }
