@@ -38,7 +38,7 @@
     "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
     "publish:prove": "bash finds/publish/prove-publish.sh",
     "publish:find": "node finds/publish/cli.ts",
-    "prerender": "node scripts/prerender.mjs"
+    "prerender": "node scripts/prerender.mjs && node scripts/prerender-verify.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
