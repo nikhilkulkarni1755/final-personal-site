@@ -45,6 +45,15 @@ export const GATE_CONFIG = {
   // conservative default, not a confirmed policy.
   signalPrecedence: ['x-robots-tag', 'meta-robots', 'robots-txt'] as const,
 
+  // Directive tokens (from X-Robots-Tag / meta robots) that we treat as a
+  // signal we should not use the page. PENDING R2: this list is a
+  // deliberately conservative guess -- "noindex" is traditionally a
+  // search-indexing signal, not a crawl-permission one, but until R2 draws
+  // that line we treat it as blocking rather than assume it doesn't apply
+  // to us (fail closed). "noai"/"noimageai" are Google's generative-AI-
+  // specific opt-out tokens and are the clearest real signal we have today.
+  disallowDirectiveTokens: ['none', 'noindex', 'noai', 'noimageai'],
+
   // If we cannot determine permission for any reason (fetch error other
   // than a clean 4xx, malformed directive we can't safely interpret,
   // conflicting signals with no precedence rule that resolves them), the
