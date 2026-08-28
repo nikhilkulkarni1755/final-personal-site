@@ -96,11 +96,33 @@ const MIN_TEXT = 400;
  * The file is optional — until it exists every snapshot just keeps the site-wide
  * title and description already in index.html, and the build still passes.
  */
+/**
+ * Both prerender scripts import routeMeta.ts directly, which relies on Node's
+ * native TypeScript type stripping — unflagged in Node 22.18.0. Cloudflare Pages'
+ * v3 build image defaults to 22.16.0, BELOW that, so `.node-version` at the repo
+ * root pins it: Pages reads .nvmrc / .node-version / NODE_VERSION, and explicitly
+ * does NOT read package.json `engines` (which is there for npm's local warning).
+ * Without a pin the production build dies here on a syntax error with nothing
+ * naming the cause, so name it.
+ */
+const MIN_NODE = '22.18';
+export function assertNodeSupportsTypeScript(version = process.versions.node) {
+  const [major, minor] = version.split('.').map(Number);
+  const [wantMajor, wantMinor] = MIN_NODE.split('.').map(Number);
+  if (major > wantMajor || (major === wantMajor && minor >= wantMinor)) return;
+  throw new Error(
+    `Node ${version} cannot import src/data/routeMeta.ts: stripping ` +
+      `its types needs Node >= ${MIN_NODE}. Pin it with .node-version (Cloudflare ` +
+      `Pages reads that file; it ignores package.json engines).`
+  );
+}
+
 async function loadRouteMeta() {
   if (!existsSync(ROUTE_META)) {
     console.log('src/data/routeMeta.ts not present — snapshots keep the site-wide meta');
     return null;
   }
+  assertNodeSupportsTypeScript();
   const mod = await import(pathToFileURL(ROUTE_META).href);
   return mod.routeMeta ?? mod.default ?? null;
 }

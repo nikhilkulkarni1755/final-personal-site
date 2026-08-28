@@ -40,6 +40,9 @@
     "publish:find": "node finds/publish/cli.ts",
     "prerender": "node scripts/prerender.mjs && node scripts/prerender-verify.mjs"
   },
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/vite": "^4.1.18",

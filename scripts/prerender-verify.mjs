@@ -11,7 +11,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ROUTES, UNRENDERED } from './prerender.mjs';
+import { ROUTES, UNRENDERED, assertNodeSupportsTypeScript } from './prerender.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -20,6 +20,7 @@ const DIST = join(ROOT, 'dist');
 // structural invariants (one canonical, one JSON-LD block, real content) are
 // still checked — only the comparisons against expected values are skipped.
 const META_PATH = join(ROOT, 'src/data/routeMeta.ts');
+if (existsSync(META_PATH)) assertNodeSupportsTypeScript();
 const routeMeta = existsSync(META_PATH)
   ? (await import(pathToFileURL(META_PATH).href)).routeMeta
   : null;
