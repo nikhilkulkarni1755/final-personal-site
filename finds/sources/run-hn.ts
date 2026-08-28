@@ -1,4 +1,5 @@
 import { fetchShowHN } from './hn.ts';
+import { productUrlKindTag } from './hostClassifier.ts';
 
 // Daily Show HN ingest. Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-hn.ts
 // Dry run (fetch only, never touches the database): node finds/sources/run-hn.ts --dry
@@ -24,7 +25,7 @@ if (DRY) {
   // read and structurally no way for this run to write anything -- same
   // guarantee finds/email/dry-run.ts gives by never importing transport.ts.
   for (const launch of launches) {
-    console.log(`[hn] [DRY] ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+    console.log(`[hn] [DRY] ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
   }
   console.log(`[hn] [DRY RUN -- FETCH ONLY, NOT PERSISTED] ${launches.length} launch(es), nothing written`);
   process.exit(0);
@@ -62,7 +63,7 @@ try {
     });
     if (isNew) {
       newSightings += 1;
-      console.log(`[hn] + ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+      console.log(`[hn] + ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
     }
   }
 

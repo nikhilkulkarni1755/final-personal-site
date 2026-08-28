@@ -1,4 +1,5 @@
 import { fetchUneedLaunches } from './uneed.ts';
+import { productUrlKindTag } from './hostClassifier.ts';
 
 // Daily Uneed ingest. Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-uneed.ts
 // Dry run (fetch only, never touches the database): node finds/sources/run-uneed.ts --dry
@@ -17,7 +18,7 @@ if (DRY) {
   // See run-hn.ts: db.ts/health.ts/ingest.ts are never imported in dry mode,
   // so there is structurally no credential read and no write possible here.
   for (const launch of launches) {
-    console.log(`[uneed] [DRY] ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+    console.log(`[uneed] [DRY] ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
   }
   console.log(`[uneed] [DRY RUN -- FETCH ONLY, NOT PERSISTED] ${launches.length} launch(es), nothing written`);
   process.exit(0);
@@ -55,7 +56,7 @@ try {
     });
     if (isNew) {
       newSightings += 1;
-      console.log(`[uneed] + ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+      console.log(`[uneed] + ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
     }
   }
 

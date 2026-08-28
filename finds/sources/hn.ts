@@ -1,4 +1,5 @@
 import type { FetchedLaunch } from './connector.ts';
+import { classifyProductUrl } from './hostClassifier.ts';
 
 // Show HN via the Algolia HN Search API. Per R1 §2: no auth, no key, no
 // documented rate limit at our volume (2 requests/day), and `show_hn` is a
@@ -57,6 +58,7 @@ export async function fetchShowHN(sinceUnixSeconds: number): Promise<FetchedLaun
         externalId: hit.objectID,
         sourceUrl: `https://news.ycombinator.com/item?id=${hit.objectID}`,
         productUrl: hit.url,
+        productUrlKind: classifyProductUrl(hit.url),
         name: hit.title.replace(/^Show HN:\s*/i, '').trim(),
         // Not available on this source (R1 §2.3): the title is the tagline.
         tagline: null,

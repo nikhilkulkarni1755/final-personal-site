@@ -1,4 +1,5 @@
 import { fetchNewGithubRepos } from './github.ts';
+import { productUrlKindTag } from './hostClassifier.ts';
 
 // Daily GitHub ingest. Usage:
 //   GITHUB_TOKEN=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-github.ts
@@ -20,7 +21,7 @@ if (DRY) {
   // See run-hn.ts: db.ts/health.ts/ingest.ts are never imported in dry mode,
   // so there is structurally no credential read and no write possible here.
   for (const launch of launches) {
-    console.log(`[github] [DRY] ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+    console.log(`[github] [DRY] ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
   }
   console.log(`[github] [DRY RUN -- FETCH ONLY, NOT PERSISTED] ${launches.length} repo(s), nothing written`);
   process.exit(0);
@@ -58,7 +59,7 @@ try {
     });
     if (isNew) {
       newSightings += 1;
-      console.log(`[github] + ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+      console.log(`[github] + ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
     }
   }
 

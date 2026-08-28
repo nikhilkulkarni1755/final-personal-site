@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import type { FetchedLaunch } from './connector.ts';
+import { classifyProductUrl } from './hostClassifier.ts';
 
 // Peerlist Launchpad. Per R1 sec.1: no public API, and every plain HTTP
 // request to peerlist.io (curl, fetch) gets a Cloudflare managed-challenge
@@ -101,13 +102,15 @@ export async function fetchPeerlistFeaturedToday(page: Page): Promise<FetchedLau
     {},
   );
   const project = body.data?.project;
-  const url = typeof project?.url === 'string' ? project.url : '';
-  if (!project || !url) return null; // no product site to crawl -- not a candidate
+  const rawUrl = typeof project?.url === 'string' ? project.url : '';
+  if (!project || !rawUrl) return null; // no product site to crawl -- not a candidate
+  const url = withScheme(rawUrl);
 
   return {
     externalId: String(project.id),
     sourceUrl: `https://peerlist.io${String(project.projectURL)}`,
     productUrl: url,
+    productUrlKind: classifyProductUrl(url),
     name: String(project.title),
     tagline: typeof project.tagline === 'string' ? project.tagline : null,
     title: String(project.title),
@@ -156,12 +159,14 @@ export function buildResolvedLaunch(
   item: PeerlistListItem,
   detail: Record<string, unknown>,
 ): FetchedLaunch | null {
-  const url = typeof detail.url === 'string' ? detail.url : '';
-  if (!url) return null; // no product site to crawl -- not a candidate
+  const rawUrl = typeof detail.url === 'string' ? detail.url : '';
+  if (!rawUrl) return null; // no product site to crawl -- not a candidate
+  const url = withScheme(rawUrl);
   return {
     externalId: item.id,
     sourceUrl: `https://peerlist.io${item.projectURL}`,
     productUrl: url,
+    productUrlKind: classifyProductUrl(url),
     name: item.title,
     tagline: item.tagline,
     title: item.title,
@@ -169,6 +174,17 @@ export function buildResolvedLaunch(
     postedAt: item.featuredOn,
     raw: { list: item, detail },
   };
+}
+
+/**
+ * Peerlist's `url` field is free text a maker typed into a form -- found
+ * live (IndieCRM, 2026-08-28) with no scheme at all ("indiecrm.app"), which
+ * is not a fetchable absolute URL for W1's gate or W4's crawler. Defaults to
+ * https:// rather than dropping the candidate; this is a normalisation of
+ * what was typed, not an invented fact -- the host and path are untouched.
+ */
+function withScheme(url: string): string {
+  return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url) ? url : `https://${url}`;
 }
 
 function sleep(ms: number): Promise<void> {
