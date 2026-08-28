@@ -73,6 +73,39 @@ SELECT v.id, c.evidence_id, v.candidate_id, c.stance
  *     and writing it as 'contradicts' would accuse a real company. Refusing is
  *     the only honest third option until the enum gains a third value.
  */
+/**
+ * Split scores into those that can be persisted honestly today and those that
+ * cannot, with the reason.
+ *
+ * Only one thing lands in `blocked`: a verdict whose citations are all
+ * `inconclusive`, which finds_verdict_evidence cannot store. Rather than
+ * failing the whole candidate -- which would silently cost every one of its
+ * other criteria -- the run persists what it can and reports the rest by name.
+ * That keeps the cost of the missing enum value VISIBLE instead of hidden in
+ * an exception, and it disappears entirely when the CHECK grows a third value.
+ */
+export function partitionPersistable(scores: readonly CriterionScore[]): {
+  persistable: CriterionScore[];
+  blocked: { score: CriterionScore; reason: string }[];
+} {
+  const persistable: CriterionScore[] = [];
+  const blocked: { score: CriterionScore; reason: string }[] = [];
+  for (const score of scores) {
+    if (score.citations.some((citation) => citation.stance === 'inconclusive')) {
+      blocked.push({
+        score,
+        reason:
+          `${score.criterion} scores ${score.score} on evidence that settled nothing, and its citations are ` +
+          "stance 'inconclusive', which finds_verdict_evidence cannot store. Recording them as 'supports' " +
+          'would be false. Pending the proposed third stance value.',
+      });
+      continue;
+    }
+    persistable.push(score);
+  }
+  return { persistable, blocked };
+}
+
 export function buildVerdictWrite(
   candidateId: string,
   evidenceRunId: string,
