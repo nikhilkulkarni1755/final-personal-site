@@ -70,26 +70,38 @@ const ROBOTS_DENY_DETAIL: Record<'robots_forbidden' | 'robots_rate_limited' | 'r
   bot_challenge: 'response carried a bot-challenge header (cf-mitigated / x-amzn-waf-action)',
 };
 
-/** Implements P0-P8 (§3.1). `robotsOutcome` must already be fetched for the
- * URL's own authority (gate.ts caches this per authority, per §7's TTL
- * table). `candidateOrigin` is the site under evaluation, used for the P1
- * scope check -- for a top-level checkPage(url) call it is url's own
- * origin; for checkSite's enumeration it is the site being crawled. */
+/**
+ * Implements P0-P8 (§3.1), in order, with NO network call before P0-P2 have
+ * all passed. `getRobotsOutcome` is a thunk, not an already-fetched value,
+ * specifically so that: it is only invoked once P0 (denylist), P1 (URL
+ * scope: scheme, private/loopback/CGNAT resolution, own eTLD+1) and P2
+ * (already denied this run) all pass. SECURITY: a candidate URL is
+ * attacker-controlled (anyone can submit a launch pointing at 127.0.0.1, a
+ * private range, or a cloud metadata address like 169.254.169.254), so
+ * fetching robots.txt before P1 is answered is an SSRF -- a real request
+ * leaves the process carrying our UA before the URL is known to be safe to
+ * talk to. gate.ts must not pre-fetch robots.txt and pass it in; it must
+ * pass this function instead. `candidateOrigin` is the site under
+ * evaluation, used for the P1 scope check -- for a top-level checkPage(url)
+ * call it is url's own origin; for checkSite's enumeration it is the site
+ * being crawled. */
 export async function decideAccess(
   url: string,
   candidateOrigin: string,
-  robotsOutcome: RobotsOutcome,
+  getRobotsOutcome: () => Promise<RobotsOutcome>,
   runState: RunState,
 ): Promise<AccessDecision> {
   const parsed = new URL(url);
   const authority = parsed.origin;
 
   // P0 -- manual denylist. Outranks everything, including robots.txt saying yes.
+  // Pure/offline: no network call is possible before this line runs.
   if (isDenylisted(parsed.hostname)) {
     return deny('manual_denylist', 'MANUAL_DENYLIST', 'domain is on finds/gate/denylist.txt', 'P0');
   }
 
   // P1 -- URL sanity: scheme, private/loopback/CGNAT resolution, own eTLD+1.
+  // A DNS lookup happens here, but never a request to the candidate itself.
   const scope = await checkUrlScope(url, candidateOrigin);
   if (!scope.inScope) {
     return deny('url_out_of_scope', 'URL_POLICY', scope.reason ?? 'URL is out of scope', 'P1');
@@ -106,6 +118,10 @@ export async function decideAccess(
   // authority returns 401/403/429/451/challenge, which P2 then picks up for
   // every subsequent URL. The triggering fetch's own verdict is built
   // directly by gate.ts, not here.
+
+  // Only NOW -- after P0, P1 and P2 all passed -- is it safe to talk to this
+  // authority at all. This is the one call site for the robots.txt fetch.
+  const robotsOutcome = await getRobotsOutcome();
 
   // P4-P7 -- robots.txt, per §1.2/§1.3 and the parse contract.
   if (robotsOutcome.kind === 'denied') {

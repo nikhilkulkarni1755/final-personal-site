@@ -155,4 +155,8 @@ export type UseSignal =
   | 'TDM_RESERVATION'
   | 'NOAI_META';
 
-export type GroupSelectionBasis = 'EXACT' | 'WILDCARD' | 'AI_BLOCK_INFERENCE' | 'NO_GROUP' | 'NO_FILE';
+// NOT_ATTEMPTED: the URL was denied by P0/P1/P2 before robots.txt was ever
+// fetched -- distinct from NO_FILE (robots.txt was fetched and turned out
+// not to exist). The distinction is the point of this fix: NOT_ATTEMPTED
+// means zero bytes left the process for this authority.
+export type GroupSelectionBasis = 'EXACT' | 'WILDCARD' | 'AI_BLOCK_INFERENCE' | 'NO_GROUP' | 'NO_FILE' | 'NOT_ATTEMPTED';
