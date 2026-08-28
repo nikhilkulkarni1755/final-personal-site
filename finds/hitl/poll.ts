@@ -24,14 +24,65 @@ import {
   TelegramConflictError,
   type TelegramUpdate,
 } from './telegramClient.ts';
+import { writeApproval } from './approvals.ts';
 import { FileOffsetStore } from './offsetStore.ts';
 import { PendingStore } from './pendingStore.ts';
-import type { HitlAnswer } from './types.ts';
+import type { ApprovalWriteStatus, HitlAnswer, PendingQuestion } from './types.ts';
 
 const CALLBACK_DATA_RE = /^q:([^:]+):(\d+)$/;
 
 function isOurChat(chatId: number, expected: string): boolean {
   return String(chatId) === expected;
+}
+
+/**
+ * Best-effort: a UI confirmation must never be allowed to abort answer
+ * routing, and it must not blow up a retry either. If a mid-batch failure
+ * (see pollOnce) causes the SAME update to be reprocessed on the next poll,
+ * this callback_query_id may already have been answered once -- Telegram
+ * rejects a second answerCallbackQuery on it, and that rejection is exactly
+ * as harmless as it sounds, so it is swallowed here rather than in every
+ * call site.
+ */
+async function safeAnswerCallback(botToken: string, callbackQueryId: string, text?: string): Promise<void> {
+  try {
+    await answerCallbackQuery(botToken, callbackQueryId, text);
+  } catch {
+    /* non-fatal, see above */
+  }
+}
+
+/**
+ * Writes the finds_approvals row for a matched approval answer, if the
+ * option tapped was the approve one. Deliberately called BEFORE
+ * pending.remove() at both call sites below: writeApproval() can throw (a
+ * real DB failure, or the FK refusing an unscored generation) and when it
+ * does, the pending entry must still be there and the offset must not have
+ * advanced, so the next poll retries this exact answer rather than losing
+ * it. See DEPENDENCIES.md's finds_approvals entry (D29) for the table
+ * contract this writes to.
+ */
+async function routeApproval(
+  entry: PendingQuestion,
+  chatId: string,
+  messageId: number,
+  updateId: number,
+  answer: string,
+  whyInteresting: string | undefined,
+): Promise<ApprovalWriteStatus> {
+  const approval = entry.approval;
+  if (!approval) throw new Error('routeApproval called on a non-approval pending entry');
+  const result = await writeApproval({
+    candidate_id: approval.candidateId,
+    evidence_run_id: approval.evidenceRunId,
+    chat_id: chatId,
+    message_id: messageId,
+    telegram_update_id: updateId,
+    answer,
+    why_interesting: whyInteresting,
+    answered_at: new Date().toISOString(),
+  });
+  return result.status;
 }
 
 async function handleUpdate(
@@ -42,30 +93,55 @@ async function handleUpdate(
 ): Promise<HitlAnswer | undefined> {
   const cq = update.callback_query;
   if (cq) {
-    const fromChat = cq.message?.chat.id;
-    if (fromChat === undefined || !isOurChat(fromChat, chatId)) {
+    const message = cq.message;
+    if (!message || !isOurChat(message.chat.id, chatId)) {
       // Not our chat: drop entirely. Do not even answerCallbackQuery --
       // that would confirm to a stranger that this bot is alive.
       return undefined;
     }
     const match = CALLBACK_DATA_RE.exec(cq.data ?? '');
     if (!match) {
-      await answerCallbackQuery(botToken, cq.id);
+      await safeAnswerCallback(botToken, cq.id);
       return undefined;
     }
     const [, questionId, idxStr] = match;
     const entry = await pending.findByQuestionId(questionId);
     if (!entry) {
-      await answerCallbackQuery(botToken, cq.id, 'This question is no longer open.');
+      await safeAnswerCallback(botToken, cq.id, 'This question is no longer open.');
       return undefined;
     }
-    const option = entry.question.options?.[Number(idxStr)];
+    const idx = Number(idxStr);
+    const option = entry.question.options?.[idx];
     if (!option) {
-      await answerCallbackQuery(botToken, cq.id);
+      await safeAnswerCallback(botToken, cq.id);
       return undefined;
     }
+
+    let approvalStatus: ApprovalWriteStatus | undefined;
+    let confirmation = `Recorded: ${option.label}`;
+    if (entry.approval) {
+      if (idx === entry.approval.approveOptionIndex) {
+        // message.message_id: a button tap creates no new Telegram message,
+        // so the original (bot-sent) message is the only message this
+        // answer can be keyed to -- see approvals.ts / DEPENDENCIES.md.
+        approvalStatus = await routeApproval(
+          entry,
+          chatId,
+          message.message_id,
+          update.update_id,
+          option.label,
+          undefined, // a tapped option label is not prose he wrote (D4)
+        );
+        confirmation = approvalStatus === 'inserted' ? `Approved: ${option.label}` : `Already recorded (${approvalStatus}).`;
+      } else {
+        // Reject: nothing is ever written to finds_approvals for this (D29).
+        approvalStatus = 'rejected';
+        confirmation = 'Noted -- not publishing.';
+      }
+    }
+
     await pending.remove(questionId);
-    await answerCallbackQuery(botToken, cq.id, `Recorded: ${option.label}`);
+    await safeAnswerCallback(botToken, cq.id, confirmation);
     try {
       // Best-effort: strip the keyboard so a second tap can't double-answer.
       // Non-fatal if the message was already edited/deleted meanwhile.
@@ -73,7 +149,7 @@ async function handleUpdate(
     } catch {
       /* non-fatal */
     }
-    return { questionId, kind: 'option', value: option.label, respondedAt: new Date().toISOString() };
+    return { questionId, kind: 'option', value: option.label, respondedAt: new Date().toISOString(), approvalStatus };
   }
 
   const msg = update.message;
@@ -83,11 +159,29 @@ async function handleUpdate(
     if (replyToId === undefined || msg.text === undefined) return undefined;
     const entry = await pending.findBySentMessageId(replyToId);
     if (!entry) return undefined;
+
+    // msg.text, unmodified everywhere below: no .trim(), no markdown/entity
+    // handling, no re-encoding. This is the D4 byte-for-byte fidelity
+    // requirement -- checked in finds/hitl/verifyFidelity.ts -- and it now
+    // also governs what a published page renders as Nikhil's own words
+    // (why_interesting), so it matters even more than it did before D29.
+    let approvalStatus: ApprovalWriteStatus | undefined;
+    if (entry.approval) {
+      // A free-text reply to an approval question approves it, using this
+      // same text as both the receipt (`answer`) and the prose he wrote for
+      // the page (`why_interesting`) -- see APPROVAL_FOOTER in ask.ts for
+      // why that has to be spelled out to him up front, not inferred here.
+      approvalStatus = await routeApproval(entry, chatId, msg.message_id, update.update_id, msg.text, msg.text);
+    }
+
     await pending.remove(entry.questionId);
-    // msg.text, unmodified: no .trim(), no markdown/entity handling, no
-    // re-encoding. This is the D4 byte-for-byte fidelity requirement --
-    // checked in finds/hitl/verifyFidelity.ts.
-    return { questionId: entry.questionId, kind: 'text', value: msg.text, respondedAt: new Date().toISOString() };
+    return {
+      questionId: entry.questionId,
+      kind: 'text',
+      value: msg.text,
+      respondedAt: new Date().toISOString(),
+      approvalStatus,
+    };
   }
 
   return undefined;
