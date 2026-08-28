@@ -16,6 +16,30 @@ import path from 'node:path';
 
 const UNRESOLVED = Symbol('unresolved');
 
+// Plain-value JS built-ins the source calls to format a number/string for
+// display (Math.round(score), String(value), ...). Anything not listed
+// here stays UNRESOLVED rather than being guessed at.
+const GLOBAL_FNS = { String, Number, Boolean };
+const MATH_FNS = { round: Math.round, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, abs: Math.abs, pow: Math.pow, sqrt: Math.sqrt };
+const NUMBER_STRING_METHODS = new Set(['toLocaleString', 'toFixed', 'toString', 'toUpperCase', 'toLowerCase', 'trim']);
+
+// Silent content loss is worse than the documented "unresolved -> nothing"
+// rule: that rule is for content we genuinely cannot know (runtime state,
+// a fetch result). It must never cover content that WAS resolved (real
+// children text/elements were passed in) and then vanished because of an
+// engine bug — e.g. a <ul> filtering its children for <li> elements after
+// they'd already been flattened to an opaque string one level up. Every
+// component call whose children carried real text but whose rendered
+// output came back empty is recorded here and surfaced loudly by the
+// caller (see getDropWarnings / resetDropWarnings), instead of shipping
+// silently truncated markdown.
+let dropWarnings = [];
+export function resetDropWarnings() { dropWarnings = []; }
+export function getDropWarnings() { return dropWarnings; }
+function recordDropWarning(componentName, lostText, file) {
+  dropWarnings.push({ componentName, file, snippet: lostText.slice(0, 120) });
+}
+
 const BLOCK_TAGS = new Set([
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'blockquote', 'pre',
   'div', 'section', 'article', 'header', 'footer', 'main', 'figure', 'table',
@@ -286,11 +310,37 @@ function evalExprInner(node, scope) {
     if (node.operator === ts.SyntaxKind.PlusToken) return +v;
   }
   if (ts.isCallExpression(node)) {
-    if (ts.isIdentifier(node.expression)) {
+    // A callable value bound anywhere reachable by evaluating the callee
+    // expression — a bare name (renderItem(x)) or a dotted lookup on a
+    // resolved object (meta.keyMetrics(m), where meta.keyMetrics is itself
+    // an arrow function stored in a local const object literal) — gets
+    // invoked for real rather than left unresolved just because the call
+    // isn't a plain identifier call.
+    if (ts.isIdentifier(node.expression) || ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) {
       const fnVal = evalExpr(node.expression, scope);
       if (fnVal && fnVal.__isFn) {
         const args = node.arguments.map((a) => evalExpr(a, scope));
         return invokeFnLiteral(fnVal, args);
+      }
+    }
+    // JS built-ins commonly used to format a value for display.
+    if (ts.isIdentifier(node.expression) && GLOBAL_FNS[node.expression.text] && scopeGet(scope, node.expression.text) === UNRESOLVED) {
+      const args = node.arguments.map((a) => evalExpr(a, scope));
+      if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
+      try { return GLOBAL_FNS[node.expression.text](...args); } catch { return UNRESOLVED; }
+    }
+    if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'Math' && MATH_FNS[node.expression.name.text]) {
+      const args = node.arguments.map((a) => evalExpr(a, scope));
+      if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
+      try { return MATH_FNS[node.expression.name.text](...args); } catch { return UNRESOLVED; }
+    }
+    // Chained number/string formatting, e.g. Math.round(x).toLocaleString().
+    if (ts.isPropertyAccessExpression(node.expression) && NUMBER_STRING_METHODS.has(node.expression.name.text)) {
+      const receiver = evalExpr(node.expression.expression, scope);
+      if ((typeof receiver === 'number' || typeof receiver === 'string') && typeof receiver[node.expression.name.text] === 'function') {
+        const args = node.arguments.map((a) => evalExpr(a, scope));
+        if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
+        try { return receiver[node.expression.name.text](...args); } catch { return UNRESOLVED; }
       }
     }
     // Object.entries / Object.keys / Object.values
@@ -404,6 +454,24 @@ function normalizeInline(s) {
   return s.replace(/\s+/g, ' ').trim();
 }
 
+
+// A component's `children` prop is kept as a lazy, structured node list —
+// not a pre-flattened string — so a callee that inspects its children's
+// *structure* (e.g. <ul> filtering for <li> elements to build a markdown
+// list) still sees real elements when it renders `{children}`, instead of
+// one opaque string that gets discarded by that structural filter. Legacy
+// call sites that coerce it (String(x), template interpolation) still get
+// a sane flattened fallback via toString().
+function makeNodeList(items) {
+  return {
+    __isNodeList: true,
+    items,
+    toString() {
+      return items.map((it) => (it.kind === 'text' ? it.value : render(it.node, it.scope))).join('');
+    },
+  };
+}
+
 function block(s) {
   const t = s.trim();
   return t ? `\n\n${t}\n\n` : '';
@@ -489,7 +557,31 @@ function renderInner(node, scope, ctx) {
       const inner = normalizeInline(renderChildrenGeneric(children, scope, ctx));
       return inner ? `- ${inner}\n` : '';
     }
-    // generic block container: div/section/article/header/footer/main/figure/table
+    if (name === 'table') {
+      const rows = collectTableRows(children, scope, ctx);
+      if (!rows.length) return '';
+      const parsed = rows.map((r) => collectRowCells(r, ctx));
+      const headerIdx = parsed.findIndex((r) => r.isHeader);
+      const header = headerIdx !== -1 ? parsed[headerIdx].cells : parsed[0].cells;
+      const bodyRows = parsed
+        .filter((_, i) => i !== (headerIdx !== -1 ? headerIdx : 0))
+        .map((r) => r.cells)
+        .filter((cells) => cells.some((c) => c));
+      const colCount = Math.max(header.length, ...parsed.map((r) => r.cells.length), 1);
+      const pad = (arr) => {
+        const a = arr.slice(0, colCount);
+        while (a.length < colCount) a.push('');
+        return a;
+      };
+      const esc = (s) => (s || '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      const lines = [
+        '| ' + pad(header).map(esc).join(' | ') + ' |',
+        '| ' + pad(header).map(() => '---').join(' | ') + ' |',
+        ...bodyRows.map((row) => '| ' + pad(row).map(esc).join(' | ') + ' |'),
+      ];
+      return block(lines.join('\n'));
+    }
+    // generic block container: div/section/article/header/footer/main/figure
     return renderChildrenGeneric(children, scope, ctx);
   }
 
@@ -501,13 +593,18 @@ function renderInner(node, scope, ctx) {
   }
 
   if (tagInfo.kind === 'component') {
-    const childrenText = renderChildrenGeneric(children, scope, ctx);
+    const childrenValue = makeNodeList(expand(children, scope, ctx));
     const calleeScope = newScope(moduleScope(tagInfo.entry));
-    bindComponentProps(tagInfo.params, attrs, scope, calleeScope, childrenText, ctx);
+    bindComponentProps(tagInfo.params, attrs, scope, calleeScope, childrenValue, ctx);
     fillLocalConsts(tagInfo.bodyBlock, calleeScope);
     const returnNode = tagInfo.returnNode;
     if (!returnNode || returnNode === 'multi') return '';
-    return render(returnNode, calleeScope, { ...ctx, entry: tagInfo.entry });
+    const output = render(returnNode, calleeScope, { ...ctx, entry: tagInfo.entry });
+    const childrenPreview = childrenValue.toString().trim();
+    if (childrenPreview.length > 3 && output.trim().length === 0) {
+      recordDropWarning(tagInfo.name, childrenPreview, ctx.entry && ctx.entry.sf.fileName);
+    }
+    return output;
   }
 
   // passthrough (unresolved import, unknown component)
@@ -518,13 +615,47 @@ function getTagNameNode(node) {
   return ts.isJsxSelfClosingElement(node) ? node.tagName : node.openingElement.tagName;
 }
 
+// Walks table children (possibly through <thead>/<tbody>/<tfoot> wrappers) to
+// find the real <tr> rows in document order, so a table renders as a real
+// markdown table instead of every header/cell run together on one line.
+function collectTableRows(childrenNodes, scope, ctx) {
+  const rows = [];
+  const items = expand(childrenNodes, scope, ctx).filter((it) => it.kind === 'el');
+  for (const it of items) {
+    const tn = resolveTag(getTagNameNode(it.node), it.scope, ctx);
+    if (tn.kind !== 'html') continue;
+    if (tn.name === 'tr') {
+      rows.push(it);
+    } else if (tn.name === 'thead' || tn.name === 'tbody' || tn.name === 'tfoot') {
+      const inner = ts.isJsxSelfClosingElement(it.node) ? [] : it.node.children;
+      rows.push(...collectTableRows(inner, it.scope, ctx));
+    }
+  }
+  return rows;
+}
+
+function collectRowCells(rowItem, ctx) {
+  const innerChildren = ts.isJsxSelfClosingElement(rowItem.node) ? [] : rowItem.node.children;
+  const items = expand(innerChildren, rowItem.scope, ctx).filter((it) => it.kind === 'el');
+  const cells = [];
+  let isHeader = false;
+  for (const it of items) {
+    const tn = resolveTag(getTagNameNode(it.node), it.scope, ctx);
+    if (tn.kind !== 'html' || (tn.name !== 'td' && tn.name !== 'th')) continue;
+    if (tn.name === 'th') isHeader = true;
+    const cellChildren = ts.isJsxSelfClosingElement(it.node) ? [] : it.node.children;
+    cells.push(normalizeInline(renderChildrenGeneric(cellChildren, it.scope, ctx)));
+  }
+  return { cells, isHeader };
+}
+
 function rawText(children, scope) {
   let out = '';
   for (const c of children) {
     if (ts.isJsxText(c)) out += decodeEntities(c.text);
     else if (ts.isJsxExpression(c) && c.expression) {
       const v = evalExpr(c.expression, scope);
-      if (v !== UNRESOLVED && (typeof v === 'string' || typeof v === 'number')) out += String(v);
+      if (v !== UNRESOLVED && (typeof v === 'string' || typeof v === 'number' || (v && v.__isNodeList))) out += String(v);
     } else if (isJsxNode(c)) {
       out += render(c, scope);
     }
@@ -546,7 +677,7 @@ function getAttrLiteral(attrs, name, scope) {
   return undefined;
 }
 
-function bindComponentProps(params, attrs, callerScope, calleeScope, childrenText, ctx) {
+function bindComponentProps(params, attrs, callerScope, calleeScope, childrenValue, ctx) {
   const propsObj = {};
   if (attrs) {
     for (const attr of attrs.properties) {
@@ -562,7 +693,7 @@ function bindComponentProps(params, attrs, callerScope, calleeScope, childrenTex
       propsObj[name] = val;
     }
   }
-  propsObj.children = childrenText;
+  propsObj.children = childrenValue;
   if (!params || params.length === 0) return;
   const p = params[0];
   if (ts.isIdentifier(p.name)) {
@@ -669,7 +800,7 @@ function buildComponentTagInfo(entry, name) {
     const expr = unwrapParens(body);
     returnNode = isJsxNode(expr) ? expr : null;
   }
-  return { kind: 'component', entry, params, bodyBlock, returnNode };
+  return { kind: 'component', entry, params, bodyBlock, returnNode, name };
 }
 
 // expand(): flatten a JSX children list into {kind:'text',value} | {kind:'el', node, scope} items,
@@ -755,6 +886,7 @@ function expandExpr(expr, scope, ctx) {
   // plain literal/text-producing expression
   const v = evalExpr(expr, scope);
   if (v === UNRESOLVED || v === null || v === undefined) return [];
+  if (v && v.__isNodeList) return v.items;
   if (typeof v === 'string' || typeof v === 'number') return [{ kind: 'text', value: String(v) }];
   return [];
 }

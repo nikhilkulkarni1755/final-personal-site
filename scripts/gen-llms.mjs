@@ -13,12 +13,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractPageMarkdown, extractComponentMarkdown } from './lib/tsx-extract.mjs';
+import { extractPageMarkdown, extractComponentMarkdown, resetDropWarnings, getDropWarnings } from './lib/tsx-extract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src', 'pages');
 const PUBLIC = path.join(ROOT, 'public');
 const SITE = 'https://nikhilkulkarni1755.com';
+
+resetDropWarnings();
 
 function write(relPath, content) {
   const abs = path.join(PUBLIC, relPath);
@@ -85,12 +87,32 @@ const weavePath = path.join(SRC, 'WeaveTakeHome.tsx');
 const weaveCategories = extractComponentMarkdown(weavePath, 'CategoriesContent');
 const weaveTodos = extractComponentMarkdown(weavePath, 'TodosContent');
 const weaveDataFetch = extractComponentMarkdown(weavePath, 'DataFetchContent');
+
+// The default (unexpanded) card view hides each engineer's full metrics and
+// most-touched-files list behind a click (`expanded` state, default false).
+// That's real, already-resolved per-engineer data pulled straight from
+// weave-data.json — not runtime-unknowable — so render the same top-5
+// default-bucket cards a second time with expanded:true and append it,
+// the same way the modal-only thought-doc content above is handled.
+const weaveData = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'data', 'weave-data.json'), 'utf8'));
+const defaultBucket = 'feature_owner';
+const topEngineerDetails = (weaveData.top_by_bucket[defaultBucket] || [])
+  .map((username) => weaveData.engineers[username])
+  .filter(Boolean)
+  .map((eng, i) =>
+    extractComponentMarkdown(weavePath, 'EngineerCard', {
+      eng, rank: i + 1, bucket: defaultBucket, expanded: true,
+    }),
+  )
+  .join('\n\n');
+
 const weave = ensureH1First(
   [
     weaveDashboard,
-    '## Engineering Impact Categories\n\n' + weaveCategories,
-    '## Future TODOs\n\n' + weaveTodos,
-    '## Data Fetch — Issues & Decisions\n\n' + weaveDataFetch,
+    '## Thought Process: Engineering Impact Categories\n\n' + weaveCategories,
+    '## Thought Process: Future TODOs\n\n' + weaveTodos,
+    '## Thought Process: Data Fetch — Issues & Decisions\n\n' + weaveDataFetch,
+    '## Full Engineer Detail (all metrics + most-touched files, Feature Owners)\n\n' + topEngineerDetails,
   ].join('\n\n'),
   'PostHog Engineering Impact — take-home',
 );
@@ -181,3 +203,19 @@ fullParts.push(
 const llmsFullTxt = fullParts.join('\n\n');
 write('llms-full.txt', llmsFullTxt);
 console.log(`wrote public/llms-full.txt  (${wordCount(llmsFullTxt)} words, ${llmsFullTxt.length} chars)`);
+
+// ---------- loud failure on silent content loss ----------
+// See resetDropWarnings/getDropWarnings in lib/tsx-extract.mjs: a component
+// whose children carried real text but whose rendered output came back
+// empty is a bug (structure was resolved, then discarded), not the
+// legitimate "genuinely unresolvable -> nothing" case. Never ship that
+// silently — fail the build so it gets fixed before anything is committed.
+const drops = getDropWarnings();
+if (drops.length > 0) {
+  console.error(`\nFAILED: ${drops.length} component(s) had real children text that produced no rendered output:`);
+  for (const d of drops) {
+    console.error(`  <${d.componentName}> in ${path.relative(ROOT, d.file || '?')}: "${d.snippet}"`);
+  }
+  process.exit(1);
+}
+console.log('\nNo silent content drops detected.');

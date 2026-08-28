@@ -270,7 +270,7 @@ Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
   Final output:  (seq_len, d_k)      ← rich, context-aware vectors
 ```
 
-Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The cat sat on the mat
+Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The 0.9 0.3 0.1 0.1 0.7 0.1 cat 0.4 0.8 0.5 0.1 0.2 0.3 sat 0.1 0.6 0.9 0.4 0.1 0.2 on 0.1 0.1 0.3 0.9 0.2 0.6 the 0.7 0.2 0.1 0.1 0.9 0.3 mat 0.1 0.3 0.2 0.5 0.3 0.8
           Each cell = attention weight from row-token → col-token. Darker = stronger attention.
 
 ### Multi-Head Attention
@@ -296,7 +296,15 @@ Input Embeddingstoken embeddings + positional encoding ▼ Multi-Head Self-Atten
 
 ### Why Transformers Beat RNNs
 
-Property RNN/LSTM Transformer Parallelism Sequential — can't parallelize across tokens Fully parallel — all tokens computed at once Long-range context Degrades with distance (vanishing gradients) O(1) path between any two positions Memory Fixed-size hidden state bottleneck Explicit attention over all positions Compute O(n) time per layer O(n²) attention but massively parallel Scaling Stops improving past ~1B params Power-law scaling — bigger = better Chapter 07
+| Property | RNN/LSTM | Transformer |
+| --- | --- | --- |
+| Parallelism | Sequential — can't parallelize across tokens | Fully parallel — all tokens computed at once |
+| Long-range context | Degrades with distance (vanishing gradients) | O(1) path between any two positions |
+| Memory | Fixed-size hidden state bottleneck | Explicit attention over all positions |
+| Compute | O(n) time per layer | O(n²) attention but massively parallel |
+| Scaling | Stops improving past ~1B params | Power-law scaling — bigger = better |
+
+Chapter 07
 
 ## Tokens & Embeddings
 
@@ -360,7 +368,14 @@ Matrix multiplication is embarrassingly parallel. GPUs and TPUs are purpose-buil
 
 ### CPU vs GPU Architecture
 
-Property CPU (e.g. Intel Xeon) GPU (e.g. NVIDIA H100) Core count 8–128 complex cores 14,592 CUDA cores Design goal Low latency, serial tasks High throughput, parallel tasks Cache Large L1/L2/L3 cache hierarchy Small cache, high bandwidth HBM memory Memory bandwidth ~100 GB/s 3.35 TB/s (H100 SXM) FP16 FLOPS ~1–2 TFLOPS 989 TFLOPS (tensor cores) Ideal workload OS, databases, branchy code Matrix multiplies, convolutions
+| Property | CPU (e.g. Intel Xeon) | GPU (e.g. NVIDIA H100) |
+| --- | --- | --- |
+| Core count | 8–128 complex cores | 14,592 CUDA cores |
+| Design goal | Low latency, serial tasks | High throughput, parallel tasks |
+| Cache | Large L1/L2/L3 cache hierarchy | Small cache, high bandwidth HBM memory |
+| Memory bandwidth | ~100 GB/s | 3.35 TB/s (H100 SXM) |
+| FP16 FLOPS | ~1–2 TFLOPS | 989 TFLOPS (tensor cores) |
+| Ideal workload | OS, databases, branchy code | Matrix multiplies, convolutions |
 
 ### Tensor Cores — The Secret Weapon
 
@@ -472,7 +487,14 @@ GPU vs TPU — Side by Side GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
 
 Not all numbers are equal in AI training. Lower precision = fewer bits = faster multiply + less memory:
 
-Format Bits Range Use Case FP64 (double) 64 ±1.8×10³⁰⁸ Scientific computing FP32 (single) 32 ±3.4×10³⁸ Gradient accumulation, master weights BF16 16 same as FP32 Training (same range, less precision) FP16 16 ±65,504 Inference, tensor core compute INT8 8 -128 to 127 Quantized inference (2× speed) INT4 / NF4 4 16 values QLoRA, edge deployment (4× speed)
+| Format | Bits | Range | Use Case |
+| --- | --- | --- | --- |
+| FP64 (double) | 64 | ±1.8×10³⁰⁸ | Scientific computing |
+| FP32 (single) | 32 | ±3.4×10³⁸ | Gradient accumulation, master weights |
+| BF16 | 16 | same as FP32 | Training (same range, less precision) |
+| FP16 | 16 | ±65,504 | Inference, tensor core compute |
+| INT8 | 8 | -128 to 127 | Quantized inference (2× speed) |
+| INT4 / NF4 | 4 | 16 values | QLoRA, edge deployment (4× speed) |
 
 ### Parallelism Strategies for Giant Models
 
@@ -530,5 +552,16 @@ Training compute:    ~10²⁵ FLOPs
 
 ### The Architecture Zoo
 
-Model Family Architecture Key Innovation Primary Use ResNet, VGG CNN Skip connections, deep convolutions Image classification LSTM, GRU RNN Gated memory cells Sequential data, NLP (legacy) BERT Encoder Transformer Bidirectional attention, MLM Classification, embedding GPT family Decoder Transformer Causal attention, RLHF Text generation T5, BART Encoder-Decoder Seq2seq with cross-attention Translation, summarization ViT Vision Transformer Image patches as tokens Image understanding Mixtral, GPT-4 MoE Transformer Sparse expert routing Efficient LLM at scale Mamba, RWKV State Space Models Linear complexity attention alternatives Long context, efficiency 💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
+| Model Family | Architecture | Key Innovation | Primary Use |
+| --- | --- | --- | --- |
+| ResNet, VGG | CNN | Skip connections, deep convolutions | Image classification |
+| LSTM, GRU | RNN | Gated memory cells | Sequential data, NLP (legacy) |
+| BERT | Encoder Transformer | Bidirectional attention, MLM | Classification, embedding |
+| GPT family | Decoder Transformer | Causal attention, RLHF | Text generation |
+| T5, BART | Encoder-Decoder | Seq2seq with cross-attention | Translation, summarization |
+| ViT | Vision Transformer | Image patches as tokens | Image understanding |
+| Mixtral, GPT-4 | MoE Transformer | Sparse expert routing | Efficient LLM at scale |
+| Mamba, RWKV | State Space Models | Linear complexity attention alternatives | Long context, efficiency |
+
+💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
       Views Likes Comments [Back to Blog](/blog)

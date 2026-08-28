@@ -503,11 +503,28 @@ Background Worker
 
 Seven stages:
 
+1. **Search** — Find profiles via keyword queries. Score on headline keywords using a three-tier weighted system.
+2. **Enrich** — Fetch full profiles: work history, about, posts, comments, skills. Re-score with complete data.
+3. **Generate** — Six-stage LLM pipeline produces a personalized connection note. Three attempts, best-of-N selection.
+4. **Review** — Interactive CLI. Full profile context alongside the draft. Approve, edit, or trigger a rewrite. Nothing sends without my approval.
+5. **Schedule** — Send time based on when the recipient is active on LinkedIn (inferred from post/comment timestamps, converted to their local timezone). Sends spread across weekdays with daily caps.
+6. **Send** — Connection invites fire via LinkedIn API with gaps between sends to stay within platform limits.
+7. **Reply Handling** — When someone replies, a webhook captures the message, the system drafts a response via LLM, and notifies me. I approve, edit, or request a rewrite with a single command.
+
 Section 02
 
 ## Tech Stack
 
-Layer Technology LLM Anthropic Claude Sonnet (primary), OpenAI GPT-4o (fallback) LinkedIn Third-party API for search, profiles, posts, connection invites, DMs, webhooks Scheduling Background worker with SQLite queue, polls every 60s Reply handling Webhook → worker → LLM draft → notification → approval poll → DM API Database PostgreSQL with SQLAlchemy ORM, JSONB for raw profiles Language Python. No framework. stdlib where possible. Section 03
+| Layer | Technology |
+| --- | --- |
+| LLM | Anthropic Claude Sonnet (primary), OpenAI GPT-4o (fallback) |
+| LinkedIn | Third-party API for search, profiles, posts, connection invites, DMs, webhooks |
+| Scheduling | Background worker with SQLite queue, polls every 60s |
+| Reply handling | Webhook → worker → LLM draft → notification → approval poll → DM API |
+| Database | PostgreSQL with SQLAlchemy ORM, JSONB for raw profiles |
+| Language | Python. No framework. stdlib where possible. |
+
+Section 03
 
 ## The LLM Pipeline
 
@@ -535,6 +552,12 @@ When someone replies, the system drafts a contextual response, gets my approval,
 
 A webhook fires when any LinkedIn message arrives. The handler:
 
+1. **Filters** — Checks the sender against tracked contacts. Messages from strangers are ignored.
+2. **Deduplicates** — Checks message ID to avoid processing twice.
+3. **Fetches conversation** — Pulls the full thread, not just the latest message.
+4. **Drafts a reply** — Claude Sonnet gets the conversation thread, contact name, and company. System prompt: acknowledge what they said, steer toward a 15-minute call, stay under 500 characters, sound like a real person.
+5. **Notifies me** with the conversation, drafted reply, and three commands:
+
 Interactive · Reply Approval Flow ▶ Animate LinkedIn reply recipient replies on connection ↓ Webhook receiver incoming message · filter + dedupe ↓ LLM draft v— Claude Sonnet · ≤ 500 chars ↓ Gmail notification thread + draft + commands My email reply (a / e / w)
                   aapprove
                   eedit
@@ -556,6 +579,10 @@ DRAFTED REPLY:
   w, [feedback] — rewrite with AI and notify again
 ```
 
+- **`a`** — Send the draft as-is.
+- **`e, [text]`** — Send my exact text instead.
+- **`w, [feedback]`** — Rewrite with my feedback (e.g., "make it shorter", "angle should be about their k8s work"). Notifies me again for another round.
+
 `w` is recursive — I can keep refining. The system only sends a DM on `a` or `e`. I manage LinkedIn conversations entirely from my phone.
 
 Section 05
@@ -574,9 +601,20 @@ Section 06
 
 ## Results
 
+- 100+ new connections in 2 months
+- ~25 profiles per run (discovery through drafting)
+- Average 3 LLM calls per message (generation + 2 quality checks), up to 9 on retries
+- ~15 minutes for enrichment + generation, ~10 minutes for review per batch
+- Webhook-to-notification latency under 30 seconds
+
 Section 08
 
 ## What's Next
+
+- **Autonomous agent loop.** LLM agent wrapping the CLI to run discover → enrich → draft → schedule on a daily cron with city/state rotation.
+- **A/B testing on send times.** The activity-pattern heuristic is untested against random timing.
+- **Automated follow-up DMs** after connection acceptance.
+- **Polling fallback for webhooks.** Periodic poll of recent conversations to catch missed replies.
 
 viewing now
       Views Likes Comments [Back to Blog](/blog)
@@ -857,7 +895,7 @@ Q·Kᵀ shape:  (seq_len, seq_len)    ← every token sees every token!
   Final output:  (seq_len, d_k)      ← rich, context-aware vectors
 ```
 
-Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The cat sat on the mat
+Attention Heatmap — "The cat sat on the mat" The cat sat on the mat The 0.9 0.3 0.1 0.1 0.7 0.1 cat 0.4 0.8 0.5 0.1 0.2 0.3 sat 0.1 0.6 0.9 0.4 0.1 0.2 on 0.1 0.1 0.3 0.9 0.2 0.6 the 0.7 0.2 0.1 0.1 0.9 0.3 mat 0.1 0.3 0.2 0.5 0.3 0.8
           Each cell = attention weight from row-token → col-token. Darker = stronger attention.
 
 ### Multi-Head Attention
@@ -883,7 +921,15 @@ Input Embeddingstoken embeddings + positional encoding ▼ Multi-Head Self-Atten
 
 ### Why Transformers Beat RNNs
 
-Property RNN/LSTM Transformer Parallelism Sequential — can't parallelize across tokens Fully parallel — all tokens computed at once Long-range context Degrades with distance (vanishing gradients) O(1) path between any two positions Memory Fixed-size hidden state bottleneck Explicit attention over all positions Compute O(n) time per layer O(n²) attention but massively parallel Scaling Stops improving past ~1B params Power-law scaling — bigger = better Chapter 07
+| Property | RNN/LSTM | Transformer |
+| --- | --- | --- |
+| Parallelism | Sequential — can't parallelize across tokens | Fully parallel — all tokens computed at once |
+| Long-range context | Degrades with distance (vanishing gradients) | O(1) path between any two positions |
+| Memory | Fixed-size hidden state bottleneck | Explicit attention over all positions |
+| Compute | O(n) time per layer | O(n²) attention but massively parallel |
+| Scaling | Stops improving past ~1B params | Power-law scaling — bigger = better |
+
+Chapter 07
 
 ## Tokens & Embeddings
 
@@ -947,7 +993,14 @@ Matrix multiplication is embarrassingly parallel. GPUs and TPUs are purpose-buil
 
 ### CPU vs GPU Architecture
 
-Property CPU (e.g. Intel Xeon) GPU (e.g. NVIDIA H100) Core count 8–128 complex cores 14,592 CUDA cores Design goal Low latency, serial tasks High throughput, parallel tasks Cache Large L1/L2/L3 cache hierarchy Small cache, high bandwidth HBM memory Memory bandwidth ~100 GB/s 3.35 TB/s (H100 SXM) FP16 FLOPS ~1–2 TFLOPS 989 TFLOPS (tensor cores) Ideal workload OS, databases, branchy code Matrix multiplies, convolutions
+| Property | CPU (e.g. Intel Xeon) | GPU (e.g. NVIDIA H100) |
+| --- | --- | --- |
+| Core count | 8–128 complex cores | 14,592 CUDA cores |
+| Design goal | Low latency, serial tasks | High throughput, parallel tasks |
+| Cache | Large L1/L2/L3 cache hierarchy | Small cache, high bandwidth HBM memory |
+| Memory bandwidth | ~100 GB/s | 3.35 TB/s (H100 SXM) |
+| FP16 FLOPS | ~1–2 TFLOPS | 989 TFLOPS (tensor cores) |
+| Ideal workload | OS, databases, branchy code | Matrix multiplies, convolutions |
 
 ### Tensor Cores — The Secret Weapon
 
@@ -1059,7 +1112,14 @@ GPU vs TPU — Side by Side GPU — Pull Model (HBM → SRAM → Cores) ▶ Run
 
 Not all numbers are equal in AI training. Lower precision = fewer bits = faster multiply + less memory:
 
-Format Bits Range Use Case FP64 (double) 64 ±1.8×10³⁰⁸ Scientific computing FP32 (single) 32 ±3.4×10³⁸ Gradient accumulation, master weights BF16 16 same as FP32 Training (same range, less precision) FP16 16 ±65,504 Inference, tensor core compute INT8 8 -128 to 127 Quantized inference (2× speed) INT4 / NF4 4 16 values QLoRA, edge deployment (4× speed)
+| Format | Bits | Range | Use Case |
+| --- | --- | --- | --- |
+| FP64 (double) | 64 | ±1.8×10³⁰⁸ | Scientific computing |
+| FP32 (single) | 32 | ±3.4×10³⁸ | Gradient accumulation, master weights |
+| BF16 | 16 | same as FP32 | Training (same range, less precision) |
+| FP16 | 16 | ±65,504 | Inference, tensor core compute |
+| INT8 | 8 | -128 to 127 | Quantized inference (2× speed) |
+| INT4 / NF4 | 4 | 16 values | QLoRA, edge deployment (4× speed) |
 
 ### Parallelism Strategies for Giant Models
 
@@ -1117,7 +1177,18 @@ Training compute:    ~10²⁵ FLOPs
 
 ### The Architecture Zoo
 
-Model Family Architecture Key Innovation Primary Use ResNet, VGG CNN Skip connections, deep convolutions Image classification LSTM, GRU RNN Gated memory cells Sequential data, NLP (legacy) BERT Encoder Transformer Bidirectional attention, MLM Classification, embedding GPT family Decoder Transformer Causal attention, RLHF Text generation T5, BART Encoder-Decoder Seq2seq with cross-attention Translation, summarization ViT Vision Transformer Image patches as tokens Image understanding Mixtral, GPT-4 MoE Transformer Sparse expert routing Efficient LLM at scale Mamba, RWKV State Space Models Linear complexity attention alternatives Long context, efficiency 💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
+| Model Family | Architecture | Key Innovation | Primary Use |
+| --- | --- | --- | --- |
+| ResNet, VGG | CNN | Skip connections, deep convolutions | Image classification |
+| LSTM, GRU | RNN | Gated memory cells | Sequential data, NLP (legacy) |
+| BERT | Encoder Transformer | Bidirectional attention, MLM | Classification, embedding |
+| GPT family | Decoder Transformer | Causal attention, RLHF | Text generation |
+| T5, BART | Encoder-Decoder | Seq2seq with cross-attention | Translation, summarization |
+| ViT | Vision Transformer | Image patches as tokens | Image understanding |
+| Mixtral, GPT-4 | MoE Transformer | Sparse expert routing | Efficient LLM at scale |
+| Mamba, RWKV | State Space Models | Linear complexity attention alternatives | Long context, efficiency |
+
+💡 Key Insight — Every model in this table — from the simplest CNN to the largest LLM — ultimately reduces to the same primitive operation: multiply two matrices, add them together, apply a non-linearity. **The miracle of deep learning is that this simple operation, composed deeply enough, with enough data, gives rise to everything from edge detection to reasoning about the world.** 🖥 Hardware — The hardware race is fundamentally a race to multiply larger matrices faster. NVIDIA H100 → H200 → Blackwell B200 are all improvements in one metric: how many FP8/FP16 multiply-accumulate operations can we execute per second, and how fast can we feed them with memory bandwidth. viewing now
       Views Likes Comments [Back to Blog](/blog)
 
 ---
@@ -1355,30 +1426,30 @@ Source: https://nikhilkulkarni1755.com/take-homes/weave
 
 # PostHog Engineering Impact — take-home
 
-[back](/) PH PostHog Engineering Impact take-home posthog/posthog 90-day window Feature Owners Feature Owners Engineers who own subsystems end-to-end with depth and continuity Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score
+[back](/) PH PostHog Engineering Impact take-home posthog/posthog 90-day window Feature Owners Feature Owners Engineers who own subsystems end-to-end with depth and continuity Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score 85
 
 Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.
 
-Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) ▾ expand Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score
+PRs merged 8 / 14 Primary subsystem frontend Dir. focus 97% Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) ▾ expand Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score 77.7
 
 Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.
 
-Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) ▾ expand Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score
+PRs merged 9 / 13 Primary subsystem rust Dir. focus 59% Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) ▾ expand Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score 74.2
 
 Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.
 
-Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) ▾ expand Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score
+PRs merged 10 / 15 Primary subsystem tools Dir. focus 37% Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) ▾ expand Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score 70
 
 Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.
 
-Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) ▾ expand Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score
+PRs merged 11 / 12 Primary subsystem posthog Dir. focus 73% Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) ▾ expand Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score 69.9
 
 Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.
 
-Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) ▾ expand
+PRs merged 3 / 3 Primary subsystem posthog Dir. focus 77% Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) ▾ expand
           Scores are normalized within each bucket. See data decisions 59 engineers · PostHog/posthog
 
-## Engineering Impact Categories
+## Thought Process: Engineering Impact Categories
 
 Before writing scoring logic, I mapped 7 distinct engineering impact archetypes. The dashboard implements 3 — the ones with the strongest GitHub signal.
 
@@ -1412,7 +1483,7 @@ Enable everyone else. CI/CD, tooling, build system. Low visibility but high leve
 
 signal: files changed in .github/, Makefile, infra dirs × downstream PRs unblocked
 
-## Future TODOs
+## Thought Process: Future TODOs
 
 Two high-priority improvements I'd tackle given more time.
 
@@ -1424,7 +1495,7 @@ Set up a daily/weekly cron job that re-runs fetch.py, writes results to a small 
 
 The 7-category framework covers far more than the current 3. Adding cross-cutting contributors, bug fixers, and community managers would give a fuller picture — especially relevant for PostHog given its open-source model.
 
-## Data Fetch — Issues & Decisions
+## Thought Process: Data Fetch — Issues & Decisions
 
 Four concrete issues hit during data collection — each with a decision and reasoning.
 
@@ -1477,6 +1548,38 @@ Why
 Engineering impact should be measured by work that lands in the main codebase. Filtering to master ensures metrics reflect production-bound work only.
 
 Final Parameters WINDOW_DAYS 90 Assignment spec MAX_PRS 300 Runtime constraint — sufficient for top-5 ranking SLEEP_BETWEEN_CALLS 0.02s Safe under 5000 req/hr; keeps runtime ~10 min BASE_BRANCH master Only PRs targeting PostHog's main branch MIN_PRS_THRESHOLD 3 Exclude engineers with too little signal Retries per call 3 Handle transient GitHub 500s/429s
+
+## Full Engineer Detail (all metrics + most-touched files, Feature Owners)
+
+Matt Pua [@MattPua](https://github.com/MattPua) #1 Feature Owner Score 85
+
+Authored 14 PRs (8 merged) with 97% focus in 'frontend'; owns 3 repeat files.
+
+PRs merged 8 / 14 Primary subsystem frontend Dir. focus 97% Top PRs [#51009feat(dashboard): disable editing title/description on dashboards when entering edit layout mode](https://github.com/PostHog/posthog/pull/51009) [#51008chore: update codeowners for dashboards](https://github.com/PostHog/posthog/pull/51008) [#51007feat: add bounded for drag config in dashboard](https://github.com/PostHog/posthog/pull/51007) All Metrics PRs authored 14 PRs merged 8 Merge rate 57% Primary subsystem frontend Dir. concentration 97% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files frontend/src/scenes/dashboard/DashboardItems.tsx frontend/src/lib/components/Cards/InsightCard/InsightCard.tsx frontend/src/scenes/dashboard/dashboardLogic.tsx frontend/src/scenes/dashboard/DashboardHeaderActions.tsx frontend/__snapshots__/scenes-app-insights-funnels--funnel-with-inline-events-edit--dark.png ▴ collapse
+
+Phil Haack [@haacked](https://github.com/haacked) #2 Feature Owner Score 77.7
+
+Authored 13 PRs (9 merged) with 59% focus in 'rust'; owns 3 repeat files.
+
+PRs merged 9 / 13 Primary subsystem rust Dir. focus 59% Top PRs [#51070feat(flags): replace auth cache warming with lazy per-token ReadThroughCache](https://github.com/PostHog/posthog/pull/51070) [#51069feat(flags): pre-compute flag dependencies in the Django hypercache](https://github.com/PostHog/posthog/pull/51069) [#51055feat: track personal API key auth source on local evaluation endpoint](https://github.com/PostHog/posthog/pull/51055) All Metrics PRs authored 13 PRs merged 9 Merge rate 69% Primary subsystem rust Dir. concentration 59% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files rust/feature-flags/src/api/auth.rs rust/feature-flags/src/metrics/consts.rs posthog/api/feature_flag.py rust/feature-flags/src/utils/test_utils.rs rust/feature-flags/tests/test_flag_definitions.rs ▴ collapse
+
+Julian Bez [@webjunkie](https://github.com/webjunkie) #3 Feature Owner Score 74.2
+
+Drove 10 infra PRs (67% of total); touched 4 infra subsystems: bin, .github, docker.
+
+PRs merged 10 / 15 Primary subsystem tools Dir. focus 37% Top PRs [#51040fix(devex): relax zero-reviews rule for low-risk PRs](https://github.com/PostHog/posthog/pull/51040) [#50999fix(devex): pr-approval-agent tuning and label retention](https://github.com/PostHog/posthog/pull/50999) [#50994fix(ci): remove redundant OpenAPI type generation in check-migrations](https://github.com/PostHog/posthog/pull/50994) All Metrics PRs authored 15 PRs merged 10 Merge rate 67% Primary subsystem tools Dir. concentration 37% Repeat files (3+ touches) 3 Avg PR size (lines) 0 Most-Touched Files .github/workflows/pr-approval-agent.yml tools/pr-approval-agent/reviewer.py .github/workflows/ci-backend.yml .github/CODEOWNERS-soft tools/pr-approval-agent/README.md ▴ collapse
+
+Tom Piccirello [@Piccirello](https://github.com/Piccirello) #4 Feature Owner Score 70
+
+Authored 12 PRs (11 merged) with 72% focus in 'posthog'; owns 1 repeat files.
+
+PRs merged 11 / 12 Primary subsystem posthog Dir. focus 73% Top PRs [#51071chore: disable egress proxy in prometheus client](https://github.com/PostHog/posthog/pull/51071) [#51043fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51043) [#51004fix: bypass egress proxy when connecting to Clickhouse](https://github.com/PostHog/posthog/pull/51004) All Metrics PRs authored 12 PRs merged 11 Merge rate 92% Primary subsystem posthog Dir. concentration 73% Repeat files (3+ touches) 1 Avg PR size (lines) 0 Most-Touched Files mypy-baseline.txt posthog/conftest.py posthog/management/commands/migrate_clickhouse.py posthog/management/commands/setup_test_environment.py ee/api/billing.py ▴ collapse
+
+Marius Andra [@mariusandra](https://github.com/mariusandra) #5 Feature Owner Score 69.9
+
+Authored 3 PRs (3 merged) with 77% focus in 'posthog'; owns 2 repeat files.
+
+PRs merged 3 / 3 Primary subsystem posthog Dir. focus 77% Top PRs [#50969fix(hogql): support nested join key expressions](https://github.com/PostHog/posthog/pull/50969) [#50923fix(warehouse): duplicate events table issue](https://github.com/PostHog/posthog/pull/50923) [#50902feat(ducklake): sql editor connection settings](https://github.com/PostHog/posthog/pull/50902) All Metrics PRs authored 3 PRs merged 3 Merge rate 100% Primary subsystem posthog Dir. concentration 77% Repeat files (3+ touches) 2 Avg PR size (lines) 0 Most-Touched Files posthog/hogql/database/database.py posthog/hogql/database/test/test_database.py posthog/hogql/database/utils.py products/data_warehouse/backend/api/test/test_view_link.py products/data_warehouse/backend/api/view_link.py ▴ collapse
 
 ---
 

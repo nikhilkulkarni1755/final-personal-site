@@ -39,11 +39,28 @@ Background Worker
 
 Seven stages:
 
+1. **Search** — Find profiles via keyword queries. Score on headline keywords using a three-tier weighted system.
+2. **Enrich** — Fetch full profiles: work history, about, posts, comments, skills. Re-score with complete data.
+3. **Generate** — Six-stage LLM pipeline produces a personalized connection note. Three attempts, best-of-N selection.
+4. **Review** — Interactive CLI. Full profile context alongside the draft. Approve, edit, or trigger a rewrite. Nothing sends without my approval.
+5. **Schedule** — Send time based on when the recipient is active on LinkedIn (inferred from post/comment timestamps, converted to their local timezone). Sends spread across weekdays with daily caps.
+6. **Send** — Connection invites fire via LinkedIn API with gaps between sends to stay within platform limits.
+7. **Reply Handling** — When someone replies, a webhook captures the message, the system drafts a response via LLM, and notifies me. I approve, edit, or request a rewrite with a single command.
+
 Section 02
 
 ## Tech Stack
 
-Layer Technology LLM Anthropic Claude Sonnet (primary), OpenAI GPT-4o (fallback) LinkedIn Third-party API for search, profiles, posts, connection invites, DMs, webhooks Scheduling Background worker with SQLite queue, polls every 60s Reply handling Webhook → worker → LLM draft → notification → approval poll → DM API Database PostgreSQL with SQLAlchemy ORM, JSONB for raw profiles Language Python. No framework. stdlib where possible. Section 03
+| Layer | Technology |
+| --- | --- |
+| LLM | Anthropic Claude Sonnet (primary), OpenAI GPT-4o (fallback) |
+| LinkedIn | Third-party API for search, profiles, posts, connection invites, DMs, webhooks |
+| Scheduling | Background worker with SQLite queue, polls every 60s |
+| Reply handling | Webhook → worker → LLM draft → notification → approval poll → DM API |
+| Database | PostgreSQL with SQLAlchemy ORM, JSONB for raw profiles |
+| Language | Python. No framework. stdlib where possible. |
+
+Section 03
 
 ## The LLM Pipeline
 
@@ -71,6 +88,12 @@ When someone replies, the system drafts a contextual response, gets my approval,
 
 A webhook fires when any LinkedIn message arrives. The handler:
 
+1. **Filters** — Checks the sender against tracked contacts. Messages from strangers are ignored.
+2. **Deduplicates** — Checks message ID to avoid processing twice.
+3. **Fetches conversation** — Pulls the full thread, not just the latest message.
+4. **Drafts a reply** — Claude Sonnet gets the conversation thread, contact name, and company. System prompt: acknowledge what they said, steer toward a 15-minute call, stay under 500 characters, sound like a real person.
+5. **Notifies me** with the conversation, drafted reply, and three commands:
+
 Interactive · Reply Approval Flow ▶ Animate LinkedIn reply recipient replies on connection ↓ Webhook receiver incoming message · filter + dedupe ↓ LLM draft v— Claude Sonnet · ≤ 500 chars ↓ Gmail notification thread + draft + commands My email reply (a / e / w)
                   aapprove
                   eedit
@@ -92,6 +115,10 @@ DRAFTED REPLY:
   w, [feedback] — rewrite with AI and notify again
 ```
 
+- **`a`** — Send the draft as-is.
+- **`e, [text]`** — Send my exact text instead.
+- **`w, [feedback]`** — Rewrite with my feedback (e.g., "make it shorter", "angle should be about their k8s work"). Notifies me again for another round.
+
 `w` is recursive — I can keep refining. The system only sends a DM on `a` or `e`. I manage LinkedIn conversations entirely from my phone.
 
 Section 05
@@ -110,9 +137,20 @@ Section 06
 
 ## Results
 
+- 100+ new connections in 2 months
+- ~25 profiles per run (discovery through drafting)
+- Average 3 LLM calls per message (generation + 2 quality checks), up to 9 on retries
+- ~15 minutes for enrichment + generation, ~10 minutes for review per batch
+- Webhook-to-notification latency under 30 seconds
+
 Section 08
 
 ## What's Next
+
+- **Autonomous agent loop.** LLM agent wrapping the CLI to run discover → enrich → draft → schedule on a daily cron with city/state rotation.
+- **A/B testing on send times.** The activity-pattern heuristic is untested against random timing.
+- **Automated follow-up DMs** after connection acceptance.
+- **Polling fallback for webhooks.** Periodic poll of recent conversations to catch missed replies.
 
 viewing now
       Views Likes Comments [Back to Blog](/blog)
