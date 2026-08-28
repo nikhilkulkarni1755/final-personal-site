@@ -50,6 +50,7 @@ try {
       product_url: launch.productUrl,
       name: launch.name,
       tagline: launch.tagline,
+      product_url_kind: launch.productUrlKind,
     });
     const isNew = await upsertSighting(client, {
       candidate_id: candidateId,

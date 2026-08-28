@@ -1,6 +1,8 @@
+import type { ProductUrlKind } from '../types.ts';
+
 /**
- * Classifies a product URL as either a dedicated site or a listing on a
- * shared host -- D23. A candidate whose product_url is
+ * Classifies a product URL as the candidate's own dedicated site, a listing
+ * on a shared host, or unknown -- D23. A candidate whose product_url is
  * `https://github.com/owner/repo` is not wrong to store, but it is a
  * different KIND of URL than `https://outcode.lol/`: the domain also hosts
  * thousands of unrelated tenants and its own marketing pages
@@ -11,12 +13,17 @@
  * github.com/pricing's trial copy) came from exactly this conflation.
  *
  * This module answers one question -- "is this URL a listing on a shared
- * host, or does the candidate control the whole domain" -- so W4/W5 can
- * treat the two differently (path-scope the crawl; discount or refuse
- * evidence attributed from outside that path). It does not decide what W4
- * or W5 DO with the answer, and it does not change what product_url is
- * stored -- D23 asks W2 only to say what the URL actually is, not to
- * substitute a different one.
+ * host, or does the candidate control the whole domain, or do we genuinely
+ * not know" -- so W4/W5 can treat the three differently (path-scope the
+ * crawl; discount or refuse evidence attributed from outside that path;
+ * never treat 'unknown' as an endorsement). It does not decide what W4 or
+ * W5 DO with the answer, and it does not change what product_url is stored
+ * -- D23 asks W2 only to say what the URL actually is, not to substitute a
+ * different one.
+ *
+ * `ProductUrlKind` itself lives in finds/types.ts (W3-owned, mirrors the
+ * finds_candidates.product_url_kind CHECK constraint) -- imported here, not
+ * redeclared, so this module cannot drift from the database's own enum.
  *
  * Deliberately conservative: hosts are matched by exact hostname (after
  * stripping a leading `www.`), and most rules also require a path shape
@@ -26,8 +33,6 @@
  * never misclassified. New platforms get added here as they are found live,
  * the same way D23 itself was found live rather than guessed.
  */
-
-export type ProductUrlKind = 'dedicated' | 'shared_host';
 
 interface SharedHostRule {
   /** Hostnames this rule matches, already lowercase, no leading `www.`. */
@@ -70,16 +75,21 @@ function normalizeHost(hostname: string): string {
 }
 
 /**
- * `dedicated` on a malformed URL, same fallback stance as
- * finds_normalize_url in the migration: an unparseable URL should not be
- * asserted to be something it wasn't measured to be.
+ * `unknown` on a malformed URL -- NOT `dedicated`. An unparseable URL is
+ * exactly the case where we have not determined anything, and `dedicated`
+ * is the value that grants confidence (finds/types.ts, finds_candidates
+ * migration 20260828211100). Every OTHER return here is a real
+ * determination, though: a parseable URL not matching a known shared-host
+ * pattern IS classified `dedicated` by elimination against an enumerated
+ * list, which is a measured judgement, not a guess -- `unknown` is reserved
+ * for "could not even look", not "looked and it wasn't on the list".
  */
 export function classifyProductUrl(rawUrl: string): ProductUrlKind {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
   } catch {
-    return 'dedicated';
+    return 'unknown';
   }
   const host = normalizeHost(parsed.hostname);
   const isShared = SHARED_HOST_RULES.some(
@@ -88,7 +98,9 @@ export function classifyProductUrl(rawUrl: string): ProductUrlKind {
   return isShared ? 'shared_host' : 'dedicated';
 }
 
-/** A short suffix for log lines: flags a shared-host URL, silent otherwise. */
+/** A short suffix for log lines: flags anything other than a plain dedicated site. */
 export function productUrlKindTag(kind: ProductUrlKind): string {
-  return kind === 'shared_host' ? ' [SHARED-HOST]' : '';
+  if (kind === 'shared_host') return ' [SHARED-HOST]';
+  if (kind === 'unknown') return ' [UNCLASSIFIED-URL]';
+  return '';
 }
