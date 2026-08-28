@@ -7,6 +7,7 @@ import Projects from './pages/Projects';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Apps from './pages/Apps';
+import InterestingFinds from './pages/InterestingFinds';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
 import DrugMarketplace from './pages/DrugMarketplace';
@@ -41,6 +42,7 @@ function AppContent() {
           <Route path="/blog/docker-secrets-injection" element={<DockerSecretsPost />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/apps" element={<Apps />} />
+          <Route path="/interesting-finds" element={<InterestingFinds />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/spearfishing/voice-agent" element={<DrugMarketplace />} />
