@@ -1581,6 +1581,14 @@ HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
 
 ↕
 
+Block 0 · SRAM (empty)
+
+Block 1 · SRAM (empty)
+
+Block 2 · SRAM (empty)
+
+Block 3 · SRAM (empty)
+
 GPU idle — data sits in HBM (off-chip memory)
 
 ### Memory Hierarchy & Bandwidth
@@ -1630,6 +1638,38 @@ TPU — Push Model (Systolic Array)
 
 ▶ Run
 
+B0
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+A0
+
+A1
+
+A2
+
+A3
+
+A4
+
+A5
+
+A6
+
+A7
+
 ↓ partial sums exit bottom edge
 
 ACC
@@ -1654,11 +1694,51 @@ HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
 
 ↕
 
+Block 0 · SRAM (empty)
+
+Block 1 · SRAM (empty)
+
+Block 2 · SRAM (empty)
+
+Block 3 · SRAM (empty)
+
 GPU idle — data sits in HBM (off-chip memory)
 
 TPU — Push Model (Systolic Array)
 
 ▶ Run
+
+B0
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+A0
+
+A1
+
+A2
+
+A3
+
+A4
+
+A5
+
+A6
+
+A7
 
 ↓ partial sums exit bottom edge
 
@@ -1966,6 +2046,16 @@ Prefix caching
 Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values. This is the one thing that worked exactly as intended — and note how much smaller the win looks on hardware fast enough to make the prefill cheap anyway.
 
 Same project, three different questions. The first pays for the whole prefix; the rest reuse it.
+
+Tail latency
+
+## Where the split was supposed to pay
+
+Eight short requests at once, nothing shared, nothing cacheable — the case disaggregation exists for. It lost the median and the tail. Eight concurrent requests is simply not enough load on two H100s for phase contention to be the thing that hurts.
+
+concurrent requests, no shared prefix — the case disaggregation exists for. It lost
+        both the median and the tail. Eight requests on two H100s never generates the phase contention the split
+        is meant to resolve, so it only pays the cost.
 
 ## What the measurement actually said
 

@@ -158,6 +158,12 @@ const matmul = ensureH1First(extractPageMarkdown(path.join(SRC, 'MatmulTutorial.
 // the page would fetch on first load.
 const fireworksDataDir = path.join(ROOT, 'public', 'spearfishing', 'fireworks-ai', 'data');
 const activeRun = JSON.parse(fs.readFileSync(path.join(fireworksDataDir, 'riga-disaggregated.json'), 'utf8'));
+// `activePair` gates the tail-latency section ("Where the split was
+// supposed to pay") entirely — {activePair && <Section .../>} — and is
+// the hook's own pairing of the one complete measured colocated/
+// disaggregated pair on the same rig, loaded here the same way.
+const colocatedRun = JSON.parse(fs.readFileSync(path.join(fireworksDataDir, 'riga-colocated.json'), 'utf8'));
+const activePairData = { colocated: colocatedRun, disaggregated: activeRun };
 const runBadgePath = path.join(ROOT, 'src', 'components', 'fireworks', 'RunBadge.tsx');
 // RunBadge is "provenance for every number on the page" per its own doc
 // comment (run id, model, dtype, interconnect, exact prefix token count +
@@ -171,7 +177,7 @@ const runBadgePath = path.join(ROOT, 'src', 'components', 'fireworks', 'RunBadge
 // EngineerCard(expanded: true).
 const runProvenance = extractComponentMarkdown(runBadgePath, 'RunBadge', { run: activeRun }, { open: true });
 
-let fireworksRaw = extractPageMarkdown(path.join(SRC, 'FireworksAI.tsx'), { active: activeRun });
+let fireworksRaw = extractPageMarkdown(path.join(SRC, 'FireworksAI.tsx'), { active: activeRun, activePair: activePairData });
 // One sentence is still unrecoverable without reimplementing phases.ts's
 // timeline-duration math from scratch (a real risk of getting a number
 // wrong rather than just missing one) — dropped rather than left broken,

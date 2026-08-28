@@ -742,6 +742,14 @@ HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
 
 ↕
 
+Block 0 · SRAM (empty)
+
+Block 1 · SRAM (empty)
+
+Block 2 · SRAM (empty)
+
+Block 3 · SRAM (empty)
+
 GPU idle — data sits in HBM (off-chip memory)
 
 ### Memory Hierarchy & Bandwidth
@@ -791,6 +799,38 @@ TPU — Push Model (Systolic Array)
 
 ▶ Run
 
+B0
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+A0
+
+A1
+
+A2
+
+A3
+
+A4
+
+A5
+
+A6
+
+A7
+
 ↓ partial sums exit bottom edge
 
 ACC
@@ -815,11 +855,51 @@ HBM (High Bandwidth Memory) — 80 GB, 3.35 TB/s
 
 ↕
 
+Block 0 · SRAM (empty)
+
+Block 1 · SRAM (empty)
+
+Block 2 · SRAM (empty)
+
+Block 3 · SRAM (empty)
+
 GPU idle — data sits in HBM (off-chip memory)
 
 TPU — Push Model (Systolic Array)
 
 ▶ Run
+
+B0
+
+B1
+
+B2
+
+B3
+
+B4
+
+B5
+
+B6
+
+B7
+
+A0
+
+A1
+
+A2
+
+A3
+
+A4
+
+A5
+
+A6
+
+A7
 
 ↓ partial sums exit bottom edge
 

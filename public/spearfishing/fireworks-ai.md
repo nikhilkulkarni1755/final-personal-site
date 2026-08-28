@@ -56,6 +56,16 @@ Three different questions about the same project. The prefix is identical across
 
 Same project, three different questions. The first pays for the whole prefix; the rest reuse it.
 
+Tail latency
+
+## Where the split was supposed to pay
+
+Eight short requests at once, nothing shared, nothing cacheable — the case disaggregation exists for. It lost the median and the tail. Eight concurrent requests is simply not enough load on two H100s for phase contention to be the thing that hurts.
+
+concurrent requests, no shared prefix — the case disaggregation exists for. It lost
+        both the median and the tail. Eight requests on two H100s never generates the phase contention the split
+        is meant to resolve, so it only pays the cost.
+
 ## What the measurement actually said
 
 - **Disaggregation lost.** Time to first token on a 21,543-token prefix: **478ms colocated, 6,233ms disaggregated**. Eight concurrent short requests: 88ms p50 against 207ms. It won one thing — inter-token p99, by 2.7ms.

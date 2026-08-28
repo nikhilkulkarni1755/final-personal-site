@@ -21,7 +21,7 @@ const UNRESOLVED = Symbol('unresolved');
 // here stays UNRESOLVED rather than being guessed at.
 const GLOBAL_FNS = { String, Number, Boolean };
 const MATH_FNS = { round: Math.round, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, abs: Math.abs, pow: Math.pow, sqrt: Math.sqrt };
-const NUMBER_STRING_METHODS = new Set(['toLocaleString', 'toFixed', 'toString', 'toUpperCase', 'toLowerCase', 'trim', 'split', 'pop', 'join', 'slice', 'replace', 'toISOString']);
+const NUMBER_STRING_METHODS = new Set(['toLocaleString', 'toFixed', 'toString', 'toUpperCase', 'toLowerCase', 'trim', 'split', 'pop', 'join', 'slice', 'replace', 'toISOString', 'has', 'get']);
 
 // Silent content loss is worse than the documented "unresolved -> nothing"
 // rule: that rule is for content we genuinely cannot know (runtime state,
@@ -329,6 +329,17 @@ function evalExprInner(node, scope) {
       return Number.isNaN(d.getTime()) ? UNRESOLVED : d;
     } catch { return UNRESOLVED; }
   }
+  // `useState(new Set())` / `useState(new Map())` — the empty-by-default
+  // case is common for tracking "which items have been visited/loaded" in
+  // an animation (e.g. MatmulTutorial's sramBlocks), and the empty set IS
+  // the real default-rendered state, not a guess.
+  if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && (node.expression.text === 'Set' || node.expression.text === 'Map')) {
+    const arg = node.arguments && node.arguments[0] ? evalExpr(node.arguments[0], scope) : [];
+    if (arg === UNRESOLVED) return UNRESOLVED;
+    try {
+      return node.expression.text === 'Set' ? new Set(arg) : new Map(arg);
+    } catch { return UNRESOLVED; }
+  }
   if (ts.isCallExpression(node)) {
     // A callable value bound anywhere reachable by evaluating the callee
     // expression — a bare name (renderItem(x)) or a dotted lookup on a
@@ -357,7 +368,7 @@ function evalExprInner(node, scope) {
     // Chained number/string formatting, e.g. Math.round(x).toLocaleString().
     if (ts.isPropertyAccessExpression(node.expression) && NUMBER_STRING_METHODS.has(node.expression.name.text)) {
       const receiver = evalExpr(node.expression.expression, scope);
-      if ((typeof receiver === 'number' || typeof receiver === 'string' || Array.isArray(receiver) || receiver instanceof Date) && typeof receiver[node.expression.name.text] === 'function') {
+      if ((typeof receiver === 'number' || typeof receiver === 'string' || Array.isArray(receiver) || receiver instanceof Date || receiver instanceof Set || receiver instanceof Map) && typeof receiver[node.expression.name.text] === 'function') {
         const args = node.arguments.map((a) => evalExpr(a, scope));
         if (args.some((a) => a === UNRESOLVED)) return UNRESOLVED;
         try { return receiver[node.expression.name.text](...args); } catch { return UNRESOLVED; }
@@ -911,6 +922,42 @@ function expandExpr(expr, scope, ctx) {
       const fnCtx = fnEntry ? { ...ctx, entry: fnEntry } : ctx;
       return bodyExpr ? expandExpr(bodyExpr, s, fnCtx) : [];
     }
+  }
+  // Array.from({ length: N }, (_, i) => <JSX/>) — a common alternative to
+  // `.map()` for "render N items" (used by MatmulTutorial's GPU/TPU grid
+  // diagrams). Handled the same way as the .map() case just below: build
+  // the N-length array for real, then run the callback per index.
+  if (
+    ts.isCallExpression(expr) &&
+    ts.isPropertyAccessExpression(expr.expression) &&
+    ts.isIdentifier(expr.expression.expression) &&
+    expr.expression.expression.text === 'Array' &&
+    expr.expression.name.text === 'from'
+  ) {
+    const arrayLike = evalExpr(expr.arguments[0], scope);
+    const length = Array.isArray(arrayLike) ? arrayLike.length : arrayLike && typeof arrayLike.length === 'number' ? arrayLike.length : UNRESOLVED;
+    const cb = expr.arguments[1];
+    if (length !== UNRESOLVED && cb && (ts.isArrowFunction(cb) || ts.isFunctionExpression(cb)) && length <= 512) {
+      const out = [];
+      for (let i = 0; i < length; i++) {
+        const s = newScope(scope);
+        bindParams(cb.parameters, [undefined, i], s);
+        let bodyExpr;
+        if (ts.isBlock(cb.body)) {
+          const rj = findReturnJsx(cb.body);
+          bodyExpr = rj === 'multi' ? null : rj;
+        } else {
+          bodyExpr = unwrapParens(cb.body);
+        }
+        if (bodyExpr) {
+          const produced = expandExpr(bodyExpr, s, ctx);
+          for (const p of produced) p.fromMap = true;
+          out.push(...produced);
+        }
+      }
+      return out;
+    }
+    return [];
   }
   if (ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'map') {
     const arrExpr = expr.expression.expression;
