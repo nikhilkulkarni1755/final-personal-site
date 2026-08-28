@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "email:test": "node --test finds/email/render.test.ts",
+    "email:test": "node --test finds/email/*.test.ts",
     "email:typecheck": "tsc --noEmit -p finds/email/tsconfig.json",
     "email:dry-run": "node finds/email/dry-run.ts",
     "email:send": "node finds/email/send.ts",
