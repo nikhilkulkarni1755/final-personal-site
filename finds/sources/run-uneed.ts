@@ -1,17 +1,17 @@
-import { getPool } from './db.ts';
+import { getSupabaseClient } from './db.ts';
 import { ensureSource, recordFailure, recordSuccess } from './health.ts';
 import { upsertCandidate, upsertSighting } from './ingest.ts';
 import { fetchUneedLaunches } from './uneed.ts';
 
-// Daily Uneed ingest. Usage: DATABASE_URL=... node finds/sources/run-uneed.ts
+// Daily Uneed ingest. Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-uneed.ts
 //
 // One call gets the whole daily surface: `limit` is capped at 50 by the API
 // (R1 §5.2) and there is no pagination, so there is nothing to window by
 // time -- the sighting upsert's (source_id, external_id) uniqueness is what
 // keeps re-running this idempotent.
 
-const pool = getPool();
-const sourceId = await ensureSource(pool, {
+const client = getSupabaseClient();
+const sourceId = await ensureSource(client, {
   slug: 'uneed',
   displayName: 'Uneed',
   homepageUrl: 'https://www.uneed.best',
@@ -24,12 +24,12 @@ try {
 
   let newSightings = 0;
   for (const launch of launches) {
-    const candidateId = await upsertCandidate(pool, {
+    const candidateId = await upsertCandidate(client, {
       product_url: launch.productUrl,
       name: launch.name,
       tagline: launch.tagline,
     });
-    const isNew = await upsertSighting(pool, {
+    const isNew = await upsertSighting(client, {
       candidate_id: candidateId,
       source_id: sourceId,
       external_id: launch.externalId,
@@ -46,12 +46,10 @@ try {
   }
 
   console.log(`[uneed] ${newSightings} new sighting(s), ${launches.length - newSightings} already seen`);
-  await recordSuccess(pool, sourceId);
+  await recordSuccess(client, sourceId);
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
-  await recordFailure(pool, sourceId, message);
+  await recordFailure(client, sourceId, message);
   console.error(`[uneed] FAILED: ${message}`);
   process.exitCode = 1;
-} finally {
-  await pool.end();
 }
