@@ -13,7 +13,18 @@
 // and TLS/JS fingerprint carry it through.
 //
 // Auth: exactly the `token` cookie (§1.7) -- nothing else from the jar is
-// ever read or sent (config.ts).
+// ever read or sent (config.ts). Sending more of Nikhil's live session than
+// this one endpoint needs would be a real risk with no offsetting benefit.
+//
+// This file forwards `payload` opaquely (JSON.stringify only) and never
+// touches `payload.comment` itself. The HTML-escape-and-wrap that D13
+// requires already happened upstream in payload.ts/htmlEncode.ts; by the
+// time a payload reaches here it is exactly the bytes to send.
+//
+// CSRF: Peerlist's own client sends no CSRF header and R1 could not verify
+// server-side enforcement without posting (§1.8, UNVERIFIED). A CSRF
+// rejection is a real possible response here, not a bug -- it lands in
+// interpretResponse.ts's `rejected` outcome like any other.
 //
 // AT-MOST-ONCE, non-negotiable: this function makes exactly one POST
 // attempt. No loop, no retry, no re-issue on a timeout. If the POST

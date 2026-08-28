@@ -8,6 +8,13 @@
 // 'ambiguous', which is reserved for peerlistClient.ts to use when the POST
 // itself failed at the network level and no response body exists to
 // classify at all -- see that file for why that case must never retry.
+//
+// R1 (§1.8) could not verify whether the server enforces a CSRF check on
+// this endpoint without posting, which D4/the lane brief forbid during
+// development. A CSRF rejection is therefore a REAL, EXPECTED possible
+// response, not an impossible one: it falls through to the final `rejected`
+// branch below like any other success:false body whose message isn't the
+// known expired-session one.
 
 import type { PeerlistCommentResponse, PostCommentResult } from './types.ts';
 
