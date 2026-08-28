@@ -90,6 +90,17 @@ async function fetchOneSitemap(url: string, candidateOrigin: string): Promise<Fe
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GATE_CONFIG.connectTimeoutMs);
   try {
+    // safeFetch defaults to redirect:'manual' (V2-C3) -- a redirecting
+    // sitemap URL comes back as a 3xx here, not the destination's content,
+    // and is treated as not-fetched below. That is a real functionality
+    // trade-off (a sitemap that redirects, e.g. to a CDN, is not enumerated)
+    // rather than a security one: the alternative is following an
+    // attacker-controlled Sitemap: URL's redirect to an unchecked
+    // destination, which is the exact bug this file's P0/P1 check exists to
+    // prevent. Not fixed to gate-check each hop, unlike gate.ts's page path
+    // -- sitemap enumeration has no RunState/pacing/cap concept to hook
+    // into today, and V2-C3 was scoped to the page path. Logged as a known
+    // gap, not a silent one.
     const res = await safeFetch(url, { signal: controller.signal });
     if (!(res.status >= 200 && res.status < 300)) {
       return { fetched: false, isIndex: false, locs: [], truncated: false };

@@ -12,6 +12,22 @@
 // checkPage returns the body it already fetched (GateVerdictWithPage), and
 // request pacing lives here, keyed by RunState, so it holds regardless of
 // who is calling -- this module, checkSite's own loop, or W4's crawler.
+//
+// V2-C3: a redirect changes the URL we actually fetch, and every guarantee
+// above is evaluated against the URL we asked about. `redirect: 'manual'`
+// plus a full per-hop P0/P1/P2/robots.txt decision (fetchWithGatedRedirects,
+// below) closes that -- a redirect landing on a different, unchecked origin
+// used to get exactly the request the P1 ordering fix exists to prevent.
+//
+// V2-C4: `candidateOrigin` used to always equal the URL's own origin (set
+// by whichever caller invoked checkPage), which makes P1's same-site half
+// a tautology -- it can never be false. checkPage now accepts a real
+// `candidateOrigin` from the caller (checkSite passes the site being
+// crawled; W4 should pass its own ProjectScope.authority, per D23), and
+// falls back to the URL's own origin only when none is given -- the
+// original, admittedly-tautological, but at least honest default for
+// standalone use (CLI, tests) where there is no broader "project" to scope
+// against.
 
 import { createHash } from 'node:crypto';
 import { GATE_CONFIG } from './config.ts';
@@ -42,7 +58,8 @@ function sleep(ms: number): Promise<void> {
  * `delayMs` since this authority's last request, then records now as the
  * new last-request time -- so it holds even if two different URLs on one
  * authority are checked back to back by two different callers of checkPage
- * sharing the same RunState.
+ * sharing the same RunState, or a redirect crosses into a second authority
+ * mid-fetch (V2-C3).
  */
 async function throttle(runState: RunState, authority: string, delayMs: number): Promise<void> {
   const last = runState.lastRequestAt.get(authority);
@@ -64,15 +81,21 @@ async function getRobotsOutcome(origin: string, runState: RunState): Promise<Rob
   return outcome;
 }
 
+/** The known Crawl-delay for an authority whose robots.txt has already been
+ * fetched, or null if unknown/absent/denied. */
+function knownCrawlDelaySecondsFor(authority: string): number | null {
+  const outcome = robotsCache.get(authority);
+  if (!outcome || outcome.kind !== 'parsed') return null;
+  const selection = selectGroup(outcome.groups, GATE_CONFIG.userAgentProductToken);
+  return selection.group?.crawlDelaySeconds ?? null;
+}
+
 /** The real, now-known delay for an authority whose robots.txt has already
  * been fetched (it must have been, by the time a page fetch is reached --
  * decideAccess's P4-P7 require it). Falls back to our floor only for the
  * defensive case where it somehow has not. */
 function knownDelayMsFor(authority: string): number {
-  const outcome = robotsCache.get(authority);
-  if (!outcome || outcome.kind !== 'parsed') return GATE_CONFIG.baseDelayMs;
-  const selection = selectGroup(outcome.groups, GATE_CONFIG.userAgentProductToken);
-  const crawlDelaySeconds = selection.group?.crawlDelaySeconds ?? null;
+  const crawlDelaySeconds = knownCrawlDelaySecondsFor(authority);
   return crawlDelaySeconds !== null ? Math.max(crawlDelaySeconds, GATE_CONFIG.minCrawlDelaySeconds) * 1000 : GATE_CONFIG.baseDelayMs;
 }
 
@@ -137,6 +160,125 @@ function crawlBudgetFor(crawlDelaySeconds: number | null): CrawlBudget {
   };
 }
 
+/** Same budget, computed from whatever this authority's robots.txt is
+ * already known to say -- used for a redirect hop, where we have no
+ * `AccessDecision` object handy (see fetchWithGatedRedirects). */
+function budgetForAuthority(authority: string): CrawlBudget {
+  return crawlBudgetFor(knownCrawlDelaySecondsFor(authority));
+}
+
+/** D22, extended to redirect hops (V2-C3): the physical page-cap ceiling
+ * for one authority. Refuses and returns false once `pageFetchCount`
+ * reaches that authority's own `page_cap` -- never incremented on refusal,
+ * so it holds no matter who calls it or how a redirect chain crosses
+ * authorities within one run. */
+function trySpendPageBudget(runState: RunState, authority: string): { ok: boolean; budget: CrawlBudget } {
+  const budget = budgetForAuthority(authority);
+  const spent = runState.pageFetchCount.get(authority) ?? 0;
+  if (spent >= budget.page_cap) return { ok: false, budget };
+  runState.pageFetchCount.set(authority, spent + 1);
+  return { ok: true, budget };
+}
+
+function evidenceEntryFor(url: string, res: Response, fetchedAt: string, elapsedMs: number): EvidenceEntry {
+  return {
+    url,
+    method: 'GET',
+    request_user_agent: GATE_CONFIG.userAgent,
+    request_headers: { ...GATE_CONFIG.requestHeaders },
+    fetched_at: fetchedAt,
+    http_status: res.status,
+    response_headers: pickAllowedResponseHeaders(res),
+    content_length: res.headers.get('content-length') ? Number(res.headers.get('content-length')) : null,
+    sha256: null,
+    body_excerpt: null,
+    elapsed_ms: elapsedMs,
+  };
+}
+
+type HopOutcome =
+  | { kind: 'settled'; res: Response; finalUrl: string; redirectHops: number; evidenceEntries: EvidenceEntry[] }
+  | { kind: 'blocked'; redirectHops: number; evidenceEntries: EvidenceEntry[]; reason: string };
+
+/**
+ * V2-C3: fetches `startUrl` with `redirect: 'manual'` and, for every hop
+ * beyond the first, runs the SAME P0/P1/P2/robots.txt decision
+ * (decideAccess) and the SAME page-cap/pacing enforcement (D22) a
+ * top-level URL gets -- reusing decideAccess rather than re-deriving a
+ * parallel check, so a redirect target is judged by exactly the rules a
+ * candidate URL is. A same-authority hop hits the cached robots.txt (no
+ * extra request) but still gets its PATH re-matched, since a same-site
+ * redirect can land on a path robots.txt disallows even when the origin
+ * page was allowed. A cross-authority hop gets its own robots.txt fetch,
+ * per R2 §3.6 ("separate authority -> its own robots.txt fetch and its
+ * own verdict"). Hop 0 is the caller's own already-decided URL: no new
+ * decideAccess/budget check for it, since checkPage already did both.
+ * Capped at GATE_CONFIG.maxRedirects hops, matching robots.ts's own
+ * fetchWithRedirects (which this mirrors) and R2 §5.3.
+ */
+async function fetchWithGatedRedirects(startUrl: string, candidateOrigin: string, runState: RunState): Promise<HopOutcome> {
+  let currentUrl = startUrl;
+  const evidenceEntries: EvidenceEntry[] = [];
+
+  for (let hop = 0; hop <= GATE_CONFIG.maxRedirects; hop++) {
+    if (hop > 0) {
+      const authority = new URL(currentUrl).origin;
+      const hopDecision = await decideAccess(currentUrl, candidateOrigin, () => getRobotsOutcome(authority, runState), runState);
+      if (!hopDecision.allowed) {
+        return {
+          kind: 'blocked',
+          redirectHops: hop,
+          evidenceEntries,
+          reason: `redirect to ${currentUrl} was denied: ${hopDecision.reasonCode} (${hopDecision.precedenceRule}) -- ${hopDecision.reasonDetail}`,
+        };
+      }
+      const spend = trySpendPageBudget(runState, authority);
+      if (!spend.ok) {
+        return {
+          kind: 'blocked',
+          redirectHops: hop,
+          evidenceEntries,
+          reason: `redirect to ${currentUrl}: page cap (${spend.budget.page_cap}) for ${authority} already spent this run`,
+        };
+      }
+      await throttle(runState, authority, knownDelayMsFor(authority));
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), GATE_CONFIG.totalTimeoutMs);
+    const startedAt = Date.now();
+    const fetchedAt = new Date().toISOString();
+    let res: Response;
+    try {
+      res = await safeFetch(currentUrl, { redirect: 'manual', signal: controller.signal });
+    } catch (err) {
+      return {
+        kind: 'blocked',
+        redirectHops: hop,
+        evidenceEntries,
+        reason: `fetching ${currentUrl}: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+    const elapsedMs = Date.now() - startedAt;
+    evidenceEntries.push(evidenceEntryFor(currentUrl, res, fetchedAt, elapsedMs));
+
+    const isRedirect = res.status >= 300 && res.status < 400;
+    if (!isRedirect) return { kind: 'settled', res, finalUrl: currentUrl, redirectHops: hop, evidenceEntries };
+
+    await res.body?.cancel(); // a redirect's own body is never content we need
+    const location = res.headers.get('location');
+    if (!location) return { kind: 'settled', res, finalUrl: currentUrl, redirectHops: hop, evidenceEntries };
+    if (hop === GATE_CONFIG.maxRedirects) {
+      return { kind: 'blocked', redirectHops: hop, evidenceEntries, reason: `exceeded ${GATE_CONFIG.maxRedirects} redirects fetching ${startUrl}` };
+    }
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+  /* istanbul ignore next -- unreachable: the loop always returns by maxRedirects */
+  return { kind: 'blocked', redirectHops: GATE_CONFIG.maxRedirects, evidenceEntries, reason: 'redirect loop' };
+}
+
 interface PageFetch {
   status: number | null;
   challenge: boolean;
@@ -144,94 +286,31 @@ interface PageFetch {
   metaDirectives: string[];
   tdmReservation: boolean;
   pageContentUsage: ReturnType<typeof parseContentUsageHeader>;
-  evidence: EvidenceEntry;
+  /** One entry per hop actually fetched (a redirect chain fetches more than one). */
+  evidence: EvidenceEntry[];
   /** D21: the body this fetch already read, handed back so nothing needs
    * to fetch this URL a second time. */
   page: PageFetchOutcome;
 }
 
 /**
- * The ONE GET for a page: reads every USE signal that lives in the
- * response (X-Robots-Tag, meta robots, tdm-reservation, Content-Usage) AND
- * the body itself (for any R2 §5.3-accepted content type, capped at 2 MB),
- * so this is also the fetch W4 (or anything else) uses for verification.
- * Paced via `throttle()` against this authority's last request before the
- * request is made -- the caller does not pace this itself.
+ * The GET(s) for a page: follows redirects itself (V2-C3, `redirect:
+ * 'manual'` plus a per-hop gate decision -- see fetchWithGatedRedirects),
+ * reads every USE signal that lives in the FINAL response (X-Robots-Tag,
+ * meta robots, tdm-reservation, Content-Usage) AND the body itself (for
+ * any R2 §5.3-accepted content type, capped at 2 MB), so this is also the
+ * fetch W4 (or anything else) uses for verification. The first hop is
+ * paced via `throttle()` against the starting authority before anything
+ * is fetched; every later hop paces and cap-checks itself, per its own
+ * authority, inside fetchWithGatedRedirects.
  */
-async function fetchPageForUseSignals(url: string, runState: RunState): Promise<PageFetch> {
+async function fetchPageForUseSignals(url: string, candidateOrigin: string, runState: RunState): Promise<PageFetch> {
   const authority = new URL(url).origin;
   await throttle(runState, authority, knownDelayMsFor(authority));
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GATE_CONFIG.totalTimeoutMs);
-  const startedAt = Date.now();
-  const fetchedAt = new Date().toISOString();
-  const baseEvidence = {
-    url,
-    method: 'GET' as const,
-    request_user_agent: GATE_CONFIG.userAgent,
-    request_headers: { ...GATE_CONFIG.requestHeaders },
-    fetched_at: fetchedAt,
-  };
-  try {
-    const res = await safeFetch(url, { signal: controller.signal });
-    const contentType = res.headers.get('content-type');
-    const rawXrt = res.headers.get('x-robots-tag');
-    const headerDirectives = rawXrt ? extractApplicableDirectives(rawXrt, GATE_CONFIG.userAgentProductToken) : [];
-    const tdmHeader = parseTdmReservationHeader(res.headers.get('tdm-reservation'));
-    const pageContentUsage = parseContentUsageHeader(res.headers.get('content-usage'));
+  const hopResult = await fetchWithGatedRedirects(url, candidateOrigin, runState);
 
-    const readable = contentTypeAccepted(contentType);
-    let bodyText = '';
-    let truncated = false;
-    if (readable) {
-      const capped = await readTextCapped(res, GATE_CONFIG.maxResponseBytes);
-      bodyText = capped.text;
-      truncated = capped.truncated;
-    } else {
-      await res.body?.cancel();
-    }
-
-    let metaDirectives: string[] = [];
-    let tdmMeta = false;
-    if (readable && contentType?.includes('html')) {
-      metaDirectives = extractMetaRobotsDirectives(bodyText, GATE_CONFIG.userAgentProductToken);
-      tdmMeta = parseTdmReservationMeta(bodyText);
-    }
-
-    const elapsedMs = Date.now() - startedAt;
-    const sha256 = readable ? createHash('sha256').update(bodyText).digest('hex') : null;
-
-    return {
-      status: res.status,
-      challenge: isBotChallenge(res),
-      headerDirectives,
-      metaDirectives,
-      tdmReservation: tdmHeader || tdmMeta,
-      pageContentUsage,
-      evidence: {
-        ...baseEvidence,
-        http_status: res.status,
-        response_headers: pickAllowedResponseHeaders(res),
-        content_length: res.headers.get('content-length') ? Number(res.headers.get('content-length')) : null,
-        sha256,
-        body_excerpt: null,
-        elapsed_ms: elapsedMs,
-      },
-      page: {
-        kind: 'fetched',
-        final_url: res.url || url,
-        http_status: res.status,
-        content_type: contentType,
-        body: bodyText,
-        content_sha256: sha256 ?? '',
-        truncated,
-        fetched_at: fetchedAt,
-        elapsed_ms: elapsedMs,
-      },
-    };
-  } catch (err) {
-    const elapsedMs = Date.now() - startedAt;
+  if (hopResult.kind === 'blocked') {
     return {
       status: null,
       challenge: false,
@@ -239,25 +318,61 @@ async function fetchPageForUseSignals(url: string, runState: RunState): Promise<
       metaDirectives: [],
       tdmReservation: false,
       pageContentUsage: null,
-      evidence: {
-        ...baseEvidence,
-        http_status: null,
-        response_headers: {},
-        content_length: null,
-        sha256: null,
-        body_excerpt: null,
-        elapsed_ms: elapsedMs,
-      },
-      page: {
-        kind: 'error',
-        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-        fetched_at: fetchedAt,
-        elapsed_ms: elapsedMs,
-      },
+      evidence: hopResult.evidenceEntries,
+      page: { kind: 'error', error: hopResult.reason, fetched_at: new Date().toISOString(), elapsed_ms: 0 },
     };
-  } finally {
-    clearTimeout(timer);
   }
+
+  const { res, finalUrl } = hopResult;
+  const fetchedAt = new Date().toISOString();
+  const startedAt = Date.now();
+  const contentType = res.headers.get('content-type');
+  const rawXrt = res.headers.get('x-robots-tag');
+  const headerDirectives = rawXrt ? extractApplicableDirectives(rawXrt, GATE_CONFIG.userAgentProductToken) : [];
+  const tdmHeader = parseTdmReservationHeader(res.headers.get('tdm-reservation'));
+  const pageContentUsage = parseContentUsageHeader(res.headers.get('content-usage'));
+
+  const readable = contentTypeAccepted(contentType);
+  let bodyText = '';
+  let truncated = false;
+  if (readable) {
+    const capped = await readTextCapped(res, GATE_CONFIG.maxResponseBytes);
+    bodyText = capped.text;
+    truncated = capped.truncated;
+  } else {
+    await res.body?.cancel();
+  }
+
+  let metaDirectives: string[] = [];
+  let tdmMeta = false;
+  if (readable && contentType?.includes('html')) {
+    metaDirectives = extractMetaRobotsDirectives(bodyText, GATE_CONFIG.userAgentProductToken);
+    tdmMeta = parseTdmReservationMeta(bodyText);
+  }
+
+  const bodyReadElapsedMs = Date.now() - startedAt;
+  const sha256 = readable ? createHash('sha256').update(bodyText).digest('hex') : null;
+
+  return {
+    status: res.status,
+    challenge: isBotChallenge(res),
+    headerDirectives,
+    metaDirectives,
+    tdmReservation: tdmHeader || tdmMeta,
+    pageContentUsage,
+    evidence: hopResult.evidenceEntries,
+    page: {
+      kind: 'fetched',
+      final_url: finalUrl,
+      http_status: res.status,
+      content_type: contentType,
+      body: bodyText,
+      content_sha256: sha256 ?? '',
+      truncated,
+      fetched_at: fetchedAt,
+      elapsed_ms: bodyReadElapsedMs,
+    },
+  };
 }
 
 function robotsEvidenceEntry(origin: string, outcome: RobotsOutcome): EvidenceEntry {
@@ -369,6 +484,13 @@ const NOT_FETCHED: PageFetchOutcome = { kind: 'not_fetched' };
  * `runState` should be shared across every URL in one crawl: it is what
  * makes P2/P3 and D21's request pacing work across separate checkPage calls.
  *
+ * `candidateOrigin` (V2-C4) is the site under evaluation for P1's same-site
+ * check -- pass the real one (checkSite passes the site being crawled; W4
+ * should pass its ProjectScope.authority, D23). Omitted, it falls back to
+ * the URL's own origin, which makes that half of P1 trivially true; that is
+ * the deliberate, honest default for standalone use (CLI, tests, a single
+ * link with no broader project context), not a silent weakening.
+ *
  * SECURITY: robots.txt is fetched lazily, inside access.ts's decideAccess,
  * only after P0 (denylist) and P1 (URL scope -- private/loopback/CGNAT
  * addresses) have both passed. A candidate URL is attacker-controlled input
@@ -377,22 +499,27 @@ const NOT_FETCHED: PageFetchOutcome = { kind: 'not_fetched' };
  * real request carrying our UA to a target the operator does not control.
  * Do not reintroduce an eager `getRobotsOutcome(authority)` call here.
  *
- * D21: `page` on the returned object IS the page's content -- callers must
- * not fetch `url` again. A denied verdict always carries `{kind:
- * 'not_fetched'}`; never derive a body from a verdict whose `allowed` is
- * false. */
-export async function checkPage(url: string, opts: { candidateId?: string | null; runState?: RunState } = {}): Promise<GateVerdictWithPage> {
+ * D21/V2-C3: `page` on the returned object IS the page's content, already
+ * fetched through every redirect hop with its own P0/P1/robots decision --
+ * callers must not fetch `url` (or wherever it redirects) again. A denied
+ * verdict always carries `{kind: 'not_fetched'}`; never derive a body from
+ * a verdict whose `allowed` is false. */
+export async function checkPage(
+  url: string,
+  opts: { candidateId?: string | null; runState?: RunState; candidateOrigin?: string } = {},
+): Promise<GateVerdictWithPage> {
   const cached = verdictCache.get(url);
   if (cached) return cached;
 
   const parsed = new URL(url);
   const authority = parsed.origin;
   const runState = opts.runState ?? createRunState();
+  const candidateOrigin = opts.candidateOrigin ?? authority;
 
   let robotsOutcome: RobotsOutcome | null = null;
   const decision = await decideAccess(
     url,
-    authority,
+    candidateOrigin,
     async () => {
       robotsOutcome = await getRobotsOutcome(authority, runState);
       return robotsOutcome;
@@ -432,10 +559,10 @@ export async function checkPage(url: string, opts: { candidateId?: string | null
       verdictCache.set(url, verdict, ttlForReasonCode(verdict.reason_code) ?? undefined);
       return verdict;
     }
-
-    const pageFetch = await fetchPageForUseSignals(url, runState);
     runState.pageFetchCount.set(authority, spentSoFar + 1);
-    evidence.push(pageFetch.evidence);
+
+    const pageFetch = await fetchPageForUseSignals(url, candidateOrigin, runState);
+    evidence.push(...pageFetch.evidence);
 
     if (pageFetch.status !== null && [401, 403, 429, 451].includes(pageFetch.status)) {
       recordAuthorityDenial(runState, authority, {
@@ -552,7 +679,11 @@ export interface SiteCheckResult {
  * P2/P3 (an authority denial found partway through) AND D21's request
  * pacing (enforced inside checkPage/fetchPageForUseSignals, not here)
  * protect and space every URL checked afterward -- this loop does not
- * sleep itself; doing so as well would double the delay.
+ * sleep itself; doing so as well would double the delay. Every checkPage
+ * call is given `candidateOrigin: origin` explicitly (V2-C4) -- the site
+ * being crawled, not each candidate URL's own origin -- so P1's same-site
+ * check is doing real work here (a sitemap entry on a different registrable
+ * domain is correctly out of scope; one on a same-domain subdomain is not).
  */
 export async function checkSite(originUrl: string, opts: { candidateId?: string | null } = {}): Promise<SiteCheckResult> {
   const origin = new URL(originUrl).origin;
@@ -561,7 +692,7 @@ export async function checkSite(originUrl: string, opts: { candidateId?: string 
   // No eager robots.txt fetch here (that was the same SSRF bug checkPage
   // had): let checkPage decide the homepage first, which only reaches
   // robots.txt itself after P0/P1/P2 pass.
-  const homepage = await checkPage(origin + '/', { ...opts, runState });
+  const homepage = await checkPage(origin + '/', { ...opts, runState, candidateOrigin: origin });
   if (!homepage.allowed) {
     return { origin, allowed: [], disallowed: [homepage], truncated: false };
   }
@@ -583,7 +714,7 @@ export async function checkSite(originUrl: string, opts: { candidateId?: string 
   const disallowed: GateVerdictWithPage[] = [];
 
   for (const candidate of candidates) {
-    const verdict = await checkPage(candidate, { ...opts, runState });
+    const verdict = await checkPage(candidate, { ...opts, runState, candidateOrigin: origin });
     (verdict.allowed ? allowed : disallowed).push(verdict);
   }
 
