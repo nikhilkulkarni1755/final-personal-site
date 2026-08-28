@@ -2,11 +2,18 @@
 # Run the REAL scoring code against a real Postgres, end to end.
 #
 # prove-d7.sh proves the schema refuses a bad write. This proves the other
-# direction: that finds/score/run.ts actually executes -- W8 found that Node's
-# native type stripping rejects TS syntax that `tsc --noEmit` is perfectly
-# happy with, so a lane that only typechecks has proven nothing about whether
-# its code runs -- and that scoring and selection produce the right answers
-# against rows read back out of Postgres rather than handed to a function.
+# direction: that this lane's code actually EXECUTES -- W8 found that Node's
+# native type stripping rejects TS syntax `tsc --noEmit` is perfectly happy
+# with, so a lane that only typechecks has proven nothing about whether its
+# code runs -- and that scoring and selection produce the right answers on rows
+# that came out of a real Postgres rather than out of a test fixture.
+#
+# The code is driven through finds/score/offline.ts rather than run.ts, because
+# run.ts speaks supabase-js (D17) and a throwaway cluster has no PostgREST in
+# front of it. Everything under test is the same: scoreCandidate,
+# buildVerdictWrite, selectForDay, toDigestInput, and the real
+# finds_write_verdict function. What is NOT proven here is db.ts's supabase-js
+# binding, which needs a live Supabase project.
 #
 # What it does NOT prove: anything about W4's crawler. The evidence rows below
 # are built inline in the shapes W4's finds/verify/{claims,signals}.ts emit,
@@ -17,15 +24,11 @@
 # only inside a throwaway cluster that is destroyed on exit. No fixture file is
 # committed and nothing here can reach a real table.
 #
-# Needs a local Postgres (initdb/pg_ctl/psql), node >= 22, and `pg` installed.
+# Needs a local Postgres (initdb/pg_ctl/psql) and node >= 22. No credential and
+# no network: it never touches Nikhil's database.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
-if ! node --input-type=module -e 'import("pg")' >/dev/null 2>&1; then
-    echo "FAIL: the 'pg' package is not installed in $REPO_ROOT. Run 'npm install' first." >&2
-    exit 1
-fi
 
 CLUSTER="$(mktemp -d "${TMPDIR:-/tmp}/finds-w5-pipeline.XXXXXX")"
 PORT=$(( 15432 + RANDOM % 2000 ))
@@ -44,6 +47,7 @@ psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role B
              GRANT ALL ON TABLES TO anon, authenticated, service_role;"
 export PGOPTIONS="-c client_min_messages=warning"
 for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration" >/dev/null; done
+psql -f "$REPO_ROOT/finds/score/verdict-rpc.sql" >/dev/null   # PROPOSED to W3
 unset PGOPTIONS
 
 # ---------------------------------------------------------------------------
@@ -133,13 +137,38 @@ SETUP
 
 cd "$REPO_ROOT"
 
-echo "--- node finds/score/run.ts score ---"
-node finds/score/run.ts score | sed 's/^/    /'
+q() { command psql "$DATABASE_URL" -X -q -t -A -v ON_ERROR_STOP=1 -c "$1"; }
 
-psql -c "DO \$\$ BEGIN
+# ---------------------------------------------------------------------------
+# Score every crawled candidate: Postgres -> the real scorer -> the real
+# finds_write_verdict function -> Postgres.
+# ---------------------------------------------------------------------------
+echo "--- scoring, through finds/score/offline.ts ---"
+for url in https://w5-strong.invalid/ https://w5-waitlist.invalid/; do
+    INPUT=$(q "
+      SELECT json_build_object(
+        'candidate_id', c.id,
+        'candidate_status', c.status,
+        'evidence_run_id', (SELECT crawl_run_id FROM finds_evidence
+                             WHERE candidate_id = c.id ORDER BY fetched_at DESC LIMIT 1),
+        'urls_refused', (SELECT count(*) FROM finds_crawl_verdicts
+                          WHERE candidate_id = c.id AND allowed = false),
+        'rows', COALESCE((SELECT json_agg(e) FROM finds_evidence e WHERE e.candidate_id = c.id), '[]'::json))
+        FROM finds_candidates c WHERE c.product_url = '$url';")
+
+    OUTPUT=$(node finds/score/offline.ts score <<<"$INPUT")
+    PAYLOAD=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const o=JSON.parse(s);if(!o.payload){console.error(o.detail??"no payload");process.exit(1)}console.log(JSON.stringify(o.payload.p_verdicts))})' <<<"$OUTPUT")
+    CID=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_candidate_id))' <<<"$OUTPUT")
+    RUN=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_evidence_run_id))' <<<"$OUTPUT")
+
+    WRITTEN=$(q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, \$w5\$$PAYLOAD\$w5\$::jsonb);")
+    q "UPDATE finds_candidates SET status = 'scored' WHERE id = '$CID';" >/dev/null
+    echo "    $url  ->  $WRITTEN verdicts written"
+done
+
+psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 8, 'expected 4 criteria x 2 candidates';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) > 0, 'every verdict must cite evidence';
-  ASSERT (SELECT count(*) FROM finds_candidates WHERE status = 'scored') = 2, 'both should be marked scored';
   ASSERT (SELECT score FROM finds_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
            WHERE c.product_url = 'https://w5-waitlist.invalid/' AND v.criterion = 'C3') = 0,
          'a waitlist must score C3 = 0';
@@ -158,25 +187,55 @@ psql -c "DO \$\$ BEGIN
 END \$\$;" >/dev/null
 echo "PASS  verdicts written from real rows, with citations, statuses and refusal counts"
 
-echo
-echo "--- node finds/score/run.ts select 2026-08-28 ---"
-node finds/score/run.ts select 2026-08-28 | sed 's/^/    /'
+# ---------------------------------------------------------------------------
+# Select the day, and build the handoff W6 sends.
+# ---------------------------------------------------------------------------
+SELECT_INPUT=$(q "
+  SELECT json_build_object('date', '2026-08-28', 'candidates', json_agg(x)) FROM (
+    SELECT c.id AS candidate_id, c.name, c.tagline, c.product_url, c.first_seen_at,
+           (SELECT v.evidence_run_id FROM finds_verdicts v
+             WHERE v.candidate_id = c.id ORDER BY v.created_at DESC LIMIT 1) AS evidence_run_id,
+           COALESCE((SELECT array_agg(DISTINCT s.slug) FROM finds_candidate_sightings sg
+                       JOIN finds_sources s ON s.id = sg.source_id
+                      WHERE sg.candidate_id = c.id), ARRAY[]::text[]) AS source_slugs,
+           (SELECT jsonb_object_agg(v.criterion, v.score) FROM finds_verdicts v
+             WHERE v.candidate_id = c.id) AS scores,
+           (SELECT jsonb_object_agg(v.criterion, v.rationale) FROM finds_verdicts v
+             WHERE v.candidate_id = c.id) AS rationales
+      FROM finds_undigested_candidates c) x;")
 
-SELECTED=$(node finds/score/run.ts select 2026-08-28)
-# Split at the rejection listing: appearing in it is the OPPOSITE of being picked.
-PICKED=$(sed '/^Not selected/,$d' <<<"$SELECTED")
-grep -q 'scheduling assistant' <<<"$PICKED" || { echo "FAIL: the usable product was not picked" >&2; exit 1; }
-grep -q 'design canvas' <<<"$PICKED" && { echo "FAIL: a waitlisted product reached the digest" >&2; exit 1; }
-grep -q 'design canvas.*contradicted -- C3 scored 0' <<<"$SELECTED" || { echo "FAIL: rejected, but not for the waitlist" >&2; exit 1; }
-echo "PASS  selection rejected the waitlisted product BY NAME of the criterion it failed"
+RESULT=$(node finds/score/offline.ts select <<<"$SELECT_INPUT")
+node -e '
+let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
+  const { selection, digest } = JSON.parse(s);
+  console.log("    " + selection.summary);
+  for (const p of selection.picks) console.log(`    PICK ${p.name} -- ${p.why}`);
+  for (const r of selection.rejected) console.log(`    DROP ${r.name}: ${r.reason} -- ${r.detail}`);
+  const fail = (m) => { console.error("FAIL: " + m); process.exit(1); };
+  if (selection.picks.length !== 1) fail("expected exactly one pick");
+  if (!selection.picks[0].name.includes("scheduling assistant")) fail("the usable product was not picked");
+  const dropped = selection.rejected.find(r => r.name.includes("design canvas"));
+  if (!dropped) fail("a waitlisted product was not rejected");
+  if (dropped.reason !== "contradicted" || !dropped.detail.startsWith("C3 scored 0")) fail("rejected, but not for the waitlist");
+  if (!digest || digest.finds.length !== 1) fail("the digest handoff was not produced");
+  const c1 = digest.finds[0].criteria.find(c => c.id === "C1");
+  if (c1.score === undefined) fail("the digest must carry the 0-3 score alongside the boolean");
+  if (digest.finds[0].criteria.length !== 4) fail("the digest needs all four criteria");
+});' <<<"$RESULT"
+echo "PASS  selection picked the usable product, rejected the waitlisted one by criterion, and produced W6's handoff"
 
 # Re-scoring must be idempotent: same evidence, same verdicts, no duplicates.
-psql -c "UPDATE finds_candidates SET status = 'crawled';" >/dev/null
-node finds/score/run.ts score >/dev/null
-psql -c "DO \$\$ BEGIN
+CID=$(q "SELECT id FROM finds_candidates WHERE product_url = 'https://w5-strong.invalid/';")
+RUN=$(q "SELECT crawl_run_id FROM finds_evidence WHERE candidate_id = '$CID' LIMIT 1;")
+INPUT=$(q "
+  SELECT json_build_object('candidate_id','$CID','candidate_status','crawled','evidence_run_id','$RUN',
+    'urls_refused',1,'rows',(SELECT json_agg(e) FROM finds_evidence e WHERE e.candidate_id='$CID'));")
+PAYLOAD=$(node finds/score/offline.ts score <<<"$INPUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).payload.p_verdicts)))')
+q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, \$w5\$$PAYLOAD\$w5\$::jsonb);" >/dev/null
+psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 8, 're-scoring must update in place, not duplicate';
 END \$\$;" >/dev/null
 echo "PASS  re-scoring the same evidence is idempotent"
 
 echo
-echo "The scoring code runs, against Postgres, on rows read back out of it."
+echo "The scoring code runs, on rows read out of Postgres, through the function W5 asks W3 to migrate."

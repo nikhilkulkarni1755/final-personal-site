@@ -22,18 +22,27 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLUSTER="$(mktemp -d "${TMPDIR:-/tmp}/finds-w5-d7.XXXXXX")"
 trap 'pg_ctl -D "$CLUSTER/data" stop -m immediate >/dev/null 2>&1 || true; rm -rf "$CLUSTER"' EXIT
 
-# The two statements, printed by the code under test rather than copied.
-PLAN_JS='
+# The payload keys buildVerdictWrite() actually emits, printed by the code
+# under test. If a field is renamed on either side this proof stops passing,
+# which is the only thing standing between the builder and the function.
+KEYS_JS='
 import { buildVerdictWrite } from "./finds/score/persist.ts";
 const zero = "00000000-0000-4000-8000-000000000000";
-const plan = buildVerdictWrite(zero, zero, [
+const args = buildVerdictWrite(zero, zero, [
   { criterion: "C1", score: 3, rationale: "x", rubric_version: "1.0",
     citations: [{ evidence_id: zero, stance: "supports", note: "" }] },
 ]);
-console.log(`PREPARE w5_clear (uuid, uuid, text) AS ${plan[1].text};`);
-console.log(`PREPARE w5_write (uuid, uuid, text, smallint, text, text, uuid[], text[]) AS ${plan[2].text};`);
+console.log([...Object.keys(args), ...Object.keys(args.p_verdicts[0]),
+             ...Object.keys(args.p_verdicts[0].citations[0])].join(" "));
 '
-PLAN_SQL="$(cd "$REPO_ROOT" && node --input-type=module -e "$PLAN_JS")"
+BUILDER_KEYS="$(cd "$REPO_ROOT" && node --input-type=module -e "$KEYS_JS")"
+EXPECTED_KEYS="p_candidate_id p_evidence_run_id p_verdicts criterion score rationale scored_by citations evidence_id stance"
+if [ "$BUILDER_KEYS" != "$EXPECTED_KEYS" ]; then
+    echo "FAIL: buildVerdictWrite emits [$BUILDER_KEYS]" >&2
+    echo "      finds_write_verdict reads  [$EXPECTED_KEYS]" >&2
+    exit 1
+fi
+echo "PASS  buildVerdictWrite emits exactly the fields finds_write_verdict reads"
 
 initdb -D "$CLUSTER/data" -U postgres --auth=trust >"$CLUSTER/initdb.log" 2>&1
 mkdir -p "$CLUSTER/sock"
@@ -49,6 +58,9 @@ psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role B
 # Migration NOTICEs (idempotent DROP ... IF EXISTS) are not this test's output.
 export PGOPTIONS="-c client_min_messages=warning"
 for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration" >/dev/null; done
+# PROPOSED to W3, not yet a migration. Installed here so the function under
+# test is the exact text this lane is asking to have migrated.
+psql -f "$REPO_ROOT/finds/score/verdict-rpc.sql" >/dev/null
 unset PGOPTIONS
 
 # --- the minimum real chain a verdict needs: candidate -> ALLOW -> evidence ---
@@ -96,18 +108,28 @@ SELECT array_agg(id ORDER BY url) AS eids FROM finds_evidence WHERE candidate_id
 SELECT id AS foreign_eid FROM finds_evidence WHERE candidate_id = :'oid' \gset
 IDSQL
 
-run() { printf '%s\n%s\n%s\n' "$PLAN_SQL" "$(cat "$IDS")" "$1" | psql -f - ; }
+run() { printf '%s\n%s\n' "$(cat "$IDS")" "$1" | psql -f - ; }
+
+# The payload, built in SQL from the ids just created. Its SHAPE is the one
+# buildVerdictWrite() emits, asserted above.
+payload() {
+    cat <<PAYLOAD
+jsonb_build_array(jsonb_build_object(
+  'criterion', '$1', 'score', $2, 'rationale', '$3', 'scored_by', 'rubric/1.0',
+  'citations', $4))
+PAYLOAD
+}
+
+CITE_ALL="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM finds_evidence WHERE candidate_id = :'cid')"
+CITE_ONE="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f)"
+CITE_FOREIGN="jsonb_build_array(jsonb_build_object('evidence_id', :'foreign_eid', 'stance', 'supports'))"
 
 # --------------------------------------------------------------------------
-# 1. The happy path: verdict and citations in one transaction, and it commits.
+# 1. The happy path: verdict and citations in one call, and it commits.
 # --------------------------------------------------------------------------
 run "
-BEGIN;
-EXECUTE w5_clear(:'cid', '11111111-1111-4111-8111-111111111111', 'C1');
-EXECUTE w5_write(:'cid', '11111111-1111-4111-8111-111111111111', 'C1', 3,
-    'CORROBORATED: 3 of 3 checkable claims are echoed on another page of the site.',
-    'rubric/1.0', :'eids', ARRAY['supports','supports','supports']);
-COMMIT;
+SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid,
+  $(payload C1 3 'CORROBORATED: 3 of 3 checkable claims are echoed on another page of the site.' "$CITE_ALL"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'expected exactly one verdict';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) = 3, 'expected three citations';
@@ -120,12 +142,8 @@ echo "PASS  a cited verdict commits, carrying all three citations"
 #    them, and leaves exactly one verdict row.
 # --------------------------------------------------------------------------
 run "
-BEGIN;
-EXECUTE w5_clear(:'cid', '11111111-1111-4111-8111-111111111111', 'C1');
-EXECUTE w5_write(:'cid', '11111111-1111-4111-8111-111111111111', 'C1', 2,
-    'CORROBORATED (partial): re-scored against the same generation.',
-    'rubric/1.0', ARRAY[(:'eids'::uuid[])[1]], ARRAY['supports']);
-COMMIT;
+SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid,
+  $(payload C1 2 'CORROBORATED (partial): re-scored against the same generation.' "$CITE_ONE"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'a re-score must update, not duplicate';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) = 1, 'stale citations must be gone';
@@ -134,8 +152,7 @@ END \$\$;" >/dev/null
 echo "PASS  a re-score updates in place and replaces its citations"
 
 # --------------------------------------------------------------------------
-# 3-5. The three things the schema must refuse. Each runs in its own psql, and
-#      the test is that psql FAILS.
+# 3-6. What must be refused. Each runs in its own psql; the test is that it FAILS.
 # --------------------------------------------------------------------------
 refuses() {
     local label="$1" sql="$2" out
@@ -148,17 +165,21 @@ refuses() {
     echo "PASS  $label"
 }
 
-refuses "an uncited score aborts at COMMIT" "
+refuses "an uncited score is refused by the function, by name of the criterion" "
+SELECT finds_write_verdict(:'cid'::uuid, '33333333-3333-4333-8333-333333333333'::uuid,
+  jsonb_build_array(jsonb_build_object('criterion','C2','score',3,
+    'rationale','it solves a rare problem','scored_by','rubric/1.0','citations', '[]'::jsonb)));" \
+  "C2 cites no evidence"
+
+refuses "an uncited score inserted DIRECTLY still aborts at COMMIT" "
 BEGIN;
 INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
 VALUES (:'cid', '33333333-3333-4333-8333-333333333333', 'C2', 3, 'it solves a rare problem', 'rubric/1.0');
 COMMIT;" "has no cited evidence"
 
 refuses "citing another product's evidence is a foreign-key violation" "
-BEGIN;
-EXECUTE w5_write(:'cid', '44444444-4444-4444-8444-444444444444', 'C3', 3,
-    'usable by anyone', 'rubric/1.0', ARRAY[:'foreign_eid']::uuid[], ARRAY['supports']);
-COMMIT;" "finds_verdict_evidence_evidence_fkey"
+SELECT finds_write_verdict(:'cid'::uuid, '44444444-4444-4444-8444-444444444444'::uuid,
+  $(payload C3 3 'usable by anyone' "$CITE_FOREIGN"));" "finds_verdict_evidence_evidence_fkey"
 
 refuses "stripping a live score's last citation aborts at COMMIT" "
 BEGIN;
@@ -166,4 +187,4 @@ DELETE FROM finds_verdict_evidence WHERE candidate_id = :'cid';
 COMMIT;" "has no cited evidence"
 
 echo
-echo "D7 is structural: proven against a real Postgres, using the SQL buildVerdictWrite() emits."
+echo "D7 is structural: proven against a real Postgres, through the function W5 asks W3 to migrate."
