@@ -19,12 +19,12 @@
  *   select: {"date","candidates":[...]}                        -> {selection, digest}
  */
 
-import { buildVerdictWrite, partitionPersistable } from './persist.ts';
+import { buildVerdictWrite } from './persist.ts';
 import { scoreCandidate } from './score.ts';
 import type { ScoreInput } from './score.ts';
 import { selectForDay } from './select.ts';
 import type { SelectionCandidate } from './select.ts';
-import { toDigestInput } from './digest.ts';
+import { toDigestSelection } from './digest.ts';
 
 const mode = process.argv[2];
 const input = JSON.parse(await new Response(process.stdin).text()) as unknown;
@@ -34,21 +34,16 @@ if (mode === 'score') {
   if (outcome.kind === 'unscoreable') {
     console.log(JSON.stringify({ unscoreable: outcome.reason, detail: outcome.detail }));
   } else {
-    const { persistable, blocked } = partitionPersistable(outcome.scores);
     console.log(
       JSON.stringify({
-        payload:
-          persistable.length > 0
-            ? buildVerdictWrite(outcome.candidate_id, outcome.evidence_run_id, persistable)
-            : null,
-        withheld: blocked.map((b) => b.score.criterion),
+        payload: buildVerdictWrite(outcome.candidate_id, outcome.evidence_run_id, outcome.scores),
       }),
     );
   }
 } else if (mode === 'select') {
   const { date, candidates } = input as { date: string; candidates: SelectionCandidate[] };
   const selection = selectForDay(date, candidates);
-  console.log(JSON.stringify({ selection, digest: toDigestInput(selection) }));
+  console.log(JSON.stringify({ selection, digest: toDigestSelection(selection) }));
 } else {
   console.error('usage: node finds/score/offline.ts score|select  < input.json');
   process.exit(2);

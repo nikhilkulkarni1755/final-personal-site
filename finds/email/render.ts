@@ -18,6 +18,9 @@ const MUTED = '#52525b'; // secondary text
 const BORDER = '#e4e4e7';
 const YES = '#15803d';
 const NO = '#b91c1c';
+// Neither a pass nor a fail: "no evidence either way". Amber, not red or
+// green, on purpose -- see the Tier note below.
+const NEUTRAL = '#a16207';
 const LINK = '#1d4ed8';
 
 // Dark-mode overrides for clients that honour prefers-color-scheme via a
@@ -34,7 +37,48 @@ const DARK_STYLE = `
   .email-link { color:#60a5fa !important; }
   .email-yes { color:#4ade80 !important; }
   .email-no { color:#f87171 !important; }
+  .email-neutral { color:#fbbf24 !important; }
 }`;
+
+/**
+ * A criterion verdict is one of three tiers, never a pass/fail boolean --
+ * see finds/email/types.ts's note on EmailCriterion for why. C1 carries its
+ * own three-way `status` (finds/score/c1.ts) and that is authoritative when
+ * present; C2-C4 only ever carry a 0-3 `score`, so the same three tiers are
+ * derived from it. 'neutral' ("no evidence either way") must never render
+ * as a failure -- that is the single worst thing this digest could do.
+ */
+type Tier = 'positive' | 'neutral' | 'negative';
+
+function tierOf(c: EmailCriterion): Tier {
+  if (c.status === 'contradicted') return 'negative';
+  if (c.status === 'unsubstantiated') return 'neutral';
+  if (c.status === 'corroborated') return 'positive';
+  if (c.score === 0) return 'negative';
+  if (c.score === 1) return 'neutral';
+  return 'positive';
+}
+
+/**
+ * A word, not just a mark -- and it names the score, so a criterion the
+ * rubric caps (C2 tops out at 2 under rubric 1.0) reads as "Supported
+ * (2/3)" rather than a bare checkmark identical to a 3/3. The rationale
+ * (rendered in full alongside this) is what explains WHY; this is what
+ * shows THAT there is something to explain.
+ */
+function tierLabel(c: EmailCriterion): string {
+  if (c.status === 'contradicted') return `Contradicted (${c.score}/3)`;
+  if (c.status === 'unsubstantiated') return `Could not verify either way (${c.score}/3)`;
+  if (c.status === 'corroborated') return `Verified true (${c.score}/3)`;
+  if (c.score === 0) return `Contradicted (${c.score}/3)`;
+  if (c.score === 1) return `No evidence either way (${c.score}/3)`;
+  if (c.score === 3) return `Clearly supported (${c.score}/3)`;
+  return `Supported (${c.score}/3)`;
+}
+
+const TIER_MARK: Record<Tier, string> = { positive: '&#10003;', negative: '&#10007;', neutral: '&#8211;' };
+const TIER_COLOR: Record<Tier, string> = { positive: YES, negative: NO, neutral: NEUTRAL };
+const TIER_CLASS: Record<Tier, string> = { positive: 'email-yes', negative: 'email-no', neutral: 'email-neutral' };
 
 function escapeHtml(s: string): string {
   return s
@@ -64,14 +108,16 @@ function orderedCriteria(find: EmailFind): EmailCriterion[] {
 }
 
 function renderCriterionRowHtml(c: EmailCriterion): string {
-  const mark = c.verdict ? '&#10003;' : '&#10007;';
-  const color = c.verdict ? YES : NO;
-  const markClass = c.verdict ? 'email-yes' : 'email-no';
+  const tier = tierOf(c);
+  const mark = TIER_MARK[tier];
+  const color = TIER_COLOR[tier];
+  const markClass = TIER_CLASS[tier];
   return `
     <tr>
       <td class="${markClass}" style="padding:4px 8px 4px 0;vertical-align:top;width:20px;color:${color};font-weight:700;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${mark}</td>
       <td class="email-text" style="padding:4px 0;vertical-align:top;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${TEXT};">
-        <span style="font-weight:700;">${escapeHtml(c.label)}</span><br/>
+        <span style="font-weight:700;">${escapeHtml(c.label)}</span>
+        <span class="${markClass}" style="color:${color};"> -- ${escapeHtml(tierLabel(c))}</span><br/>
         <span class="email-muted" style="color:${MUTED};">${escapeHtml(c.evidence)}</span>
       </td>
     </tr>`;
@@ -178,7 +224,8 @@ function renderText(input: DigestInput, subject: string): string {
       lines.push(`${find.name} -- ${find.tagline}`);
       lines.push(find.url);
       for (const c of orderedCriteria(find)) {
-        lines.push(`  [${c.verdict ? 'x' : ' '}] ${c.label}: ${c.evidence}`);
+        const mark = { positive: 'x', neutral: '~', negative: '!' }[tierOf(c)];
+        lines.push(`  [${mark}] ${c.label} -- ${tierLabel(c)}: ${c.evidence}`);
       }
       lines.push('');
     }

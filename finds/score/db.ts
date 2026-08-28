@@ -11,10 +11,8 @@
  * is DEFERRABLE INITIALLY DEFERRED, so a verdict and its citations must commit
  * together. PostgREST gives one transaction per request, so writing them as two
  * `.insert()` calls would commit the verdict alone and the deferred trigger
- * would abort it, correctly, for being uncited. `finds_write_verdict`
- * (finds/score/verdict-rpc.sql, proposed to W3) is one request and therefore
- * one transaction. Until that function is migrated this path fails loudly with
- * the reason -- it does not fall back to a two-request write that cannot work.
+ * would abort it, correctly, for being uncited. `finds_write_verdict` (W3,
+ * migration 20260828210900) is one request and therefore one transaction.
  *
  * THE NEVER-TWICE RULE LIVES IN ONE PLACE. Selection reads
  * `finds_undigested_candidates`, never finds_candidates with a hand-rolled NOT
@@ -23,8 +21,8 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CandidateStatus, Criterion, EvidenceRow, VerdictScore } from '../types.ts';
-import type { VerdictRpcArgs } from './persist.ts';
+import type { CandidateStatus, Criterion, EvidenceRow, VerdictScore, WriteVerdictArgs } from '../types.ts';
+
 import type { SelectionCandidate } from './select.ts';
 
 export { getSupabaseClient } from '../sources/db.ts';
@@ -99,19 +97,20 @@ export async function refusedUrlCount(db: SupabaseClient, candidateId: string): 
 }
 
 /** One transaction, on the database's side. See the header. */
-export async function writeVerdicts(db: SupabaseClient, args: VerdictRpcArgs): Promise<void> {
+export async function writeVerdicts(db: SupabaseClient, args: WriteVerdictArgs): Promise<void> {
   const { error } = await db.rpc('finds_write_verdict', args);
   if (error) {
-    const missing = /function .*finds_write_verdict|could not find the function|PGRST202/i.test(
-      `${error.message} ${error.code ?? ''}`,
-    );
+    // PostgREST resolves an overload by argument NAMES, so a signature change
+    // surfaces as "function not found" rather than as a wrong write. W3 made
+    // p_rubric_version required for exactly that reason; say so, because the
+    // message alone reads like a missing migration.
+    const signature = /could not find the function|PGRST202/i.test(`${error.message} ${error.code ?? ''}`);
     throw new Error(
       `writing verdicts for candidate ${args.p_candidate_id}: ${error.message}` +
-        (missing
-          ? '\n\nfinds_write_verdict is not in the database. D7\'s citation check is a DEFERRED ' +
-            'constraint trigger, so a verdict and its citations must commit together, and PostgREST ' +
-            'gives one transaction per request -- there is no two-call version of this write that ' +
-            'works. Apply finds/score/verdict-rpc.sql (proposed to W3 for migration) and re-run.'
+        (signature
+          ? '\n\nPostgREST matches an overload by argument names, so this is either a missing migration ' +
+            '(20260828210900_create_finds_write_verdict) or an argument-name drift between ' +
+            'WriteVerdictArgs and the function. It is never a silent partial write.'
           : ''),
     );
   }

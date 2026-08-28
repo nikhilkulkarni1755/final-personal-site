@@ -23,24 +23,6 @@ import type { CorpusStats, CriterionScore, ScoreCitation } from './types.ts';
  */
 export const RUBRIC_VERSION = '1.0';
 
-/**
- * What goes in finds_verdicts.scored_by.
- *
- * That column is documented as "model id, or 'human'". This rubric is neither:
- * it is a deterministic function, so it names itself as one. The rubric version
- * rides here because finds_verdicts has no `rubric_version` column
- * (finds_crawl_verdicts does) -- PROPOSED to the coordinator. When the column
- * lands, this stays accurate and the column is backfillable from it, so nothing
- * has to be rewritten.
- *
- * A criterion judged with model help must pass the model id, and the evidence
- * it read plus the reason it gave must still be persisted as citations and
- * rationale. "The model said 7" is not auditable and D7 forbids it.
- */
-export function scoredBy(model?: string): string {
-  return model ? `${model}+rubric/${RUBRIC_VERSION}` : `rubric/${RUBRIC_VERSION}`;
-}
-
 /* -------------------------------------------------------------------------- */
 /* looking at a crawl generation                                               */
 /* -------------------------------------------------------------------------- */

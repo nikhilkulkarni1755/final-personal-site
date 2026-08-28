@@ -29,10 +29,11 @@ const cited: CriterionScore = {
   rubric_version: '1.0',
 };
 
-test('the payload names the candidate, the generation, and every citation', () => {
+test('the payload names the candidate, the generation, the rubric and every citation', () => {
   const args = buildVerdictWrite(CANDIDATE, RUN, [cited]);
   assert.equal(args.p_candidate_id, CANDIDATE);
   assert.equal(args.p_evidence_run_id, RUN);
+  assert.equal(args.p_rubric_version, '1.0');
   assert.equal(args.p_verdicts.length, 1);
   assert.equal(args.p_verdicts[0].criterion, 'C1');
   assert.equal(args.p_verdicts[0].score, 3);
@@ -44,28 +45,36 @@ test('the payload is JSON-serialisable, because that is how it crosses the wire'
   assert.deepEqual(JSON.parse(JSON.stringify(args)), args);
 });
 
-test('the rubric version travels with every verdict', () => {
-  assert.match(buildVerdictWrite(CANDIDATE, RUN, [cited]).p_verdicts[0].scored_by, /^rubric\/\d+\.\d+$/);
-  assert.match(
-    buildVerdictWrite(CANDIDATE, RUN, [cited], 'claude-opus-5').p_verdicts[0].scored_by,
-    /^claude-opus-5\+rubric\/\d+\.\d+$/,
+test('who scored it and under which rules are two separate facts', () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [cited]);
+  assert.equal(args.p_verdicts[0].scored_by, 'rubric', 'scored_by is WHO');
+  assert.equal(args.p_rubric_version, '1.0', 'rubric_version is WHICH RULES, in its own column');
+  assert.equal(buildVerdictWrite(CANDIDATE, RUN, [cited], 'claude-opus-5').p_verdicts[0].scored_by, 'claude-opus-5');
+});
+
+test('a batch mixing two rubric revisions has no honest version, so it is refused', () => {
+  assert.throws(
+    () => buildVerdictWrite(CANDIDATE, RUN, [cited, { ...cited, criterion: 'C4', rubric_version: '1.1' }]),
+    /scored under 2 rubric revisions/,
   );
+});
+
+test("an inconclusive citation is now sent as itself, not withheld and not relabelled", () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [
+    { ...cited, score: 1, citations: [{ evidence_id: EVIDENCE, stance: 'inconclusive', note: 'settled nothing' }] },
+  ]);
+  assert.deepEqual(args.p_verdicts[0].citations, [{ evidence_id: EVIDENCE, stance: 'inconclusive' }]);
+});
+
+test('every stance is sent explicitly, so the function never COALESCEs one to supports', () => {
+  const args = buildVerdictWrite(CANDIDATE, RUN, [cited]);
+  assert.ok(args.p_verdicts[0].citations.every((c) => c.stance !== undefined));
 });
 
 test('an uncited score cannot even be turned into a write plan', () => {
   assert.throws(
     () => buildVerdictWrite(CANDIDATE, RUN, [{ ...cited, criterion: 'C2', citations: [] }]),
     /cites no evidence/,
-  );
-});
-
-test("an inconclusive citation is refused rather than written as 'supports'", () => {
-  assert.throws(
-    () =>
-      buildVerdictWrite(CANDIDATE, RUN, [
-        { ...cited, score: 1, status: 'unsubstantiated', citations: [{ evidence_id: EVIDENCE, stance: 'inconclusive', note: '3 unsubstantiated claim(s)' }] },
-      ]),
-    /inconclusive/,
   );
 });
 

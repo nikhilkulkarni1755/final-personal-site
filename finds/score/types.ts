@@ -6,35 +6,29 @@
  * are imported, never redeclared. What is declared here is the layer above
  * them: the *judgment*, before it is flattened into rows.
  *
- * Two things in here are deliberately richer than what W3's schema can store
- * today, and both are open proposals to the coordinator rather than local
- * inventions (see lanes/W5.md):
- *
- *   1. `ScoreStance` has a third value, 'inconclusive'. finds_verdict_evidence
- *      allows only supports|contradicts, so an evidence row that was read and
- *      settled nothing cannot currently be cited as such. That is exactly the
- *      row a score of 1 has to point at.
- *   2. `rubric_version` is a first-class field. finds_verdicts has no such
- *      column (finds_crawl_verdicts does). Until it gains one it travels
- *      inside `scored_by`; see rubric.ts.
+ * Both of the gaps this file used to work around are closed. W3 migrated
+ * `stance = 'inconclusive'` and `finds_verdicts.rubric_version` (PR #25), so a
+ * score of 1 can now cite the rows that settled nothing AS such, and the rules
+ * that produced a score are stored beside it instead of smuggled into
+ * `scored_by`.
  */
 
-import type { Criterion, VerdictScore } from '../types.ts';
+import type { CitationStance, Criterion, VerdictScore } from '../types.ts';
 
 /* ========================================================================== */
 /* citations -- the D7 substance                                               */
 /* ========================================================================== */
 
 /**
- * A superset of W3's CitationStance.
+ * W3's CitationStance, re-exported under this lane's name so the criteria read
+ * in their own vocabulary. It is the same type, not a parallel one.
  *
  * 'inconclusive' is not a hedge. It is the difference between "we read this
  * page and it disproves the claim" and "we read this page and it settled
  * nothing" -- and under Nikhil's first criterion those are not the same
- * finding at all. persist.ts refuses to write one rather than mislabelling it
- * as 'supports'.
+ * finding at all.
  */
-export type ScoreStance = 'supports' | 'contradicts' | 'inconclusive';
+export type ScoreStance = CitationStance;
 
 /** One cited evidence row. `evidence_id` is a real finds_evidence.id. */
 export interface ScoreCitation {

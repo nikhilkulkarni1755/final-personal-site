@@ -8,10 +8,11 @@
  * `finds_undigested_candidates` for exactly the reason this prints instead:
  * a selection is not a send, and only a send may consume a candidate.
  *
- * With an output path, `select` writes W6's DigestInput there -- the handoff
- * W10's daily runner passes to finds/email/send.ts. Nothing else writes that
- * file, and it is NOT written on a day with no picks: an empty day must not
- * become an empty digest.
+ * With an output path, `select` writes W6's DigestSelection there -- the handoff
+ * W10's daily runner passes to finds/email/send.ts, carrying the render input
+ * and the real candidate ids send.ts needs for finds_digest_items. Nothing else
+ * writes that file, and it is NOT written on a day with no picks: an empty day
+ * must not become an empty digest.
  *
  * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (D17). Absent, W2's
  * getSupabaseClient() fails loud and this exits non-zero rather than
@@ -19,11 +20,11 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { buildVerdictWrite, partitionPersistable } from './persist.ts';
+import { buildVerdictWrite } from './persist.ts';
 import { candidatesToScore, getSupabaseClient, latestGeneration, loadGeneration, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
-import { toDigestInput } from './digest.ts';
+import { toDigestSelection } from './digest.ts';
 
 async function score(): Promise<number> {
   const db = getSupabaseClient();
@@ -35,7 +36,6 @@ async function score(): Promise<number> {
 
   let scored = 0;
   let unscoreable = 0;
-  let blockedVerdicts = 0;
 
   for (const candidate of candidates) {
     const crawlRunId = await latestGeneration(db, candidate.id);
@@ -53,26 +53,16 @@ async function score(): Promise<number> {
       continue;
     }
 
-    const { persistable, blocked } = partitionPersistable(outcome.scores);
-    for (const { reason } of blocked) {
-      blockedVerdicts += 1;
-      console.log(`  ${candidate.id}  NOT PERSISTED: ${reason}`);
-    }
-    if (persistable.length > 0) {
-      await writeVerdicts(db, buildVerdictWrite(candidate.id, outcome.evidence_run_id, persistable));
-      await markStatus(db, candidate.id, 'scored');
-      scored += 1;
-      console.log(
-        `  ${candidate.id}  ${persistable.map((s) => `${s.criterion}=${s.score}`).join(' ')}` +
-          `  (${persistable.reduce((n, s) => n + s.citations.length, 0)} citations)`,
-      );
-    }
+    await writeVerdicts(db, buildVerdictWrite(candidate.id, outcome.evidence_run_id, outcome.scores));
+    await markStatus(db, candidate.id, 'scored');
+    scored += 1;
+    console.log(
+      `  ${candidate.id}  ${outcome.scores.map((s) => `${s.criterion}=${s.score}`).join(' ')}` +
+        `  (${outcome.scores.reduce((n, s) => n + s.citations.length, 0)} citations)`,
+    );
   }
 
-  console.log(
-    `\n${candidates.length} candidate(s): ${scored} scored, ${unscoreable} not scoreable, ` +
-      `${blockedVerdicts} verdict(s) withheld pending the 'inconclusive' stance value.`,
-  );
+  console.log(`\n${candidates.length} candidate(s): ${scored} scored, ${unscoreable} not scoreable.`);
   return 0;
 }
 
@@ -96,12 +86,12 @@ async function select(date: string, outputPath?: string): Promise<number> {
   // empty day must not become an empty digest, and W10's stage reports the
   // absent file rather than W6 mailing nothing.
   if (outputPath) {
-    const input = toDigestInput(selection);
-    if (input === null) {
+    const handoff = toDigestSelection(selection);
+    if (handoff === null) {
       console.log(`\nNo digest written to ${outputPath}: nothing was selected.`);
     } else {
-      writeFileSync(outputPath, `${JSON.stringify(input, null, 2)}\n`);
-      console.log(`\nDigest input written to ${outputPath} (${input.finds.length} find(s)).`);
+      writeFileSync(outputPath, `${JSON.stringify(handoff, null, 2)}\n`);
+      console.log(`\nDigest selection written to ${outputPath} (${handoff.digest.finds.length} find(s)).`);
     }
   }
   return 0;
