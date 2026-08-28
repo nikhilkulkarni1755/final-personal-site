@@ -470,7 +470,7 @@ function textJoin(parts) { return parts.join(''); }
 // JsxText nodes carry literal HTML entities verbatim (e.g. authors writing
 // `${API_KEY}` as `$&#123;API_KEY&#125;` to dodge JSX's `{}` interpolation).
 // Decode the common ones so the real characters survive into markdown.
-const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', bull: '•' };
 function decodeEntities(s) {
   return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (m, body) => {
     if (body[0] === '#') {

@@ -39,6 +39,10 @@ full text of every page in one request, fetch /llms-full.txt.
 
 - [Interesting Finds](https://nikhilkulkarni1755.com/interesting-finds.md): product launches checked against four fixed criteria (claim verified, solves a rare problem, no gated access, agentic/MCP-friendly) before being listed. The current list is served live from a database and isn't reproduced in this index — fetch the page itself for what's actually there.
 
+## Crawler disclosure
+
+- [Interesting Finds Bot](https://nikhilkulkarni1755.com/bot.md): public disclosure for InterestingFindsBot — operator, user-agent string, what it will and won't do, and how to block it. Also served as plain text at https://nikhilkulkarni1755.com/bot.txt.
+
 ## Optional
 
 - [Privacy policy](https://nikhilkulkarni1755.com/privacy-policy.md)

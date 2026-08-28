@@ -135,6 +135,18 @@ function isKnownNonContent(node) {
   if (p && (ts.isImportDeclaration(p) || ts.isExportDeclaration(p)) && p.moduleSpecifier === node) return true;
   if (p && ts.isCallExpression(p) && p.expression.kind === ts.SyntaxKind.ImportKeyword) return true;
 
+  // usePageAnalytics('some label') — a page-id string passed to this
+  // codebase's own analytics hook, called consistently the same way on
+  // every single page (verified: every call site in src/pages/*.tsx).
+  // Often duplicates the page's real H1 (which is why this rule mattered
+  // less before now — most such labels happened to already be checked via
+  // the real heading), but not always: "Bot Disclosure" and "Fireworks AI
+  // - Disaggregated Inference" are internal labels distinct from either
+  // page's actual visible H1 text.
+  if (p && ts.isCallExpression(p) && ts.isIdentifier(p.expression) && p.expression.text === 'usePageAnalytics' && p.arguments[0] === node) {
+    return true;
+  }
+
   // A string literal that lives inside a useEffect()/useLayoutEffect()
   // callback — e.g. InterestingFinds.tsx building and injecting a
   // <script type="application/ld+json"> tag via document.createElement in
@@ -266,6 +278,7 @@ const PAGES = [
   ['FireworksAI.tsx', 'spearfishing/fireworks-ai.md'],
   ['WeaveTakeHome.tsx', 'take-homes/weave.md'],
   ['InterestingFinds.tsx', 'interesting-finds.md'],
+  ['Bot.tsx', 'bot.md'],
 ];
 
 // Two exceptions, both judged and documented rather than silently allowed:

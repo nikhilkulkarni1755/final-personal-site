@@ -254,6 +254,10 @@ if (!interestingFindsRaw.includes(findsHeading)) {
 interestingFindsRaw = interestingFindsRaw.replace(findsHeading, findsHeading + findsNote + '\n\n');
 const interestingFinds = ensureH1First(interestingFindsRaw, 'Interesting Finds');
 
+// /bot is fully static — a crawler disclosure with no Supabase, no runtime
+// state, nothing gated. Extracts cleanly with no caveat needed.
+const bot = ensureH1First(extractPageMarkdown(path.join(SRC, 'Bot.tsx')), 'Interesting Finds Bot');
+
 // ---------- write per-route markdown mirrors ----------
 // Path contract (see agent-ready-coord/lanes/W2.md): extension-replacement at
 // the SAME path as the HTML route — /about -> /about.md — per llmstxt.org's
@@ -272,6 +276,7 @@ const pages = [
   { route: '/spearfishing/fireworks-ai', file: 'spearfishing/fireworks-ai.md', title: 'A purpose-built disaggregated inference engine', md: fireworks },
   { route: '/take-homes/weave', file: 'take-homes/weave.md', title: 'PostHog Engineering Impact — take-home', md: weave },
   { route: '/interesting-finds', file: 'interesting-finds.md', title: 'Interesting Finds', md: interestingFinds },
+  { route: '/bot', file: 'bot.md', title: 'Interesting Finds Bot', md: bot },
 ].map((p) => ({ ...p, md: dropEmptyHeadings(p.md) }));
 
 for (const p of pages) {
@@ -326,6 +331,10 @@ full text of every page in one request, fetch /llms-full.txt.
 ## Interesting Finds
 
 - [Interesting Finds](${SITE}/interesting-finds.md): product launches checked against four fixed criteria (claim verified, solves a rare problem, no gated access, agentic/MCP-friendly) before being listed. The current list is served live from a database and isn't reproduced in this index — fetch the page itself for what's actually there.
+
+## Crawler disclosure
+
+- [Interesting Finds Bot](${SITE}/bot.md): public disclosure for InterestingFindsBot — operator, user-agent string, what it will and won't do, and how to block it. Also served as plain text at ${SITE}/bot.txt.
 
 ## Optional
 
