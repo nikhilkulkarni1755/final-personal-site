@@ -28,16 +28,52 @@ function quoteFor(corpus: readonly CorpusPage[], pattern: RegExp): { page: Corpu
 }
 
 /**
+ * A sentence that mentions a thing in order to say it is NOT there.
+ *
+ * Found on a real launch site: colrows.com says "cluster-based CLI clients were
+ * retired", "Not stitched together with cron jobs and webhook handlers" and
+ * "no SDK to ship in your agents". A plain keyword match reported all three as
+ * the feature being advertised, which is a false statement about a real
+ * company's product. It is not enough to record the quote and hope the reader
+ * notices -- the observation itself must not assert what the sentence denies.
+ */
+const NEGATION = /\b(no|not|never|without|instead of|rather than|retired|removed|deprecated|dropped|there is no|do(es)? not)\b/i;
+
+/**
  * Record a named signal either way. A hit carries the sentence that produced
  * it and the URL it was on; a miss says how many pages were searched, so
  * "not found" is auditable rather than assumed.
+ *
+ * A hit says the page MENTIONS the thing, never that it offers it. Only the
+ * quote can settle that, and the quote is always attached.
  */
-function record(into: SignalSet, kind: string, corpus: readonly CorpusPage[], pattern: RegExp, detail: string): boolean {
+function record(
+  into: SignalSet,
+  kind: string,
+  corpus: readonly CorpusPage[],
+  pattern: RegExp,
+  detail: string,
+  /**
+   * Only for signals naming a FEATURE that a page could be denying. A problem
+   * statement is full of honest negation -- "there was no way to do X" is the
+   * canonical shape of one -- so applying this everywhere would flag the very
+   * sentences C2 exists to find.
+   */
+  negationAware = false,
+): boolean {
   const hit = quoteFor(corpus, pattern);
   if (hit) {
-    into.quotes.push({ text: hit.sentence, locator: `${hit.page.url} (${kind})` });
-    into.observations.push({ kind, detail: `${detail} -- stated on ${hit.page.url}`, value: hit.page.url });
-    return true;
+    const negated = negationAware && NEGATION.test(hit.sentence);
+    const resolvedKind = negated ? `${kind}_negated` : kind;
+    into.quotes.push({ text: hit.sentence, locator: `${hit.page.url} (${resolvedKind})` });
+    into.observations.push({
+      kind: resolvedKind,
+      detail: negated
+        ? `${detail} -- but the sentence found on ${hit.page.url} appears to DENY it, not offer it. Read the quote.`
+        : `${detail} -- the page says so on ${hit.page.url}. The quote is verbatim; it is the evidence, not this summary.`,
+      value: hit.page.url,
+    });
+    return !negated;
   }
   into.observations.push({
     kind: `${kind}_absent`,
@@ -103,7 +139,7 @@ export function collectC2(corpus: readonly CorpusPage[]): SignalSet {
 export function collectC3(corpus: readonly CorpusPage[]): SignalSet {
   const out: SignalSet = { quotes: [], observations: [] };
 
-  record(out, 'c3_free_tier', corpus, /\b(free tier|free plan|free forever|forever free|100% free|free to use)\b/i, 'A no-cost way to use it is advertised');
+  record(out, 'c3_free_tier', corpus, /\b(free tier|free plan|free forever|forever free|100% free|free to use)\b/i, 'A no-cost way to use it is advertised', true);
   record(out, 'c3_no_card_required', corpus, /\bno credit card( required| needed)?\b/i, 'Trying it does not require a payment method');
   // Not a bare "request access": a privacy page offering to let you request
   // access to your own data matched that on the first field run, which would
@@ -213,6 +249,7 @@ export function collectC4(corpus: readonly CorpusPage[], inputs: C4Inputs): Sign
     corpus,
     /\b(mcp|model context protocol)\b/i,
     'An MCP server is advertised',
+    true,
   );
   if (mcpMentioned || mcpUrls.length) {
     out.observations.push({
@@ -224,10 +261,10 @@ export function collectC4(corpus: readonly CorpusPage[], inputs: C4Inputs): Sign
     });
   }
 
-  record(out, 'c4_api', corpus, /\b(rest api|public api|http api|graphql api|api reference|api docs?|api endpoint)\b/i, 'A documented API is advertised');
-  record(out, 'c4_cli', corpus, /\b(cli|command[- ]line (tool|interface)|npx |npm install -g|brew install|pip install|cargo install)\b/i, 'A CLI is advertised');
-  record(out, 'c4_webhooks', corpus, /\bwebhooks?\b/i, 'Webhooks are advertised');
-  record(out, 'c4_sdk', corpus, /\b(sdk|client librar(y|ies)|python package|npm package|typescript client)\b/i, 'A client SDK is advertised');
+  record(out, 'c4_api', corpus, /\b(rest api|public api|http api|graphql api|api reference|api docs?|api endpoint)\b/i, 'A documented API is advertised', true);
+  record(out, 'c4_cli', corpus, /\b(cli|command[- ]line (tool|interface)|npx |npm install -g|brew install|pip install|cargo install)\b/i, 'A CLI is advertised', true);
+  record(out, 'c4_webhooks', corpus, /\bwebhooks?\b/i, 'Webhooks are advertised', true);
+  record(out, 'c4_sdk', corpus, /\b(sdk|client librar(y|ies)|python package|npm package|typescript client)\b/i, 'A client SDK is advertised', true);
 
   const markdownDocs = inputs.discoveredUrls.filter((url) => /\.md($|\?)/i.test(url));
   if (markdownDocs.length) {
