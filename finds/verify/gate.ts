@@ -33,6 +33,16 @@ const ORIGIN_REFUSAL_STATUSES = new Set([401, 403, 429, 451]);
 
 export interface GatedFetchOptions {
   candidateId?: string;
+  /**
+   * The candidate's own authority, from D23's ProjectScope.
+   *
+   * Defence in depth, and deliberately redundant: W4's own path-prefix scoping
+   * already stops a landlord's pages being attributed to a tenant, and this
+   * makes the gate check it again, independently, at the moment of the fetch.
+   * D23 produced a false public accusation about a real project, so one
+   * mechanism is not enough for it.
+   */
+  candidateOrigin?: string;
 }
 
 /** R2 §5.4. Checked before we ask the gate: no point spending a decision on it. */
@@ -49,7 +59,10 @@ export function isNeverTouch(url: string): boolean {
  * result: a 404 on /docs is a finding, not an error.
  */
 export async function gatedFetch(url: string, runState: RunState, options: GatedFetchOptions = {}): Promise<FetchOutcome> {
-  const decision = await decide(url, runState, options.candidateId);
+  const decision = await decide(url, runState, {
+    candidateId: options.candidateId,
+    candidateOrigin: options.candidateOrigin,
+  });
   if (!decision.allowed) return { kind: 'refused', url, decision };
 
   const page = decision.page;
