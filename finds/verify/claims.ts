@@ -95,7 +95,7 @@ const STOPWORDS = new Set([
 export function keyTerms(text: string): string[] {
   const seen = new Set<string>();
   for (const raw of text.toLowerCase().match(/[a-z][a-z0-9+#.-]{3,}/g) ?? []) {
-    const token = raw.replace(/[.\-]+$/, '');
+    const token = raw.replace(/[.-]+$/, '');
     if (token.length >= 4 && !STOPWORDS.has(token)) seen.add(token);
   }
   return [...seen];
