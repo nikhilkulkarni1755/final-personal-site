@@ -1,18 +1,20 @@
-// X-Robots-Tag response-header reader.
+// Page-level response-header readers: X-Robots-Tag (§1.4), tdm-reservation /
+// tdm-policy (§1.5 S10), and Content-Usage (§1.5 S9). All are pure parsers
+// -- fetching the page is the orchestrator's job (gate.ts), which shares one
+// GET per page across this, meta-robots, and the sitemap/body reads.
 //
-// Format (per Google's documented extension to the robots exclusion
-// vocabulary): a comma-separated directive list, optionally scoped to one
-// crawler with a "<product-token>: " prefix, e.g.
+// X-Robots-Tag format (per Google's documented extension to the robots
+// exclusion vocabulary): a comma-separated directive list, optionally
+// scoped to one crawler with a "<product-token>: " prefix, e.g.
 //   X-Robots-Tag: noindex, nofollow
 //   X-Robots-Tag: googlebot: noai
 // Some directives carry their own colon-delimited parameter (unavailable_after,
 // max-snippet, max-image-preview, max-video-preview) -- those colons are NOT
 // a UA scope, so we special-case the known parameterized directive names.
-// This module only extracts directive tokens; deciding which tokens count
-// as "disallow" is a policy call and lives in config.ts (see
-// disallowDirectiveTokens), applied in verdict.ts. Fetching the page is the
-// orchestrator's job (gate.ts) -- one GET per page serves both this and the
-// meta-robots reader, rather than a separate request each.
+// max-snippet's numeric value is kept (needed for the USE lattice's
+// max_snippet_chars, §3.2); the others' values are dropped as policy-irrelevant.
+// This module only extracts directive tokens; deciding what they mean for
+// FETCH vs USE is §3.1/§3.2's job, applied in access.ts/use.ts.
 
 const PARAMETERIZED_DIRECTIVES = new Set([
   'unavailable_after',
@@ -20,6 +22,7 @@ const PARAMETERIZED_DIRECTIVES = new Set([
   'max-image-preview',
   'max-video-preview',
 ]);
+const VALUE_RELEVANT_DIRECTIVES = new Set(['max-snippet']);
 
 /**
  * Extract the directive tokens from a raw X-Robots-Tag value that apply to
@@ -44,9 +47,14 @@ export function extractApplicableDirectives(
 
     const prefix = trimmed.slice(0, colonIdx).trim().toLowerCase();
     if (PARAMETERIZED_DIRECTIVES.has(prefix)) {
-      // e.g. "unavailable_after: 25 Jun 2010 15:00:00 PST" -- keep the
-      // directive name, drop the parameter (irrelevant to allow/disallow).
-      tokens.push(prefix);
+      if (VALUE_RELEVANT_DIRECTIVES.has(prefix)) {
+        const val = trimmed.slice(colonIdx + 1).trim();
+        tokens.push(`${prefix}:${val}`);
+      } else {
+        // e.g. "unavailable_after: 25 Jun 2010 15:00:00 PST" -- keep the
+        // directive name, drop the parameter (irrelevant to our USE lattice).
+        tokens.push(prefix);
+      }
       continue;
     }
 
@@ -58,4 +66,23 @@ export function extractApplicableDirectives(
   }
 
   return tokens;
+}
+
+/** §1.5 S10 -- "tdm-reservation: 1" response header. Anything other than the
+ * literal "1" is a protocol error; the spec says to treat it as unset. */
+export function parseTdmReservationHeader(rawValue: string | null): boolean {
+  return rawValue !== null && rawValue.trim() === '1';
+}
+
+/** §1.5 S9 (aipref) response-header form: "Content-Usage: train-ai=n". */
+export function parseContentUsageHeader(rawValue: string | null): { trainAi?: 'y' | 'n'; search?: 'y' | 'n' } | null {
+  if (!rawValue) return null;
+  const out: { trainAi?: 'y' | 'n'; search?: 'y' | 'n' } = {};
+  for (const pair of rawValue.trim().split(/\s+/)) {
+    const [rawKey, rawVal] = pair.split('=').map((s) => s.trim().toLowerCase());
+    if (!rawKey || (rawVal !== 'y' && rawVal !== 'n')) continue;
+    if (rawKey === 'train-ai') out.trainAi = rawVal;
+    else if (rawKey === 'search') out.search = rawVal;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }

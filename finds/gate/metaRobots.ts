@@ -41,3 +41,24 @@ export function extractMetaRobotsDirectives(html: string, productToken: string):
 
   return tokens;
 }
+
+/**
+ * Generic <meta name="X" content="..."> reader, case-insensitive on name.
+ * Used for tdm-reservation / tdm-policy (§1.5 S10), which use their own
+ * meta name rather than "robots".
+ */
+export function extractMetaContent(html: string, name: string): string | null {
+  const target = name.toLowerCase();
+  for (const [tag] of html.matchAll(META_TAG_RE)) {
+    if (getAttr(tag, 'name')?.toLowerCase() !== target) continue;
+    const content = getAttr(tag, 'content');
+    if (content !== null) return content;
+  }
+  return null;
+}
+
+/** §1.5 S10 -- <meta name="tdm-reservation" content="1">. Anything other
+ * than the literal "1" is a protocol error; treat as unset. */
+export function parseTdmReservationMeta(html: string): boolean {
+  return extractMetaContent(html, 'tdm-reservation')?.trim() === '1';
+}
