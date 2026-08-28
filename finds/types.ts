@@ -88,6 +88,10 @@ export interface SourceHealthRow {
 export type CandidateStatus =
   | 'new'
   | 'gate_blocked'
+  /** Fetch was allowed, but ai-input is reserved, so C1-C4 cannot be evaluated
+   *  at all (R2 §3.2). A non-evaluation, never a low score -- inventing a
+   *  verdict for it is what D6 forbids. */
+  | 'not_evaluable'
   | 'crawled'
   | 'scored'
   | 'digested'
@@ -192,6 +196,11 @@ export interface EvidenceObservation {
 export interface EvidenceRow {
   id: string;
   candidate_id: string;
+  /**
+   * The gate decision that permitted this fetch. The FK is composite on
+   * (id, allowed), so evidence from a DENIED verdict cannot be inserted at all.
+   */
+  crawl_verdict_id: string;
   /** Groups one crawl pass. Verdicts record which generation they scored. */
   crawl_run_id: string;
   url: string;
@@ -209,7 +218,7 @@ export interface EvidenceRow {
 
 export type NewEvidence = Pick<
   EvidenceRow,
-  'candidate_id' | 'crawl_run_id' | 'url' | 'page_role'
+  'candidate_id' | 'crawl_verdict_id' | 'crawl_run_id' | 'url' | 'page_role'
 > &
   Partial<
     Pick<
@@ -412,3 +421,179 @@ export type NewDigestItem = Pick<DigestItemRow, 'digest_id' | 'candidate_id' | '
  * clause, so the never-twice rule lives in one place.
  */
 export type UndigestedCandidateRow = CandidateRow;
+
+/* ========================================================================== */
+/* crawl verdicts -- the permission gate (R2-permission-rubric v1.1 §6)        */
+/* ========================================================================== */
+
+/**
+ * R2 §6.1. The split is not cosmetic: a CHECK ties `allowed` to it, so a
+ * verdict claiming it was allowed for a denying reason is not representable.
+ */
+export type GateAllowReason =
+  | 'robots_exact_group'
+  | 'robots_allow'
+  | 'robots_wildcard_allow'
+  | 'robots_no_rules'
+  | 'robots_absent'
+  | 'robots_soft_404'
+  | 'robots_redirect_loop';
+
+export type GateDenyReason =
+  | 'manual_denylist'
+  | 'url_out_of_scope'
+  | 'robots_disallow'
+  | 'robots_wildcard_disallow'
+  | 'ai_block_inferred'
+  | 'robots_forbidden'
+  | 'robots_rate_limited'
+  | 'robots_server_error'
+  | 'robots_unreachable'
+  | 'robots_bad_success'
+  | 'origin_blocked_us'
+  | 'origin_rate_limited'
+  | 'bot_challenge'
+  | 'unhandled_case';
+
+export type GateReasonCode = GateAllowReason | GateDenyReason;
+
+/** R2 §6.2. USE-axis signals never appear here -- they never decide access. */
+export type GateDecidingSignal =
+  | 'MANUAL_DENYLIST'
+  | 'URL_POLICY'
+  | 'ROBOTS_TXT'
+  | 'AI_BLOCK_INFERENCE'
+  | 'HTTP_STATUS'
+  | 'BOT_CHALLENGE'
+  | 'RATE_LIMIT'
+  | 'CACHED_VERDICT'
+  | 'UNHANDLED';
+
+/** R2 §3.2. Start permissive, let every signal subtract; `train` is always false. */
+export interface GateUseRights {
+  llm_ingest: boolean;
+  publish_excerpt: boolean;
+  publish_link: boolean;
+  follow_links: boolean;
+  store_raw_body: boolean;
+  /** Constant false. Not configurable. */
+  train: false;
+  max_snippet_chars: number | null;
+  reserved_by: Array<{
+    signal: string;
+    directive: string;
+    source_url: string;
+    restricts: string[];
+  }>;
+}
+
+/** R2 §5.3. What we will do if allowed. */
+export interface GateCrawlBudget {
+  delay_ms: number;
+  delay_source: 'CRAWL_DELAY' | 'DEFAULT';
+  page_cap: number;
+  depth_cap: number;
+  wall_clock_ms: number;
+}
+
+/**
+ * A row of `finds_crawl_verdicts`. Private.
+ *
+ * One row per URL ASKED ABOUT, not per page fetched: a DENY produces a row too,
+ * and those rows are the proof we behaved. Never deleted (R2 §6.3), and the
+ * decision is final -- only `expires_at` and `revalidated_at` may change, for
+ * the 304 revalidation of R2 §7. A new decision is a new row.
+ */
+export interface CrawlVerdictRow {
+  id: string;
+  /** The rubric revision that decided this. A verdict is only readable against it. */
+  rubric_version: string;
+  gate_version: string;
+  candidate_id: string;
+  url: string;
+  /** scheme://host[:port] -- the cache key per R2 §7. NOT the registrable domain. */
+  authority: string;
+  registrable_domain: string;
+  allowed: boolean;
+  reason_code: GateReasonCode;
+  reason_detail: string;
+  deciding_signal: GateDecidingSignal;
+  /** The literal line from their robots.txt, verbatim. The primary exhibit. */
+  deciding_rule: string | null;
+  deciding_group: string | null;
+  precedence_rule: string | null;
+  use_rights: GateUseRights | Record<string, never>;
+  crawl_budget: GateCrawlBudget | Record<string, never>;
+  robots: Record<string, unknown>;
+  decided_at: Timestamp;
+  /** Null only for `manual_denylist`: a human decided, only a human undoes it. */
+  expires_at: Timestamp | null;
+  revalidated_at: Timestamp | null;
+  created_at: Timestamp;
+}
+
+export type NewCrawlVerdict = Pick<
+  CrawlVerdictRow,
+  | 'rubric_version'
+  | 'gate_version'
+  | 'candidate_id'
+  | 'url'
+  | 'authority'
+  | 'registrable_domain'
+  | 'allowed'
+  | 'reason_code'
+  | 'reason_detail'
+  | 'deciding_signal'
+  | 'expires_at'
+> &
+  Partial<
+    Pick<
+      CrawlVerdictRow,
+      'deciding_rule' | 'deciding_group' | 'precedence_rule' | 'use_rights' | 'crawl_budget' | 'robots'
+    >
+  >;
+
+/**
+ * A row of `finds_crawl_evidence`: everything fetched to reach one decision.
+ * Append-only. A CHECK refuses any header bag containing Cookie or
+ * Authorization (R2 §6.3) -- we never send one, and the schema asserts it.
+ */
+export interface CrawlEvidenceRow {
+  id: string;
+  verdict_id: string;
+  url: string;
+  method: string;
+  /** Who we said we were. Half of answering "why did you crawl me". */
+  request_user_agent: string;
+  request_headers: Record<string, string | null>;
+  http_status: number | null;
+  /** An allowlisted subset, never the whole bag. */
+  response_headers: Record<string, string | null>;
+  content_length: number | null;
+  sha256: string | null;
+  /** robots.txt verbatim, capped at 512000 bytes. */
+  body_excerpt: string | null;
+  fetched_at: Timestamp;
+  elapsed_ms: number | null;
+  remote_ip: string | null;
+  created_at: Timestamp;
+}
+
+export type NewCrawlEvidence = Pick<
+  CrawlEvidenceRow,
+  'verdict_id' | 'url' | 'request_user_agent' | 'fetched_at'
+> &
+  Partial<
+    Pick<
+      CrawlEvidenceRow,
+      | 'method'
+      | 'request_headers'
+      | 'http_status'
+      | 'response_headers'
+      | 'content_length'
+      | 'sha256'
+      | 'body_excerpt'
+      | 'elapsed_ms'
+      | 'remote_ip'
+    >
+  >;
