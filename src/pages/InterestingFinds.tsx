@@ -41,7 +41,7 @@ const InterestingFinds = () => {
       itemListElement: finds.map((find, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: find.url,
+        url: find.product_url,
         name: find.name,
       })),
     });
