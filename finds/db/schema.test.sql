@@ -207,8 +207,9 @@ BEGIN
     INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
     VALUES (cand, run, 'C1', 3, 'pricing page states free tier; quoted', 'test', 'test/1')
     RETURNING id INTO v;
-    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
-    VALUES (v, ev, cand, 'supports');
+    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                        evidence_run_id, stance)
+    VALUES (v, ev, cand, run, 'supports');
     SET CONSTRAINTS ALL IMMEDIATE;
 
     -- a second product, with its own evidence
@@ -229,8 +230,9 @@ BEGIN
 
     -- citing Acme's evidence for Other's verdict must be a FK violation
     BEGIN
-        INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id)
-        VALUES (v, (SELECT id FROM finds_evidence WHERE candidate_id = other), cand);
+        INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                            evidence_run_id)
+        VALUES (v, (SELECT id FROM finds_evidence WHERE candidate_id = other), cand, run);
         RAISE EXCEPTION 'a verdict cited another product''s evidence';
     EXCEPTION WHEN foreign_key_violation THEN NULL;
     END;
@@ -475,8 +477,9 @@ BEGIN
             'test', 'test/1')
     RETURNING id INTO v;
 
-    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id, stance)
-    VALUES (v, ev, cand, 'inconclusive');
+    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                        evidence_run_id, stance)
+    VALUES (v, ev, cand, run, 'inconclusive');
     SET CONSTRAINTS ALL IMMEDIATE;
 
     -- and the enum is still closed
@@ -633,6 +636,78 @@ BEGIN
                 'scored_by','test','citations', jsonb_build_array(
                     jsonb_build_object('evidence_id', other_e, 'stance','supports'))))) INTO n;
         RAISE EXCEPTION 'the RPC cited another product''s evidence';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+END $$;
+
+-- --------------------------------------------------------------------------
+-- A citation must come from the generation its verdict scored
+-- --------------------------------------------------------------------------
+-- Evidence is append-only, so several generations of the same page coexist.
+-- Citing across them would reintroduce exactly the drift immutability buys:
+-- a re-crawl that fixed a 404 would let a stale score keep citing the 404.
+DO $$
+DECLARE
+    cand     UUID;
+    old_run  UUID;
+    new_run  UUID := gen_random_uuid();
+    verdict  UUID;
+    old_ev   UUID;
+    new_ev   UUID;
+    v        UUID;
+    n        INTEGER;
+BEGIN
+    SET CONSTRAINTS ALL DEFERRED;
+
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id, crawl_run_id INTO old_ev, old_run
+      FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+    SELECT crawl_verdict_id INTO verdict FROM finds_evidence WHERE id = old_ev;
+
+    -- a SECOND generation of the same page, as a re-crawl would produce
+    INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url,
+                                page_role, http_status)
+    VALUES (cand, verdict, new_run, 'https://acme.dev/pricing', 'pricing', 200)
+    RETURNING id INTO new_ev;
+
+    -- a verdict that scored the NEW generation may not cite the OLD one
+    INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score,
+                                rationale, scored_by, rubric_version)
+    VALUES (cand, new_run, 'C2', 3, 'scored against the fresh crawl', 'test', 'test/1')
+    RETURNING id INTO v;
+
+    BEGIN
+        INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                            evidence_run_id, stance)
+        VALUES (v, old_ev, cand, new_run, 'supports');
+        RAISE EXCEPTION 'a score cited evidence from a generation it did not read';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- ...and claiming the old run on the citation does not smuggle it past the
+    -- verdict side of the key either
+    BEGIN
+        INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                            evidence_run_id, stance)
+        VALUES (v, old_ev, cand, old_run, 'supports');
+        RAISE EXCEPTION 'a citation disagreed with its verdict about the generation';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- the honest citation, from the generation actually scored
+    INSERT INTO finds_verdict_evidence (verdict_id, evidence_id, candidate_id,
+                                        evidence_run_id, stance)
+    VALUES (v, new_ev, cand, new_run, 'supports');
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    -- and the RPC pins the run from its argument, so a payload cannot cross it
+    SET CONSTRAINTS ALL DEFERRED;
+    BEGIN
+        SELECT finds_write_verdict(cand, new_run, 'test/1', jsonb_build_array(
+            jsonb_build_object('criterion','C3','score',2,'rationale','x',
+                'scored_by','test','citations', jsonb_build_array(
+                    jsonb_build_object('evidence_id', old_ev, 'stance','supports'))))) INTO n;
+        RAISE EXCEPTION 'the RPC cited evidence from an unscored generation';
     EXCEPTION WHEN foreign_key_violation THEN NULL;
     END;
 END $$;
