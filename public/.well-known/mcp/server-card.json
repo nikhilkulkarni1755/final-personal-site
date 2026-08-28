@@ -146,6 +146,11 @@
       "mimeType": "text/markdown"
     },
     {
+      "uri": "site://bot",
+      "name": "Interesting Finds Bot — crawler disclosure",
+      "mimeType": "text/markdown"
+    },
+    {
       "uri": "site://interesting-finds",
       "name": "Interesting Finds",
       "mimeType": "text/markdown"

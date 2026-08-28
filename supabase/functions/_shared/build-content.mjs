@@ -70,7 +70,10 @@ const SKIP = new Set(['svg', 'path', 'circle', 'rect', 'line', 'g', 'defs', 'sty
   'script', 'input', 'textarea', 'select', 'canvas', 'polygon', 'polyline', 'ellipse',
   'linearGradient', 'stop', 'clipPath', 'mask', 'filter', 'text', 'tspan']);
 
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  bull: '\u2022', middot: '\u00b7', mdash: '\u2014', ndash: '\u2013', hellip: '\u2026',
+  lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201c', rdquo: '\u201d', times: '\u00d7',
+  rarr: '\u2192', larr: '\u2190', deg: '\u00b0', copy: '\u00a9', trade: '\u2122' };
 const decodeEntities = (s) =>
   s.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, code) =>
     code[0] === '#'
@@ -116,7 +119,7 @@ function extractPage(relPath, inlines = {}) {
   const collect = (n) => {
     if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) {
       const v = literal(n.initializer);
-      if (v !== undefined && typeof v === 'object') locals.set(n.name.text, v);
+      if (v !== undefined) locals.set(n.name.text, v);
     }
     ts.forEachChild(n, collect);
   };
@@ -140,6 +143,13 @@ function extractPage(relPath, inlines = {}) {
       const e = node.expression;
       if (!e) return;
       if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) { push(e.text); return; }
+      // A bare {IDENT} that resolves to a string constant is text the page
+      // renders — dropping it silently loses facts like a User-Agent string.
+      if (ts.isIdentifier(e)) {
+        const v = locals.get(e.text);
+        if (typeof v === 'string' || typeof v === 'number') push(String(v));
+        return;
+      }
       // {items.map(...)}, {Object.entries(items).map(...)}, {[{...}].map(...)}
       if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) &&
           e.expression.name.text === 'map') {
@@ -217,6 +227,9 @@ function extractPage(relPath, inlines = {}) {
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/^- *\n+/gm, '- ')
+    .replace(/^(- )[\u2022\u00b7]\s*/gm, '$1') // the marker already is the bullet
+    .replace(/^- *$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
@@ -236,6 +249,10 @@ const PAGES = [
     records: ['src/data/apps.json'] },
   { id: 'privacy-policy', route: '/privacy-policy', title: 'Privacy Policy', kind: 'page',
     file: 'src/pages/Privacy.tsx' },
+  // Public crawler disclosure for InterestingFindsBot. Fully static — no
+  // Supabase, no state gate, so no liveContent caveat applies.
+  { id: 'bot', route: '/bot', title: 'Interesting Finds Bot — crawler disclosure',
+    kind: 'page', file: 'src/pages/Bot.tsx' },
   // The page's chrome and its four verification criteria are static and real.
   // The finds themselves come from the `finds_published` table at page load,
   // so they are not extractable here — and the build cannot know what the table
