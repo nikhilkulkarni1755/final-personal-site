@@ -1,0 +1,274 @@
+#!/usr/bin/env node
+// Generates supabase/functions/_shared/content.ts from the real site source.
+// Prose is extracted from the page components' JSX via the TypeScript AST, so
+// every string in the corpus is text that actually renders on the site. Nothing
+// is authored here. Run: node supabase/functions/_shared/build-content.mjs
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import ts from 'typescript';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const read = (p) => readFileSync(join(ROOT, p), 'utf8');
+const json = (p) => JSON.parse(read(p));
+
+// ── literal evaluator: only plain JSON-able literals, never identifiers ──
+function literal(node) {
+  if (!node) return undefined;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (ts.isArrayLiteralExpression(node)) {
+    const out = [];
+    for (const el of node.elements) {
+      const v = literal(el);
+      if (v === undefined) return undefined;
+      out.push(v);
+    }
+    return out;
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    // Lenient: keep the literal properties, drop the rest (render fns, styles).
+    // Objects like BUCKET_META mix prose with arrow functions.
+    const out = {};
+    for (const p of node.properties) {
+      if (!ts.isPropertyAssignment(p)) continue;
+      const key = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) ? p.name.text : undefined;
+      const v = literal(p.initializer);
+      if (key === undefined || v === undefined || PRESENTATION.has(key)) continue;
+      if (typeof v === 'string' && /^(#[0-9a-f]{3,8}|rgba?\(|[\d.]+(px|rem|em|%)?)$/i.test(v)) continue;
+      out[key] = v;
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  return undefined;
+}
+// keys that only ever carry styling/layout, never prose
+const PRESENTATION = new Set(['color', 'bg', 'background', 'backgroundColor', 'border',
+  'borderColor', 'style', 'className', 'icon', 'poster', 'variant', 'prefix', 'colors',
+  'width', 'height', 'size', 'gap', 'padding', 'margin', 'fontSize', 'lineHeight']);
+
+// ── markdown shaping per JSX tag ──
+const tagName = (n) => {
+  const e = n.tagName ?? n.openingElement?.tagName;
+  const t = e ? e.getText() : '';
+  return t.includes('.') ? t.slice(t.lastIndexOf('.') + 1) : t;
+};
+const HEADING = { h1: '# ', h2: '## ', h3: '### ', h4: '#### ', h5: '##### ',
+  SectionTitle: '## ', SectionTag: '### ' };
+const WRAP = { strong: '**', Strong: '**', b: '**', em: '*', Em: '*', i: '*',
+  code: '`', Code: '`' };
+const BLOCK = new Set(['p', 'P', 'Lead', 'div', 'section', 'article', 'header', 'footer',
+  'ul', 'ol', 'blockquote', 'Callout', 'figcaption', 'td', 'tr', 'table']);
+const CODEBLOCK = new Set(['pre', 'MathBlock', 'CodeBlock']);
+// purely decorative / non-prose subtrees
+const SKIP = new Set(['svg', 'path', 'circle', 'rect', 'line', 'g', 'defs', 'style',
+  'script', 'input', 'textarea', 'select', 'canvas', 'polygon', 'polyline', 'ellipse',
+  'linearGradient', 'stop', 'clipPath', 'mask', 'filter', 'text', 'tspan']);
+
+function renderData(value, depth = 0) {
+  const pad = '  '.repeat(depth);
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.map((v) => renderData(v, depth)).filter(Boolean).join('\n');
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([k, v]) => {
+        if (v && typeof v === 'object') {
+          const inner = renderData(v, depth + 1);
+          return inner ? `${pad}- ${k}:\n${inner}` : '';
+        }
+        return `${pad}- ${k}: ${v}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+  return `${pad}- ${value}`;
+}
+
+function extractPage(relPath) {
+  const src = ts.createSourceFile(relPath, read(relPath), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const locals = new Map();
+  const out = [];
+  const push = (s) => { if (s) out.push(s); };
+
+  // collect every `const X = <json literal>` anywhere in the file
+  const collect = (n) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) {
+      const v = literal(n.initializer);
+      if (v !== undefined && typeof v === 'object') locals.set(n.name.text, v);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(src);
+
+  // transient UI states ("Could not load…", spinners) are not site content
+  const TRANSIENT = /\b(error|loading|isLoading|pending|notFound)\b/i;
+
+  const walk = (node) => {
+    if (ts.isIfStatement(node) && TRANSIENT.test(node.expression.getText())) {
+      if (node.elseStatement) walk(node.elseStatement);
+      return;
+    }
+    if (ts.isJsxText(node)) {
+      const t = node.text.replace(/\s+/g, ' ');
+      if (t.trim()) push(t);
+      return;
+    }
+    if (ts.isJsxExpression(node)) {
+      const e = node.expression;
+      if (!e) return;
+      if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) { push(e.text); return; }
+      // {items.map(...)}, {Object.entries(items).map(...)}, {[{...}].map(...)}
+      if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) &&
+          e.expression.name.text === 'map') {
+        const subjectNode = e.expression.expression;
+        if (ts.isArrayLiteralExpression(subjectNode)) {
+          const v = literal(subjectNode);
+          if (v !== undefined) { push('\n' + renderData(v) + '\n'); return; }
+        }
+        const m = subjectNode.getText().match(/^(?:Object\.(?:entries|keys|values)\()?([A-Za-z_$][\w$]*)/);
+        if (m && locals.has(m[1])) { push('\n' + renderData(locals.get(m[1])) + '\n'); return; }
+      }
+      // conditional JSX: descend so both branches' literal prose is captured,
+      // minus the error/loading branch
+      if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+          && TRANSIENT.test(e.left.getText())) return;
+      if (ts.isConditionalExpression(e) && TRANSIENT.test(e.condition.getText())) {
+        walk(e.whenFalse);
+        return;
+      }
+      ts.forEachChild(e, walk);
+      return;
+    }
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = tagName(node);
+      if (SKIP.has(tag)) return;
+      if (ts.isJsxSelfClosingElement(node)) { if (tag === 'br') push('\n'); return; }
+      if (CODEBLOCK.has(tag)) {
+        const inner = [];
+        const save = out.length;
+        node.children.forEach(walk);
+        inner.push(...out.splice(save));
+        push('\n```\n' + inner.join('').trim() + '\n```\n');
+        return;
+      }
+      if (HEADING[tag]) {
+        const save = out.length;
+        node.children.forEach(walk);
+        const inner = out.splice(save).join('').replace(/\s+/g, ' ').trim();
+        if (inner) push(`\n\n${HEADING[tag]}${inner}\n\n`);
+        return;
+      }
+      if (WRAP[tag]) {
+        const save = out.length;
+        node.children.forEach(walk);
+        const inner = out.splice(save).join('').trim();
+        if (inner) push(`${WRAP[tag]}${inner}${WRAP[tag]}`);
+        return;
+      }
+      if (tag === 'li') { push('\n- '); node.children.forEach(walk); return; }
+      if (BLOCK.has(tag)) { push('\n\n'); node.children.forEach(walk); push('\n\n'); return; }
+      node.children.forEach(walk);
+      return;
+    }
+    ts.forEachChild(node, walk);
+  };
+  walk(src);
+
+  return out.join('')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^- *\n+/gm, '- ')
+    .trim();
+}
+
+// ── the route table. D4: /spearfishing/voice-agent is excluded (mock fallback). ──
+const SITE = 'https://nikhilkulkarni1755.com';
+const PAGES = [
+  { id: 'home', route: '/', title: 'Nikhil Kulkarni — AI Engineer', kind: 'page',
+    file: 'src/pages/Home.tsx',
+    records: ['src/data/projects.json', 'src/data/contributions.json', 'src/data/blogs.json'] },
+  { id: 'about', route: '/about', title: 'About Nikhil Kulkarni', kind: 'page',
+    file: 'src/pages/About.tsx' },
+  { id: 'projects', route: '/projects', title: 'Projects', kind: 'page',
+    file: 'src/pages/Projects.tsx', records: ['src/data/projects.json'] },
+  { id: 'blog', route: '/blog', title: 'Blog', kind: 'page', file: 'src/pages/Blog.tsx',
+    records: ['src/data/blogs.json'] },
+  { id: 'apps', route: '/apps', title: 'Apps', kind: 'page', file: 'src/pages/Apps.tsx',
+    records: ['src/data/apps.json'] },
+  { id: 'privacy-policy', route: '/privacy-policy', title: 'Privacy Policy', kind: 'page',
+    file: 'src/pages/Privacy.tsx' },
+  { id: 'spearfishing-fireworks-ai', route: '/spearfishing/fireworks-ai', kind: 'page',
+    title: 'Fireworks AI — disaggregated vs colocated inference', file: 'src/pages/FireworksAI.tsx',
+    also: ['src/components/fireworks/Writeup.tsx', 'src/components/fireworks/LiveRunPanel.tsx'] },
+  { id: 'take-homes-weave', route: '/take-homes/weave', kind: 'page',
+    title: 'Weave take-home — ranking engineers from repo activity', file: 'src/pages/WeaveTakeHome.tsx' },
+];
+const POSTS = [
+  { slug: 'matmul-to-ai', file: 'src/pages/MatmulTutorial.tsx' },
+  { slug: 'linkedin-agent', file: 'src/pages/LinkedinAgentPost.tsx' },
+  { slug: 'docker-secrets-injection', file: 'src/pages/DockerSecretsPost.tsx' },
+];
+
+const blogs = json('src/data/blogs.json');
+const documents = [];
+
+for (const p of PAGES) {
+  // Listing pages are thin shells that render imported JSON; splice the real
+  // records in so the document carries the content the page actually shows.
+  const records = (p.records ?? [])
+    .map((f) => renderData(json(f).map(({ content: _c, ...r }) => r)))
+    .join('\n\n');
+  const prose = [p.file, ...(p.also ?? [])].map(extractPage).join('\n\n');
+  documents.push({
+    id: p.id, route: p.route, url: SITE + p.route, title: p.title, kind: p.kind,
+    tags: [], date: null, text: (prose + (records ? '\n\n' + records : '')).trim(),
+  });
+}
+for (const p of POSTS) {
+  const meta = blogs.find((b) => b.slug === p.slug);
+  if (!meta) throw new Error(`no blogs.json entry for ${p.slug}`);
+  documents.push({
+    id: `blog-${p.slug}`, route: `/blog/${p.slug}`, url: `${SITE}/blog/${p.slug}`,
+    title: meta.title, kind: 'post', tags: meta.tags, date: meta.publishDate,
+    subtitle: meta.subtitle, readTimeMinutes: meta.readTime, text: extractPage(p.file),
+  });
+}
+
+for (const d of documents) {
+  if (d.text.length < 200) throw new Error(`${d.id}: extracted only ${d.text.length} chars`);
+}
+
+const content = {
+  generatedAt: new Date().toISOString().slice(0, 10),
+  site: SITE,
+  owner: {
+    name: 'Nikhil Kulkarni',
+    headline: 'AI Engineer building reproducible, scalable AI systems',
+    site: SITE,
+    links: json('src/data/social.json'),
+  },
+  documents,
+  projects: json('src/data/projects.json'),
+  contributions: json('src/data/contributions.json'),
+  apps: json('src/data/apps.json'),
+  posts: blogs.map(({ content: _drop, ...rest }) => ({
+    ...rest, route: `/blog/${rest.slug}`, url: `${SITE}/blog/${rest.slug}`,
+  })),
+};
+
+writeFileSync(
+  join(ROOT, 'supabase/functions/_shared/content.ts'),
+  `// GENERATED by supabase/functions/_shared/build-content.mjs — do not edit by hand.\n` +
+  `// Every string below is extracted from the site's own source. Re-run the generator\n` +
+  `// after changing src/pages/* or src/data/*.\n` +
+  `export const content = ${JSON.stringify(content, null, 2)} as const;\n` +
+  `export type Document = (typeof content.documents)[number];\n`
+);
+
+console.log(`wrote content.ts — ${documents.length} documents, ` +
+  `${documents.reduce((n, d) => n + d.text.length, 0)} chars of prose, ` +
+  `${content.projects.length} projects, ${content.contributions.length} contributions`);
+for (const d of documents) console.log(`  ${d.route.padEnd(32)} ${String(d.text.length).padStart(6)} chars`);
