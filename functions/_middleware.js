@@ -51,6 +51,22 @@ function markdownPathFor(pathname) {
   return pathname === '/' ? '/index.md' : `${pathname}.md`;
 }
 
+// Collapse the alternate spellings of a route (Cloudflare's own /index.html
+// suffix and trailing slashes) down to the canonical form STATIC_ROUTES and
+// BLOG_SLUGS are keyed on. "/index.html" -> "/", "/about/" -> "/about",
+// "/about/index.html" -> "/about" (the shape W1's per-route prerendered
+// files will have on disk). Anything else passes through unchanged.
+function canonicalRoute(pathname) {
+  let route = pathname;
+  if (route.endsWith('/index.html')) {
+    route = route.slice(0, -'index.html'.length);
+  }
+  if (route.length > 1 && route.endsWith('/')) {
+    route = route.slice(0, -1);
+  }
+  return route || '/';
+}
+
 // ora `agent-mode-view`: "a structured, machine-readable view with API
 // endpoints, authentication info, and key capabilities instead of marketing
 // HTML." Pages listed here are the real STATIC_ROUTES map plus blog posts
@@ -101,12 +117,16 @@ export async function onRequest(context) {
     return agentModeView();
   }
 
-  // No dot in the last segment => this looks like a client-side route, not a
-  // file request. Reject it up front if it's not one src/App.tsx defines, so
-  // agents guessing paths get a real 404 instead of the SPA shell.
-  const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+  // Resolve alternate spellings (/index.html, trailing slash) to the same
+  // canonical route before deciding what this request is. No dot in the
+  // canonical form's last segment => this looks like a client-side route,
+  // not a file request. Reject it up front if it's not one src/App.tsx
+  // defines, so agents guessing paths get a real 404 instead of the SPA
+  // shell.
+  const canonical = canonicalRoute(pathname);
+  const lastSegment = canonical.slice(canonical.lastIndexOf('/') + 1);
   const looksLikeRoute = !lastSegment.includes('.');
-  if (looksLikeRoute && !isKnownRoute(pathname)) {
+  if (looksLikeRoute && !isKnownRoute(canonical)) {
     return notFound();
   }
 
@@ -116,7 +136,7 @@ export async function onRequest(context) {
     // through to the normal HTML response otherwise (pre-launch, or routes
     // W2 excludes, e.g. /spearfishing/voice-agent's live-Supabase page).
     if ((request.headers.get('accept') || '').includes('text/markdown')) {
-      const mdUrl = new URL(markdownPathFor(pathname), request.url);
+      const mdUrl = new URL(markdownPathFor(canonical), request.url);
       const mdResponse = await env.ASSETS.fetch(new Request(mdUrl, request));
       // env.ASSETS.fetch bypasses this middleware, so a missing .md file
       // falls through _redirects to the SPA shell (200, text/html) rather
