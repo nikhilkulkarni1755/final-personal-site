@@ -43,7 +43,7 @@ for table in finds_sources finds_source_health finds_candidates \
              finds_candidate_sightings finds_evidence finds_verdicts \
              finds_verdict_evidence finds_digests finds_digest_items \
              finds_undigested_candidates finds_crawl_verdicts \
-             finds_crawl_evidence; do
+             finds_crawl_evidence finds_approvals; do
     if psql -c "SET ROLE anon; SELECT 1 FROM $table LIMIT 1;" >/dev/null 2>&1; then
         echo "FAIL: anon can read $table" >&2
         exit 1
