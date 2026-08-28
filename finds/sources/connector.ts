@@ -1,4 +1,5 @@
 import type { SourceAuthKind } from '../types.ts';
+import type { ProductUrlKind } from './hostClassifier.ts';
 
 /**
  * Shapes local to the ingest lane -- how a connector talks about what it
@@ -29,6 +30,16 @@ export interface FetchedLaunch {
   externalId: string;
   sourceUrl: string;
   productUrl: string;
+  /**
+   * Whether productUrl is the candidate's own dedicated site or a listing on
+   * a shared host (github.com/owner/repo and the like) -- D23. Every
+   * connector must set this via classifyProductUrl(); it is NOT yet written
+   * to finds_candidates (no column exists there yet -- proposed to the
+   * coordinator, see DEPENDENCIES.md LIVE), but it is computed here and
+   * logged by every run-*.ts so the signal exists the moment W3 adds it,
+   * and so it is visible in the meantime rather than silently absent.
+   */
+  productUrlKind: ProductUrlKind;
   name: string;
   tagline: string | null;
   title: string | null;

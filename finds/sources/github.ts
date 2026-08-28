@@ -1,4 +1,5 @@
 import type { FetchedLaunch } from './connector.ts';
+import { classifyProductUrl } from './hostClassifier.ts';
 
 // GitHub repo search. Per R1 sec.4: not a launch-announcement feed like the
 // others, but "what got built and noticed this week" -- strong specifically
@@ -89,11 +90,18 @@ export async function fetchNewGithubRepos(sinceUtc: Date): Promise<FetchedLaunch
     totalCount = body.total_count;
 
     for (const repo of body.items) {
+      // D23: when there is no homepage, productUrl falls back to the repo
+      // page itself -- correct (it is still the best URL we have) but a
+      // DIFFERENT KIND of URL than a dedicated site, since github.com also
+      // hosts its own marketing pages under the same authority. Measured
+      // live (2026-08-28): 55/69 repos in a 24h window had no homepage, so
+      // this is the majority case for this source, not an edge case.
       const productUrl = repo.homepage?.trim() || repo.html_url;
       launches.push({
         externalId: String(repo.id),
         sourceUrl: repo.html_url,
         productUrl,
+        productUrlKind: classifyProductUrl(productUrl),
         name: repo.full_name,
         tagline: repo.description,
         title: repo.full_name,

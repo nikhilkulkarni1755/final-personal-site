@@ -1,4 +1,5 @@
 import type { FetchedLaunch } from './connector.ts';
+import { classifyProductUrl } from './hostClassifier.ts';
 
 // Uneed's public launches feed. Per R1 §5.2: no auth at all, no browser, the
 // site's own llms.txt invites agent use of this exact endpoint, and one
@@ -44,6 +45,7 @@ export async function fetchUneedLaunches(): Promise<FetchedLaunch[]> {
       externalId: item.slug,
       sourceUrl: item.uneed_url,
       productUrl: item.url,
+      productUrlKind: classifyProductUrl(item.url),
       name: item.name,
       tagline: item.description?.trim() || null,
       title: item.name,

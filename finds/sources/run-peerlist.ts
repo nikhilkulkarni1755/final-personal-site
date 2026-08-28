@@ -11,6 +11,7 @@ import {
 } from './peerlist.ts';
 import type { FetchedLaunch } from './connector.ts';
 import type { PeerlistListItem } from './peerlist.ts';
+import { productUrlKindTag } from './hostClassifier.ts';
 
 // Daily Peerlist ingest. Usage:
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/sources/run-peerlist.ts
@@ -93,12 +94,12 @@ try {
   const featured = await fetchPeerlistFeaturedToday(page);
   if (featured) {
     if (DRY) {
-      console.log(`[peerlist] [DRY] (featured today) ${featured.name} -- ${featured.productUrl} (${featured.sourceUrl})`);
+      console.log(`[peerlist] [DRY] (featured today) ${featured.name} -- ${featured.productUrl}${productUrlKindTag(featured.productUrlKind)} (${featured.sourceUrl})`);
     } else {
       const isNew = await persist(client!, sourceId!, featured);
       if (isNew) {
         newSightings += 1;
-        console.log(`[peerlist] + (featured today) ${featured.name} -- ${featured.productUrl} (${featured.sourceUrl})`);
+        console.log(`[peerlist] + (featured today) ${featured.name} -- ${featured.productUrl}${productUrlKindTag(featured.productUrlKind)} (${featured.sourceUrl})`);
       }
     }
   } else {
@@ -136,12 +137,12 @@ try {
       continue;
     }
     if (DRY) {
-      console.log(`[peerlist] [DRY] ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+      console.log(`[peerlist] [DRY] ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
     } else {
       const isNew = await persist(client!, sourceId!, launch);
       if (isNew) {
         newSightings += 1;
-        console.log(`[peerlist] + ${launch.name} -- ${launch.productUrl} (${launch.sourceUrl})`);
+        console.log(`[peerlist] + ${launch.name} -- ${launch.productUrl}${productUrlKindTag(launch.productUrlKind)} (${launch.sourceUrl})`);
       }
     }
   }
