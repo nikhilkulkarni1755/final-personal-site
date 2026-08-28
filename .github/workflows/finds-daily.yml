@@ -84,9 +84,13 @@ jobs:
 
       - name: Run the daily pipeline
         env:
-          # D17: never a VITE_ prefix on any of these. Vite bundles VITE_* into
-          # the browser, and the service-role key bypasses RLS entirely.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # D17/D19: ONE datastore credential for the whole pipeline, the same
+          # one finds/sources/db.ts reads. There is deliberately no
+          # DATABASE_URL here -- an earlier version of preflight opened its own
+          # `pg` pool and would have made Nikhil provision a second database
+          # secret for a check that needs no extra access.
+          # Never a VITE_ prefix on the key: Vite bundles VITE_* into the
+          # browser, and the service-role key bypasses RLS entirely.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # D2. Send-only, one recipient.

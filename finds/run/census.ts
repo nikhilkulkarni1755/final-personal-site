@@ -8,53 +8,71 @@
  * emails got thin. So the run counts what it actually landed and says so.
  *
  * Zero new sightings in the window is reported as a FAILURE of this stage,
- * not as a quiet zero. Show HN alone carries ~134 launches/day (R1), so an
- * empty day is a fault until proven otherwise. The stage is non-aborting:
- * the rest of the run still reports its own state.
+ * not as a quiet zero. Uneed alone returns >=50/day and Show HN ~134/day
+ * (R1), so an empty day is a fault until proven otherwise. The stage is
+ * non-aborting: the rest of the run still reports its own state.
  *
- * Usage: DATABASE_URL=... node finds/run/census.ts [lookback-hours]
+ * D19: reads through the shared Supabase service-role client (D17), the same
+ * access path the connectors just wrote through. One HEAD count per source --
+ * no rows come back, only the count.
+ *
+ * Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node finds/run/census.ts [lookback-hours]
  */
 
-import { getPool } from '../sources/db.ts';
+import { getSupabaseClient } from '../sources/db.ts';
 
 const LOOKBACK_HOURS = Number(process.argv[2] ?? process.env.FINDS_CENSUS_HOURS ?? 24);
+const since = new Date(Date.now() - LOOKBACK_HOURS * 3600 * 1000).toISOString();
 
-const pool = getPool();
+const client = getSupabaseClient();
 
-try {
-  const { rows } = await pool.query<{ slug: string; sightings: string; candidates: string }>(
-    `SELECT s.slug,
-            COUNT(*)::text                         AS sightings,
-            COUNT(DISTINCT s2.candidate_id)::text  AS candidates
-       FROM finds_candidate_sightings s2
-       JOIN finds_sources s ON s.id = s2.source_id
-      WHERE s2.seen_at > NOW() - make_interval(hours => $1::int)
-      GROUP BY s.slug
-      ORDER BY s.slug`,
-    [LOOKBACK_HOURS],
+const { data: sources, error: sourcesError } = await client
+  .from('finds_sources')
+  .select('id, slug')
+  .order('slug');
+
+if (sourcesError) {
+  console.error(`[census] FAILED: could not read finds_sources: ${sourcesError.message}`);
+  process.exitCode = 1;
+} else if (!sources || sources.length === 0) {
+  console.error(
+    '[census] FAILED: no sources are registered at all. A connector registers ' +
+      'itself on its first successful run, so this means not one of them got that far.',
   );
+  process.exitCode = 1;
+} else {
+  let total = 0;
+  let failed = false;
 
-  const total = rows.reduce((n, r) => n + Number(r.sightings), 0);
-  for (const r of rows) {
-    console.log(`[census] ${r.slug}: ${r.sightings} sighting(s), ${r.candidates} distinct product(s)`);
+  for (const source of sources as { id: string; slug: string }[]) {
+    const { count, error } = await client
+      .from('finds_candidate_sightings')
+      .select('*', { head: true, count: 'exact' })
+      .eq('source_id', source.id)
+      .gte('seen_at', since);
+
+    if (error) {
+      console.error(`[census] FAILED: counting ${source.slug}: ${error.message}`);
+      failed = true;
+      continue;
+    }
+    console.log(`[census] ${source.slug}: ${count ?? 0} sighting(s) in the last ${LOOKBACK_HOURS}h`);
+    total += count ?? 0;
   }
 
-  if (total === 0) {
+  if (failed) {
+    process.exitCode = 1;
+  } else if (total === 0) {
     console.error(
-      `[census] FAILED: 0 new sightings in the last ${LOOKBACK_HOURS}h across all sources. ` +
-        'Nothing was ingested, so there is nothing for the rest of the pipeline to ' +
-        'work on. Check the per-source status printed by preflight: a source ' +
-        'reporting "ok" while landing zero rows means the connector ran fine and ' +
-        'the source returned nothing, which is a connector or an upstream-API ' +
-        'change, not a quiet day.',
+      `[census] FAILED: 0 new sightings in the last ${LOOKBACK_HOURS}h across all ` +
+        `${sources.length} registered source(s). Nothing was ingested, so there is ` +
+        'nothing for the rest of the pipeline to work on. Check the per-source status ' +
+        'printed by preflight: a source reporting "ok" while landing zero rows means ' +
+        'the connector ran fine and the source returned nothing, which is a connector ' +
+        'or an upstream-API change, not a quiet day.',
     );
     process.exitCode = 1;
   } else {
     console.log(`[census] ${total} sighting(s) landed in the last ${LOOKBACK_HOURS}h`);
   }
-} catch (err) {
-  console.error(`[census] FAILED: ${err instanceof Error ? err.message : String(err)}`);
-  process.exitCode = 1;
-} finally {
-  await pool.end();
 }
