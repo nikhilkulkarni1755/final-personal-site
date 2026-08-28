@@ -20,6 +20,25 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLUSTER="$(mktemp -d "${TMPDIR:-/tmp}/finds-w5-d7.XXXXXX")"
+
+# ---------------------------------------------------------------------------
+# The crawl generations, named once and used everywhere.
+#
+# These were literal UUIDs scattered through the file, chosen to look distinct
+# rather than to mean anything -- and one of them (a run with no evidence under
+# it at all) made a test cite ACROSS generations, which passed only because the
+# foreign key did not yet include the run. The constraint that now forbids it
+# found the bug in the very test that proves this lane's D7 compliance.
+#
+# The lesson is not "fix line 191". It is that a fixture which does not model
+# the invariant the production code maintains will eventually assert something
+# the production code would never do. So: two real generations of the same
+# candidate, because evidence is append-only and a re-crawl appends one -- and
+# every citation helper below is scoped to a generation, exactly as
+# loadGeneration() is, so a cross-run citation cannot be written by accident.
+# ---------------------------------------------------------------------------
+GEN_A='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'   # the generation under test
+GEN_B='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'   # a later re-crawl of the same site
 trap 'pg_ctl -D "$CLUSTER/data" stop -m immediate >/dev/null 2>&1 || true; rm -rf "$CLUSTER"' EXIT
 
 # The payload keys buildVerdictWrite() actually emits, printed by the code
@@ -61,7 +80,7 @@ for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration"
 unset PGOPTIONS
 
 # --- the minimum real chain a verdict needs: candidate -> ALLOW -> evidence ---
-psql >/dev/null <<'SETUP'
+psql >/dev/null <<SETUP
 INSERT INTO finds_candidates (product_url, name, tagline)
 VALUES ('https://w5-d7-proof.invalid/', 'W5 D7 proof (throwaway)', 'exists only inside this test cluster');
 
@@ -81,7 +100,7 @@ SELECT '1.1', 'w5-proof', id, product_url, 'https://w5-d7-other.invalid', 'w5-d7
   FROM finds_candidates WHERE product_url = 'https://w5-d7-other.invalid/';
 
 INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role, http_status, observations)
-SELECT v.candidate_id, v.id, '11111111-1111-4111-8111-111111111111', p.url, p.role, 200, p.obs::jsonb
+SELECT v.candidate_id, v.id, '$GEN_A', p.url, p.role, 200, p.obs::jsonb
   FROM finds_crawl_verdicts v
   JOIN finds_candidates c ON c.id = v.candidate_id
   CROSS JOIN (VALUES
@@ -91,8 +110,20 @@ SELECT v.candidate_id, v.id, '11111111-1111-4111-8111-111111111111', p.url, p.ro
       ) AS p(url, role, obs)
  WHERE c.product_url = 'https://w5-d7-proof.invalid/';
 
+-- A LATER RE-CRAWL of the same site. Evidence is append-only, so this is what
+-- a real table looks like, and it is what makes "cited the wrong generation"
+-- constructible below instead of hypothetical.
+INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role, http_status, observations)
+SELECT v.candidate_id, v.id, '$GEN_B', 'https://w5-d7-proof.invalid/', 'homepage', 200,
+       '[{"kind":"c1_corroborated","detail":"a, on the re-crawl"}]'::jsonb
+  FROM finds_crawl_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
+ WHERE c.product_url = 'https://w5-d7-proof.invalid/' AND v.allowed;
+
+-- The OTHER candidate, deliberately in the SAME generation. A crawl pass covers
+-- many candidates, and sharing the run is what lets the foreign-candidate test
+-- below vary the candidate and nothing else.
 INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role, http_status)
-SELECT v.candidate_id, v.id, '22222222-2222-4222-8222-222222222222', 'https://w5-d7-other.invalid/', 'homepage', 200
+SELECT v.candidate_id, v.id, '$GEN_A', 'https://w5-d7-other.invalid/', 'homepage', 200
   FROM finds_crawl_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
  WHERE c.product_url = 'https://w5-d7-other.invalid/';
 SETUP
@@ -101,7 +132,6 @@ IDS="$CLUSTER/ids.sql"
 cat >"$IDS" <<'IDSQL'
 SELECT id AS cid FROM finds_candidates WHERE product_url = 'https://w5-d7-proof.invalid/' \gset
 SELECT id AS oid FROM finds_candidates WHERE product_url = 'https://w5-d7-other.invalid/' \gset
-SELECT array_agg(id ORDER BY url) AS eids FROM finds_evidence WHERE candidate_id = :'cid' \gset
 SELECT id AS foreign_eid FROM finds_evidence WHERE candidate_id = :'oid' \gset
 IDSQL
 
@@ -117,17 +147,19 @@ jsonb_build_array(jsonb_build_object(
 PAYLOAD
 }
 
-CITE_ALL="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM finds_evidence WHERE candidate_id = :'cid')"
-CITE_ONE="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f)"
-CITE_ONE_INCONCLUSIVE="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'inconclusive')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f)"
+# Every helper names the generation it draws from. That is the same narrowing
+# scoreCandidate() and loadGeneration() do in production, so the fixture now
+# exercises the invariant rather than merely coexisting with it.
+cite_all()  { echo "(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', '${2:-supports}')) FROM finds_evidence WHERE candidate_id = :'cid' AND crawl_run_id = '$1')"; }
+cite_one()  { echo "(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', '${2:-supports}')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' AND crawl_run_id = '$1' ORDER BY url LIMIT 1) f)"; }
 CITE_FOREIGN="jsonb_build_array(jsonb_build_object('evidence_id', :'foreign_eid', 'stance', 'supports'))"
 
 # --------------------------------------------------------------------------
 # 1. The happy path: verdict and citations in one call, and it commits.
 # --------------------------------------------------------------------------
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.0',
-  $(payload C1 3 'CORROBORATED: 3 of 3 checkable claims are echoed on another page of the site.' "$CITE_ALL"));
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
+  $(payload C1 3 'CORROBORATED: 3 of 3 checkable claims are echoed on another page of the site.' "$(cite_all $GEN_A)"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'expected exactly one verdict';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) = 3, 'expected three citations';
@@ -141,8 +173,8 @@ echo "PASS  a cited verdict commits, carrying all three citations and its rubric
 #    them, and leaves exactly one verdict row.
 # --------------------------------------------------------------------------
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.0',
-  $(payload C1 2 'CORROBORATED (partial): re-scored against the same generation.' "$CITE_ONE"));
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
+  $(payload C1 2 'CORROBORATED (partial): re-scored against the same generation.' "$(cite_one $GEN_A)"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'a re-score must update, not duplicate';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) = 1, 'stale citations must be gone';
@@ -165,7 +197,7 @@ refuses() {
 }
 
 refuses "an uncited score is refused by the function, by name of the criterion" "
-SELECT finds_write_verdict(:'cid'::uuid, '33333333-3333-4333-8333-333333333333'::uuid, '1.0',
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
   jsonb_build_array(jsonb_build_object('criterion','C2','score',3,
     'rationale','it solves a rare problem','scored_by','rubric/1.0','citations', '[]'::jsonb)));" \
   "C2 cites no evidence"
@@ -173,12 +205,22 @@ SELECT finds_write_verdict(:'cid'::uuid, '33333333-3333-4333-8333-333333333333':
 refuses "an uncited score inserted DIRECTLY still aborts at COMMIT" "
 BEGIN;
 INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
-VALUES (:'cid', '33333333-3333-4333-8333-333333333333', 'C2', 3, 'it solves a rare problem', 'rubric', '1.0');
+VALUES (:'cid', '$GEN_A', 'C2', 3, 'it solves a rare problem', 'rubric', '1.0');
 COMMIT;" "has no cited evidence"
 
+# Both candidates were crawled in GEN_A, so this varies the CANDIDATE and
+# nothing else -- otherwise it would pass on the run mismatch and never test
+# what its name says.
 refuses "citing another product's evidence is a foreign-key violation" "
-SELECT finds_write_verdict(:'cid'::uuid, '44444444-4444-4444-8444-444444444444'::uuid, '1.0',
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
   $(payload C3 3 'usable by anyone' "$CITE_FOREIGN"));" "finds_verdict_evidence_evidence_fkey"
+
+# The defect this fixture used to contain, turned into the test that catches it.
+# Same candidate, real evidence, real generations -- the ONLY thing wrong is
+# that the score claims to have read GEN_B while pointing at a GEN_A row.
+refuses "citing a generation this score did not read is a foreign-key violation" "
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_B'::uuid, '1.0',
+  $(payload C3 3 'usable by anyone' "$(cite_one $GEN_A)"));" "finds_verdict_evidence_evidence_fkey"
 
 refuses "stripping a live score's last citation aborts at COMMIT" "
 BEGIN;
@@ -188,8 +230,8 @@ COMMIT;" "has no cited evidence"
 # The whole point of the third stance value: a score of 1 cites rows that
 # settled nothing, and must be able to say so.
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '55555555-5555-4555-8555-555555555555'::uuid, '1.0',
-  $(payload C4 1 'NO EVIDENCE: no llms.txt, no linked spec, no MCP endpoint.' "$CITE_ONE_INCONCLUSIVE"));
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
+  $(payload C4 1 'NO EVIDENCE: no llms.txt, no linked spec, no MCP endpoint.' "$(cite_one $GEN_A inconclusive)"));
 DO \$\$ BEGIN
   ASSERT (SELECT stance FROM finds_verdict_evidence ve JOIN finds_verdicts v ON v.id = ve.verdict_id
            WHERE v.criterion = 'C4') = 'inconclusive',
@@ -200,10 +242,11 @@ echo "PASS  a score of 1 cites its evidence as inconclusive, not as support"
 # W3's own review finding, asserted rather than trusted: an omitted stance must
 # take the column default instead of failing NOT NULL on an explicit NULL.
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '66666666-6666-4666-8666-666666666666'::uuid, '1.0',
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.0',
   jsonb_build_array(jsonb_build_object('criterion','C2','score',2,'rationale','x','scored_by','rubric',
     'citations', (SELECT jsonb_agg(jsonb_build_object('evidence_id', id))
-                    FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f))));
+                    FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid'
+                           AND crawl_run_id = '$GEN_A' ORDER BY url LIMIT 1) f))));
 DO \$\$ BEGIN
   ASSERT (SELECT stance FROM finds_verdict_evidence ve JOIN finds_verdicts v ON v.id = ve.verdict_id
            WHERE v.criterion = 'C2') = 'supports', 'an omitted stance must take the column default';
@@ -217,8 +260,8 @@ echo "PASS  a citation with no stance takes the default rather than failing NOT 
 run "
 BEGIN;
 SET CONSTRAINTS ALL IMMEDIATE;
-SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.1',
-  $(payload C1 2 'CORROBORATED (partial): re-scored under a caller that went IMMEDIATE first.' "$CITE_ONE"));
+SELECT finds_write_verdict(:'cid'::uuid, '$GEN_A'::uuid, '1.1',
+  $(payload C1 2 'CORROBORATED (partial): re-scored under a caller that went IMMEDIATE first.' "$(cite_one $GEN_A)"));
 COMMIT;
 DO \$\$ BEGIN
   ASSERT (SELECT rubric_version FROM finds_verdicts WHERE criterion = 'C1') = '1.1',
