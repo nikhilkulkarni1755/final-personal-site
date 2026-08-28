@@ -74,12 +74,10 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      # Turns itself on the moment W2's Peerlist entry point lands on main --
-      # that path drives headless Chromium and needs the system libraries.
-      # Nothing wired today needs a browser (Show HN is a plain JSON API), so
-      # this stays off rather than costing every run an install for nothing.
-      - name: Install Chromium (only once a browser-driven source is wired)
-        if: hashFiles('finds/sources/run-peerlist.ts') != ''
+      # The Peerlist connector drives headless Chromium and needs the system
+      # libraries, not just the npm package. It is a wired stage now, so this
+      # is unconditional -- it was gated on the connector existing, and it does.
+      - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
       - name: Run the daily pipeline
@@ -93,6 +91,11 @@ jobs:
           # browser, and the service-role key bypasses RLS entirely.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Actions provisions this one itself -- it is not a secret Nikhil has
+          # to create, and `permissions: contents: read` above is all the
+          # GitHub search API needs. Only the GitHub connector reads it; its
+          # absence would block that one stage and nothing else.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # D2. Send-only, one recipient.
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
