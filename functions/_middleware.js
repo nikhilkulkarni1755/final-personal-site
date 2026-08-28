@@ -6,17 +6,19 @@
 
 import blogs from '../src/data/blogs.json';
 
-// Extensionless paths the client-side router (src/App.tsx) actually renders.
-const STATIC_ROUTES = new Set([
-  '/',
-  '/projects',
-  '/blog',
-  '/apps',
-  '/about',
-  '/privacy-policy',
-  '/spearfishing/voice-agent',
-  '/spearfishing/fireworks-ai',
-  '/take-homes/weave',
+// Extensionless paths the client-side router (src/App.tsx) actually renders,
+// with a short title for each — reused below both for 404 knowledge and for
+// the ?mode=agent page list.
+const STATIC_ROUTES = new Map([
+  ['/', 'Home'],
+  ['/projects', 'Projects'],
+  ['/blog', 'Blog'],
+  ['/apps', 'Apps'],
+  ['/about', 'About'],
+  ['/privacy-policy', 'Privacy policy'],
+  ['/spearfishing/voice-agent', 'Live demo: voice-driven marketplace agent'],
+  ['/spearfishing/fireworks-ai', 'Project writeup: Fireworks AI'],
+  ['/take-homes/weave', 'Take-home: Weave'],
 ]);
 
 const BLOG_SLUGS = new Set(blogs.map((post) => post.slug));
@@ -49,6 +51,36 @@ function markdownPathFor(pathname) {
   return pathname === '/' ? '/index.md' : `${pathname}.md`;
 }
 
+// ora `agent-mode-view`: "a structured, machine-readable view with API
+// endpoints, authentication info, and key capabilities instead of marketing
+// HTML." Pages listed here are the real STATIC_ROUTES map plus blog posts
+// pulled from the same src/data/blogs.json src/App.tsx renders from —
+// nothing here is invented.
+function agentModeView() {
+  const pages = [...STATIC_ROUTES.entries()].map(([path, title]) => ({ path, title }));
+  for (const post of blogs) {
+    pages.push({ path: `/blog/${post.slug}`, title: post.title });
+  }
+  const body = {
+    site: 'Nikhil Kulkarni',
+    description:
+      'Software Engineer building AI agents in production. Creator of Iridium, an MCP server giving AI agents real access to LinkedIn. Agent orchestration, MCP tooling, and cloud infrastructure. Contributor to vLLM and SGLang.',
+    authentication: 'none — every page here is public, no API key required',
+    content_negotiation:
+      'Send Accept: text/markdown to any page path below for a machine-readable version.',
+    endpoints: {
+      sitemap: '/sitemap.xml',
+      llms_txt: '/llms.txt',
+      llms_full_txt: '/llms-full.txt',
+    },
+    pages,
+  };
+  return new Response(JSON.stringify(body, null, 2), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
 function withVary(response) {
   const headers = new Headers(response.headers);
   const existing = headers.get('vary');
@@ -62,7 +94,12 @@ function withVary(response) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const { pathname } = new URL(request.url);
+  const url = new URL(request.url);
+  const { pathname } = url;
+
+  if (pathname === '/' && url.searchParams.get('mode') === 'agent') {
+    return agentModeView();
+  }
 
   // No dot in the last segment => this looks like a client-side route, not a
   // file request. Reject it up front if it's not one src/App.tsx defines, so
