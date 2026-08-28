@@ -166,6 +166,9 @@ export function extractClaims(page: ParsedPage): ExtractedClaim[] {
     // Recording that as a seventh claim would diff the whole page against
     // itself, so anything already covered by a claim is skipped.
     if (claims.some((claim) => sentence.includes(claim.text))) continue;
+    // A real sentence ends. An unpunctuated run of nav labels does not, and
+    // the first field run showed it is otherwise indistinguishable from prose.
+    if (!/[.!?]$/.test(sentence)) continue;
     push(claims, sentence, 'body');
   }
 

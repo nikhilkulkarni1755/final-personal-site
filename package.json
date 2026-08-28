@@ -25,7 +25,8 @@
     "score:typecheck": "tsc --noEmit -p finds/score/tsconfig.json",
     "score:prove-d7": "bash finds/score/prove-d7.sh",
     "verify:test": "node --test finds/verify/*.test.ts",
-    "verify:typecheck": "tsc --noEmit -p finds/verify/tsconfig.json"
+    "verify:typecheck": "tsc --noEmit -p finds/verify/tsconfig.json",
+    "verify:crawl": "node finds/verify/cli.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",

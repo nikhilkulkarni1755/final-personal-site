@@ -105,7 +105,16 @@ export function collectC3(corpus: readonly CorpusPage[]): SignalSet {
 
   record(out, 'c3_free_tier', corpus, /\b(free tier|free plan|free forever|forever free|100% free|free to use)\b/i, 'A no-cost way to use it is advertised');
   record(out, 'c3_no_card_required', corpus, /\bno credit card( required| needed)?\b/i, 'Trying it does not require a payment method');
-  record(out, 'c3_waitlist', corpus, /\b(join the waitlist|request (early )?access|sign up to be notified|invite[- ]only)\b/i, 'Access is gated behind a waitlist or invite');
+  // Not a bare "request access": a privacy page offering to let you request
+  // access to your own data matched that on the first field run, which would
+  // have put a false waitlist finding against a real product.
+  record(
+    out,
+    'c3_waitlist',
+    corpus,
+    /\b(join the waitlist|on the waitlist|request early access|sign up to be notified|invite[- ]only)\b/i,
+    'Access is gated behind a waitlist or invite',
+  );
   record(
     out,
     'c3_terminal_required',
