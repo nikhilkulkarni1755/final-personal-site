@@ -58,6 +58,23 @@ const EXCLUDED_ROUTES = new Map([
       'renders Supabase-backed content with a hardcoded MOCK_DRUGS fallback ' +
       'when the table is empty, and this site ships no stub data as fact.',
   ],
+  [
+    '/interesting-finds/:slug',
+    'a dynamic React Router pattern like /blog/:slug above, but NOT the same ' +
+      'shape underneath: the blog catch-all is unreachable in practice because ' +
+      "its three real slugs are separately enumerable from src/data/blogs.json " +
+      "and each already has its own literal <Route> and routeMeta entry. This " +
+      "one has no such enumeration available — its slugs live in the Supabase " +
+      "finds_published table and are only knowable at runtime, so routeMeta " +
+      "cannot list concrete /interesting-finds/<slug> entries the way the blog " +
+      "routes are listed. Per D38, this lane does not read finds_published to " +
+      "enumerate them either — that table belongs to another initiative. The " +
+      "honest position: individual find detail pages get no per-route " +
+      "metadata, no canonical, and no markdown twin from this lane. They are " +
+      "dynamic, runtime-backed, and it is the owning initiative's job to make " +
+      "them agent-legible, not this one's to fake with build-time data it " +
+      "does not have.",
+  ],
 ]);
 
 const expectedRoutes = new Set([...appRoutes].filter((p) => !EXCLUDED_ROUTES.has(p)));
