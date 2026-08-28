@@ -82,6 +82,8 @@ export const ROUTES = [
   // table all render the same empty state — so anything drawn from the list itself
   // would be an expect string that can never be satisfied when there is nothing
   // published yet.
+  // Fully static disclosure page — no runtime data of any kind.
+  { path: '/bot', expect: ['Never logs in, signs up, checks out, or submits a form', 'At most 25 pages per site, at least 2 seconds apart'] },
   {
     path: '/interesting-finds',
     expect: ['How a find earns its spot', 'Launches I dug into and found genuinely worth your time'],
