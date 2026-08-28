@@ -1,20 +1,26 @@
 /**
- * Run one crawl and print the evidence rows it would write.
+ * Run one crawl and print the evidence rows it produced.
  *
- *   node finds/verify/cli.ts <product-url> [candidate-id]
+ *   node finds/verify/cli.ts <product-url> [candidate-id] [--persist]
  *
- * Prints, it does not persist -- persisting needs a real candidate row and the
- * service-role credential. Without a candidate id it uses the nil UUID and says
- * so, because an evidence row invented against a candidate that does not exist
- * is exactly the stub data D6 bans.
+ * Prints by default. `--persist` writes to finds_evidence and requires a real
+ * candidate id: an evidence row against a candidate that does not exist is
+ * exactly the stub data D6 bans, and the foreign key would refuse it anyway.
  */
 
 import { crawlCandidate } from './crawl.ts';
+import { persistEvidence } from './persist.ts';
 
-const [productUrl, candidateId] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const persist = args.includes('--persist');
+const [productUrl, candidateId] = args.filter((arg) => arg !== '--persist');
 
 if (!productUrl) {
-  console.error('usage: node finds/verify/cli.ts <product-url> [candidate-id]');
+  console.error('usage: node finds/verify/cli.ts <product-url> [candidate-id] [--persist]');
+  process.exit(2);
+}
+if (persist && !candidateId) {
+  console.error('--persist needs a real candidate id from finds_candidates.');
   process.exit(2);
 }
 
@@ -33,4 +39,9 @@ for (const decision of result.decisions) {
 }
 console.error('');
 
-console.log(JSON.stringify(result.evidence, null, 2));
+if (persist) {
+  const written = await persistEvidence(result.evidence);
+  console.error(`wrote ${written.inserted} evidence row(s) for crawl_run_id ${written.crawlRunId}`);
+} else {
+  console.log(JSON.stringify(result.evidence, null, 2));
+}
