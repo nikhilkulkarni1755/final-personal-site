@@ -132,14 +132,27 @@ END $$;
 -- holds even for the table owner.
 DO $$
 DECLARE
-    cand UUID;
-    run  UUID := gen_random_uuid();
-    ev   UUID;
+    cand    UUID;
+    run     UUID := gen_random_uuid();
+    ev      UUID;
+    verdict UUID;
 BEGIN
     SELECT id INTO cand FROM finds_candidates LIMIT 1;
 
-    INSERT INTO finds_evidence (candidate_id, crawl_run_id, url, page_role, http_status, quotes)
-    VALUES (cand, run, 'https://acme.dev/pricing', 'pricing', 200,
+    -- W4 may not record a fetch it was not permitted to make, so the evidence
+    -- insert needs the ALLOW verdict that authorised it.
+    INSERT INTO finds_crawl_verdicts (
+        rubric_version, gate_version, candidate_id, url, authority,
+        registrable_domain, allowed, reason_code, reason_detail,
+        deciding_signal, expires_at)
+    VALUES ('R2-permission-rubric/1.1', '1.0.0', cand, 'https://acme.dev/pricing',
+            'https://acme.dev', 'acme.dev', true, 'robots_absent',
+            'robots.txt returned 404', 'ROBOTS_TXT', NOW() + interval '6 hours')
+    RETURNING id INTO verdict;
+
+    INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url,
+                                page_role, http_status, quotes)
+    VALUES (cand, verdict, run, 'https://acme.dev/pricing', 'pricing', 200,
             '[{"text": "Free forever for individuals", "locator": "h2"}]'::jsonb)
     RETURNING id INTO ev;
 
@@ -185,6 +198,7 @@ DECLARE
     run   UUID;
     ev    UUID;
     other UUID;
+    ov    UUID;
     v     UUID;
 BEGIN
     SELECT id INTO cand FROM finds_candidates LIMIT 1;
@@ -200,8 +214,18 @@ BEGIN
     -- a second product, with its own evidence
     INSERT INTO finds_candidates (product_url, name) VALUES ('https://other.dev', 'Other')
     RETURNING id INTO other;
-    INSERT INTO finds_evidence (candidate_id, crawl_run_id, url, page_role)
-    VALUES (other, gen_random_uuid(), 'https://other.dev', 'homepage');
+    INSERT INTO finds_crawl_verdicts (
+        rubric_version, gate_version, candidate_id, url, authority,
+        registrable_domain, allowed, reason_code, reason_detail,
+        deciding_signal, expires_at)
+    VALUES ('R2-permission-rubric/1.1', '1.0.0', other, 'https://other.dev',
+            'https://other.dev', 'other.dev', true, 'robots_no_rules',
+            'robots.txt parsed, zero applicable rules', 'ROBOTS_TXT',
+            NOW() + interval '6 hours')
+    RETURNING id INTO ov;
+
+    INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id, url, page_role)
+    VALUES (other, ov, gen_random_uuid(), 'https://other.dev', 'homepage');
 
     -- citing Acme's evidence for Other's verdict must be a FK violation
     BEGIN
@@ -335,6 +359,93 @@ BEGIN
         UPDATE finds_digests SET status = 'sent', sent_at = NOW() WHERE id = d3;
         RAISE EXCEPTION 'the same find was sent twice';
     EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+END $$;
+
+-- --------------------------------------------------------------------------
+-- The permission gate, as a schema constraint rather than a convention
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand   UUID;
+    denied UUID;
+BEGIN
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+
+    -- R2 §6.1: `allowed` cannot disagree with `reason_code`
+    BEGIN
+        INSERT INTO finds_crawl_verdicts (
+            rubric_version, gate_version, candidate_id, url, authority,
+            registrable_domain, allowed, reason_code, reason_detail,
+            deciding_signal, expires_at)
+        VALUES ('R2-permission-rubric/1.1', '1.0.0', cand, 'https://acme.dev',
+                'https://acme.dev', 'acme.dev', true, 'robots_disallow',
+                'Disallow: /', 'ROBOTS_TXT', NOW() + interval '1 day');
+        RAISE EXCEPTION 'a verdict claimed allowed with a denying reason_code';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- R2 §7: only a human decision is permanent
+    BEGIN
+        INSERT INTO finds_crawl_verdicts (
+            rubric_version, gate_version, candidate_id, url, authority,
+            registrable_domain, allowed, reason_code, reason_detail,
+            deciding_signal, expires_at)
+        VALUES ('R2-permission-rubric/1.1', '1.0.0', cand, 'https://acme.dev',
+                'https://acme.dev', 'acme.dev', false, 'ai_block_inferred',
+                'GPTBot, ClaudeBot, CCBot disallowed', 'AI_BLOCK_INFERENCE', NULL);
+        RAISE EXCEPTION 'a non-manual verdict was allowed to never expire';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- a real DENY: the row that proves we behaved
+    INSERT INTO finds_crawl_verdicts (
+        rubric_version, gate_version, candidate_id, url, authority,
+        registrable_domain, allowed, reason_code, reason_detail,
+        deciding_signal, deciding_rule, deciding_group, precedence_rule, expires_at)
+    VALUES ('R2-permission-rubric/1.1', '1.0.0', cand, 'https://acme.dev/docs',
+            'https://acme.dev', 'acme.dev', false, 'ai_block_inferred',
+            'No group for InterestingFindsBot; 3 known AI crawler tokens disallowed',
+            'AI_BLOCK_INFERENCE', 'Disallow: /', 'GPTBot', 'P5',
+            NOW() + interval '24 hours')
+    RETURNING id INTO denied;
+
+    -- R2 §6.3: never store a Cookie or Authorization header
+    BEGIN
+        INSERT INTO finds_crawl_evidence (
+            verdict_id, url, request_user_agent, request_headers, fetched_at)
+        VALUES (denied, 'https://acme.dev/robots.txt', 'InterestingFindsBot/1.0',
+                '{"Cookie": "session=abc"}'::jsonb, NOW());
+        RAISE EXCEPTION 'a Cookie header was stored';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- evidence of a fetch we were NOT allowed to make must be unrepresentable
+    BEGIN
+        INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id,
+                                    url, page_role)
+        VALUES (cand, denied, gen_random_uuid(), 'https://acme.dev/docs', 'docs');
+        RAISE EXCEPTION 'a page was crawled under a DENY verdict';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- the decision itself is final; only revalidation may move
+    BEGIN
+        UPDATE finds_crawl_verdicts SET allowed = true, reason_code = 'robots_allow'
+         WHERE id = denied;
+        RAISE EXCEPTION 'a gate decision was rewritten';
+    EXCEPTION WHEN restrict_violation THEN NULL;
+    END;
+
+    -- R2 §7: a 304 extends the verdict by a fresh TTL. That must still work.
+    UPDATE finds_crawl_verdicts
+       SET expires_at = NOW() + interval '24 hours', revalidated_at = NOW()
+     WHERE id = denied;
+
+    BEGIN
+        DELETE FROM finds_crawl_verdicts WHERE id = denied;
+        RAISE EXCEPTION 'a verdict row was deleted -- it is the audit trail';
+    EXCEPTION WHEN restrict_violation THEN NULL;
     END;
 END $$;
 
