@@ -34,7 +34,7 @@
  *   states how much we were allowed to read.
  */
 
-import type { EvidenceRow } from '../types.ts';
+import type { EvidenceRow, VerdictScore } from '../types.ts';
 import type { C1Status, CriterionScore, ScoreCitation, UnscoreableReason } from './types.ts';
 import { RUBRIC_VERSION, citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
 
@@ -58,6 +58,19 @@ const UNSUBSTANTIATED = 'c1_unsubstantiated';
  */
 const CLEAR_SUPPORT_MIN_CLAIMS = 3;
 const CLEAR_SUPPORT_MIN_RATIO = 0.6;
+
+/**
+ * The C1 score and its three-way status are 1:1 by construction -- every branch
+ * of scoreC1() pairs them this way and nothing else can produce a C1 verdict.
+ * This is the exact inverse, for readers (like the selection loader) that have
+ * the persisted score and need the distinction back. `c1StatusIsExact` in the
+ * tests keeps the two from drifting apart.
+ */
+export function c1StatusFromScore(score: VerdictScore): C1Status {
+  if (score === 0) return 'contradicted';
+  if (score === 1) return 'unsubstantiated';
+  return 'corroborated';
+}
 
 export type C1Result =
   | { kind: 'scored'; score: CriterionScore }

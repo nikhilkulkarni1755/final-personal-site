@@ -14,7 +14,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { EvidenceObservation, EvidencePageRole, EvidenceRow } from '../types.ts';
-import { scoreC1 } from './c1.ts';
+import { c1StatusFromScore, scoreC1 } from './c1.ts';
 import { generation } from './rubric.ts';
 
 const RUN = '00000000-0000-4000-8000-00000000c1a0';
@@ -165,4 +165,12 @@ test('scoring one generation ignores the rows of another', () => {
 test('every rationale states how much we were allowed to read', () => {
   const score = scored(scoreC1([row('https://x/', 'homepage', unsubstantiated(4))], 6));
   assert.match(score.rationale, /1 page\(s\) fetched \(1 answered 2xx\), 6 URL\(s\) refused/);
+});
+
+test('c1StatusIsExact: the status a score maps back to is the one scoreC1 set', () => {
+  const cases = [contradicted(1), unsubstantiated(3), [...corroborated(1), ...unsubstantiated(3)], corroborated(4)];
+  for (const observations of cases) {
+    const score = scored(scoreC1([row('https://x/', 'homepage', observations)]));
+    assert.equal(score.status, c1StatusFromScore(score.score), `score ${score.score} disagreed with its status`);
+  }
 });
