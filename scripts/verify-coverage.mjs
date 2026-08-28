@@ -135,6 +135,33 @@ function isKnownNonContent(node) {
   if (p && (ts.isImportDeclaration(p) || ts.isExportDeclaration(p)) && p.moduleSpecifier === node) return true;
   if (p && ts.isCallExpression(p) && p.expression.kind === ts.SyntaxKind.ImportKeyword) return true;
 
+  // A string literal that lives inside a useEffect()/useLayoutEffect()
+  // callback — e.g. InterestingFinds.tsx building and injecting a
+  // <script type="application/ld+json"> tag via document.createElement in
+  // an effect. This engine's renderer only ever interprets a component's
+  // JSX *return value*; a useEffect body is imperative side-effect code
+  // that runs after render and is never part of that return value, so
+  // nothing in it — script ids, MIME types, JSON-LD payload strings
+  // (including real prose duplicated into structured data for crawlers,
+  // as here) — can appear in a static markdown mirror of the page. Scoped
+  // narrowly to the effect *callback's own body*, not its dependency array,
+  // by checking the string's nearest enclosing function is that exact
+  // first-argument callback.
+  let effectCur = node;
+  while (effectCur) {
+    if (ts.isArrowFunction(effectCur) || ts.isFunctionExpression(effectCur)) {
+      const fp = effectCur.parent;
+      if (
+        fp && ts.isCallExpression(fp) && ts.isIdentifier(fp.expression) &&
+        (fp.expression.text === 'useEffect' || fp.expression.text === 'useLayoutEffect') &&
+        fp.arguments[0] === effectCur
+      ) {
+        return true;
+      }
+    }
+    effectCur = effectCur.parent;
+  }
+
   // TypeScript literal-type positions (`type Mode = 'colocated' |
   // 'disaggregated'`): compile-time type information, never a runtime
   // value, never rendered.
@@ -238,6 +265,7 @@ const PAGES = [
   ['Privacy.tsx', 'privacy-policy.md'],
   ['FireworksAI.tsx', 'spearfishing/fireworks-ai.md'],
   ['WeaveTakeHome.tsx', 'take-homes/weave.md'],
+  ['InterestingFinds.tsx', 'interesting-finds.md'],
 ];
 
 // Two exceptions, both judged and documented rather than silently allowed:
@@ -328,6 +356,13 @@ const ALLOWED_MISSING = {
     'Total PRs authored', 'Infra PRs count', 'Infra PR ratio', 'Infra merge rate',
     'Infra subsystems', 'Dep. update PRs',
   ],
+  // JSONLD_SCRIPT_ID is declared once at module scope and referenced only
+  // by identifier from inside the useEffect (as the injected <script>'s
+  // DOM id, and again in the cleanup's getElementById lookup) — the
+  // useEffect-body exclusion above only sees literal string *nodes*
+  // lexically inside the effect, not a same-value identifier declared
+  // outside it. A DOM element id, never rendered page text either way.
+  'InterestingFinds.tsx': ['interesting-finds-jsonld'],
 };
 
 let totalMissing = 0;

@@ -231,6 +231,29 @@ const weave = ensureH1First(
   'PostHog Engineering Impact — take-home',
 );
 
+// /interesting-finds reads a Supabase table (finds_published) at runtime
+// via useFinds.ts — the list of finds is genuinely not in the source and
+// cannot be extracted, and per that initiative's own decision D6, the table
+// fails closed to an empty list rather than stub data, so (unlike
+// /spearfishing/voice-agent's excluded MOCK_DRUGS fallback) there is no
+// fabricated-data reason to exclude this page. What IS static — the H1, the
+// intro copy, and the CriteriaLegend component describing the four
+// verification criteria — extracts normally: the `{!loading && (...)}` gate
+// around the finds list itself stays correctly unresolved and is dropped by
+// the same "unresolved -> nothing" rule as everywhere else, so this mirror
+// asserts neither an empty list nor any specific entries. A plain, honest
+// note replaces the list instead of leaving the "Finds" heading looking
+// empty.
+let interestingFindsRaw = extractPageMarkdown(path.join(SRC, 'InterestingFinds.tsx'));
+const findsNote =
+  'The list of finds itself is read live from a Supabase table (`finds_published`) at page-load time and is not included in this static file — it is not knowable from source, and is not reproduced here as empty, populated, or any specific count. Fetch https://nikhilkulkarni1755.com/interesting-finds directly for the current, real list.';
+const findsHeading = '## Finds\n\n';
+if (!interestingFindsRaw.includes(findsHeading)) {
+  throw new Error('Expected "## Finds" heading not found in InterestingFinds.tsx output — the source structure this note is inserted against may have changed; update this fix.');
+}
+interestingFindsRaw = interestingFindsRaw.replace(findsHeading, findsHeading + findsNote + '\n\n');
+const interestingFinds = ensureH1First(interestingFindsRaw, 'Interesting Finds');
+
 // ---------- write per-route markdown mirrors ----------
 // Path contract (see agent-ready-coord/lanes/W2.md): extension-replacement at
 // the SAME path as the HTML route — /about -> /about.md — per llmstxt.org's
@@ -248,6 +271,7 @@ const pages = [
   { route: '/privacy-policy', file: 'privacy-policy.md', title: 'Privacy Policy', md: privacy },
   { route: '/spearfishing/fireworks-ai', file: 'spearfishing/fireworks-ai.md', title: 'A purpose-built disaggregated inference engine', md: fireworks },
   { route: '/take-homes/weave', file: 'take-homes/weave.md', title: 'PostHog Engineering Impact — take-home', md: weave },
+  { route: '/interesting-finds', file: 'interesting-finds.md', title: 'Interesting Finds', md: interestingFinds },
 ].map((p) => ({ ...p, md: dropEmptyHeadings(p.md) }));
 
 for (const p of pages) {
@@ -298,6 +322,10 @@ full text of every page in one request, fetch /llms-full.txt.
 ## Apps
 
 - [Apps](${SITE}/apps.md): The Progress App (iOS/Android, React Native).
+
+## Interesting Finds
+
+- [Interesting Finds](${SITE}/interesting-finds.md): product launches checked against four fixed criteria (claim verified, solves a rare problem, no gated access, agentic/MCP-friendly) before being listed. The current list is served live from a database and isn't reproduced in this index — fetch the page itself for what's actually there.
 
 ## Optional
 
