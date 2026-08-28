@@ -23,7 +23,9 @@
     "comment:post": "node finds/comment/postComment.ts",
     "score:test": "node --test finds/score/c1.test.ts finds/score/persist.test.ts",
     "score:typecheck": "tsc --noEmit -p finds/score/tsconfig.json",
-    "score:prove-d7": "bash finds/score/prove-d7.sh"
+    "score:prove-d7": "bash finds/score/prove-d7.sh",
+    "verify:test": "node --test finds/verify/*.test.ts",
+    "verify:typecheck": "tsc --noEmit -p finds/verify/tsconfig.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
