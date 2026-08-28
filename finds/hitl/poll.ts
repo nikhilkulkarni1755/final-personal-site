@@ -21,6 +21,7 @@ import {
   answerCallbackQuery,
   editMessageReplyMarkup,
   getUpdates,
+  sendMessage,
   TelegramConflictError,
   type TelegramUpdate,
 } from './telegramClient.ts';
@@ -124,15 +125,24 @@ async function handleUpdate(
         // message.message_id: a button tap creates no new Telegram message,
         // so the original (bot-sent) message is the only message this
         // answer can be keyed to -- see approvals.ts / DEPENDENCIES.md.
+        // why_interesting is entry.approval.draftNote: D32 -- only the tap
+        // approves, but any text he sent beforehand (captured by the
+        // message branch below, never written on its own) becomes the
+        // write-up now that there is an actual approval to attach it to.
         approvalStatus = await routeApproval(
           entry,
           chatId,
           message.message_id,
           update.update_id,
           option.label,
-          undefined, // a tapped option label is not prose he wrote (D4)
+          entry.approval.draftNote,
         );
-        confirmation = approvalStatus === 'inserted' ? `Approved: ${option.label}` : `Already recorded (${approvalStatus}).`;
+        confirmation =
+          approvalStatus === 'inserted'
+            ? entry.approval.draftNote
+              ? `Approved: ${option.label} (with your note as the write-up).`
+              : `Approved: ${option.label}`
+            : `Already recorded (${approvalStatus}).`;
       } else {
         // Reject: nothing is ever written to finds_approvals for this (D29).
         approvalStatus = 'rejected';
@@ -167,11 +177,25 @@ async function handleUpdate(
     // (why_interesting), so it matters even more than it did before D29.
     let approvalStatus: ApprovalWriteStatus | undefined;
     if (entry.approval) {
-      // A free-text reply to an approval question approves it, using this
-      // same text as both the receipt (`answer`) and the prose he wrote for
-      // the page (`why_interesting`) -- see APPROVAL_FOOTER in ask.ts for
-      // why that has to be spelled out to him up front, not inferred here.
-      approvalStatus = await routeApproval(entry, chatId, msg.message_id, update.update_id, msg.text, msg.text);
+      // D32: a free-text reply never approves by itself -- ambiguity is not
+      // consent, and this is the one action in the system that is
+      // irreversible, outward-facing, and under his real name. Save it as a
+      // draft why_interesting on the still-pending entry (used if a later
+      // tap approves; discarded if he taps Reject or never taps at all),
+      // nudge him toward the buttons, and do NOT touch finds_approvals.
+      await pending.setDraftNote(entry.questionId, msg.text);
+      await sendMessage(botToken, {
+        chatId,
+        text: "Noted -- I'll use this as the write-up if you approve. Tap Approve or Reject above to confirm.",
+        replyToMessageId: msg.message_id,
+      });
+      return {
+        questionId: entry.questionId,
+        kind: 'text',
+        value: msg.text,
+        respondedAt: new Date().toISOString(),
+        approvalStatus: 'noted',
+      };
     }
 
     await pending.remove(entry.questionId);

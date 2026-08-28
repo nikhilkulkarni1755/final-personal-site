@@ -49,4 +49,21 @@ export class PendingStore {
     const entries = await this.readAll();
     await this.writeAll(entries.filter((e) => e.questionId !== questionId));
   }
+
+  /**
+   * Records free text sent before any tap as a draft why_interesting on an
+   * approval question (D32) -- the entry stays pending; this never writes
+   * to finds_approvals. A no-op if `questionId` isn't an approval question
+   * (or isn't pending at all), so a caller can't accidentally attach a note
+   * to a plain askQuestion().
+   */
+  async setDraftNote(questionId: string, note: string): Promise<void> {
+    const entries = await this.readAll();
+    const idx = entries.findIndex((e) => e.questionId === questionId);
+    if (idx === -1) return;
+    const entry = entries[idx];
+    if (!entry.approval) return;
+    entries[idx] = { ...entry, approval: { ...entry.approval, draftNote: note } };
+    await this.writeAll(entries);
+  }
 }
