@@ -122,3 +122,47 @@ test('evidence that no criterion can read is unscoreable, not four 1s', () => {
   });
   assert.equal(outcome.kind === 'unscoreable' && outcome.reason, 'no_claims_extracted');
 });
+
+/* -------------------------------------------------------------------------- */
+/* W3's question: can a verdict cite evidence from a generation it did not     */
+/* score? The composite FK gives same-CANDIDATE, not same-GENERATION.          */
+/* -------------------------------------------------------------------------- */
+
+test('no citation can name a row outside the generation being scored', () => {
+  // Two generations of the same candidate, both carrying full c1-c4 signals.
+  // If anything cited across runs, this is where it would show.
+  const current = row(everyPass, RUN);
+  const stale = row(everyPass, STALE);
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: RUN,
+    rows: [stale, current, row(everyPass, STALE)],
+  });
+  assert.equal(outcome.kind, 'scored');
+  if (outcome.kind !== 'scored') return;
+
+  const inGeneration = new Set([current.id]);
+  for (const score of outcome.scores) {
+    for (const citation of score.citations) {
+      assert.ok(
+        inGeneration.has(citation.evidence_id),
+        `${score.criterion} cited ${citation.evidence_id}, which is not in generation ${RUN}`,
+      );
+    }
+  }
+});
+
+test('the generation filter is the single choke point, so this cannot regress quietly', () => {
+  // scoreCandidate() narrows with generation() BEFORE any criterion sees a row,
+  // and every citation is built from a row the criterion was handed. So the
+  // property above holds by construction rather than by four separate careful
+  // implementations -- which is what makes W3's same-run constraint safe to add.
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: STALE,
+    rows: [row(everyPass, RUN)],
+  });
+  assert.equal(outcome.kind === 'unscoreable' && outcome.reason, 'no_evidence');
+});

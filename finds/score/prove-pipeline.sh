@@ -47,7 +47,6 @@ psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role B
              GRANT ALL ON TABLES TO anon, authenticated, service_role;"
 export PGOPTIONS="-c client_min_messages=warning"
 for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration" >/dev/null; done
-psql -f "$REPO_ROOT/finds/score/verdict-rpc.sql" >/dev/null   # PROPOSED to W3
 unset PGOPTIONS
 
 # ---------------------------------------------------------------------------
@@ -128,7 +127,8 @@ SELECT v.candidate_id, v.id, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'https://w5
         {"kind":"c2_named_alternatives","detail":"names none","value":0},
         {"kind":"c3_waitlist","detail":"join the waitlist","value":"https://w5-waitlist.invalid/"},
         {"kind":"c4_api","detail":"a documented API is advertised","value":"https://w5-waitlist.invalid/"},
-        {"kind":"c4_cli","detail":"a CLI is advertised","value":"https://w5-waitlist.invalid/"}
+        {"kind":"c4_cli_absent","detail":"no CLI mentioned","value":false},
+        {"kind":"c4_llms_txt_absent","detail":"llms.txt was never reachable","value":null}
      ]'::jsonb
   FROM finds_crawl_verdicts v
   JOIN finds_candidates c ON c.id = v.candidate_id
@@ -158,10 +158,11 @@ for url in https://w5-strong.invalid/ https://w5-waitlist.invalid/; do
 
     OUTPUT=$(node finds/score/offline.ts score <<<"$INPUT")
     PAYLOAD=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const o=JSON.parse(s);if(!o.payload){console.error(o.detail??"no payload");process.exit(1)}console.log(JSON.stringify(o.payload.p_verdicts))})' <<<"$OUTPUT")
+    RUBRIC=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_rubric_version))' <<<"$OUTPUT")
     CID=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_candidate_id))' <<<"$OUTPUT")
     RUN=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_evidence_run_id))' <<<"$OUTPUT")
 
-    WRITTEN=$(q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, \$w5\$$PAYLOAD\$w5\$::jsonb);")
+    WRITTEN=$(q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, '$RUBRIC', \$w5\$$PAYLOAD\$w5\$::jsonb);")
     q "UPDATE finds_candidates SET status = 'scored' WHERE id = '$CID';" >/dev/null
     echo "    $url  ->  $WRITTEN verdicts written"
 done
@@ -182,10 +183,19 @@ psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
             FROM finds_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
            WHERE c.product_url = 'https://w5-strong.invalid/'),
          'every rationale must state the gate refusal it could not see in evidence';
-  ASSERT (SELECT bool_and(scored_by LIKE 'rubric/%') FROM finds_verdicts),
-         'the rubric version must travel with every verdict';
+  ASSERT (SELECT bool_and(scored_by = 'rubric') FROM finds_verdicts),
+         'scored_by says WHO scored it';
+  ASSERT (SELECT bool_and(rubric_version = '1.0') FROM finds_verdicts),
+         'rubric_version says under WHICH RULES, in its own column';
+  ASSERT (SELECT count(*) FROM finds_verdict_evidence WHERE stance = 'inconclusive') > 0,
+         'a score of 1 must cite the rows that settled nothing AS inconclusive';
+  ASSERT (SELECT bool_and(e.crawl_run_id = v.evidence_run_id)
+            FROM finds_verdict_evidence ve
+            JOIN finds_verdicts v ON v.id = ve.verdict_id
+            JOIN finds_evidence  e ON e.id = ve.evidence_id),
+         'every citation must belong to the generation its verdict scored';
 END \$\$;" >/dev/null
-echo "PASS  verdicts written from real rows, with citations, statuses and refusal counts"
+echo "PASS  verdicts written from real rows, with citations, stances, rubric version and refusal counts"
 
 # ---------------------------------------------------------------------------
 # Select the day, and build the handoff W6 sends.
@@ -231,11 +241,11 @@ INPUT=$(q "
   SELECT json_build_object('candidate_id','$CID','candidate_status','crawled','evidence_run_id','$RUN',
     'urls_refused',1,'rows',(SELECT json_agg(e) FROM finds_evidence e WHERE e.candidate_id='$CID'));")
 PAYLOAD=$(node finds/score/offline.ts score <<<"$INPUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).payload.p_verdicts)))')
-q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, \$w5\$$PAYLOAD\$w5\$::jsonb);" >/dev/null
+q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, '1.0', \$w5\$$PAYLOAD\$w5\$::jsonb);" >/dev/null
 psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 8, 're-scoring must update in place, not duplicate';
 END \$\$;" >/dev/null
 echo "PASS  re-scoring the same evidence is idempotent"
 
 echo
-echo "The scoring code runs, on rows read out of Postgres, through the function W5 asks W3 to migrate."
+echo "The scoring code runs, on rows read out of Postgres, through W3's merged finds_write_verdict."

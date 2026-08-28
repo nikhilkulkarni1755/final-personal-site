@@ -36,7 +36,7 @@ console.log([...Object.keys(args), ...Object.keys(args.p_verdicts[0]),
              ...Object.keys(args.p_verdicts[0].citations[0])].join(" "));
 '
 BUILDER_KEYS="$(cd "$REPO_ROOT" && node --input-type=module -e "$KEYS_JS")"
-EXPECTED_KEYS="p_candidate_id p_evidence_run_id p_verdicts criterion score rationale scored_by citations evidence_id stance"
+EXPECTED_KEYS="p_candidate_id p_evidence_run_id p_rubric_version p_verdicts criterion score rationale scored_by citations evidence_id stance"
 if [ "$BUILDER_KEYS" != "$EXPECTED_KEYS" ]; then
     echo "FAIL: buildVerdictWrite emits [$BUILDER_KEYS]" >&2
     echo "      finds_write_verdict reads  [$EXPECTED_KEYS]" >&2
@@ -58,9 +58,6 @@ psql -c "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role B
 # Migration NOTICEs (idempotent DROP ... IF EXISTS) are not this test's output.
 export PGOPTIONS="-c client_min_messages=warning"
 for migration in "$REPO_ROOT"/supabase/migrations/*.sql; do psql -f "$migration" >/dev/null; done
-# PROPOSED to W3, not yet a migration. Installed here so the function under
-# test is the exact text this lane is asking to have migrated.
-psql -f "$REPO_ROOT/finds/score/verdict-rpc.sql" >/dev/null
 unset PGOPTIONS
 
 # --- the minimum real chain a verdict needs: candidate -> ALLOW -> evidence ---
@@ -122,27 +119,29 @@ PAYLOAD
 
 CITE_ALL="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM finds_evidence WHERE candidate_id = :'cid')"
 CITE_ONE="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'supports')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f)"
+CITE_ONE_INCONCLUSIVE="(SELECT jsonb_agg(jsonb_build_object('evidence_id', id, 'stance', 'inconclusive')) FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f)"
 CITE_FOREIGN="jsonb_build_array(jsonb_build_object('evidence_id', :'foreign_eid', 'stance', 'supports'))"
 
 # --------------------------------------------------------------------------
 # 1. The happy path: verdict and citations in one call, and it commits.
 # --------------------------------------------------------------------------
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid,
+SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.0',
   $(payload C1 3 'CORROBORATED: 3 of 3 checkable claims are echoed on another page of the site.' "$CITE_ALL"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'expected exactly one verdict';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence) = 3, 'expected three citations';
   ASSERT (SELECT score FROM finds_verdicts) = 3, 'expected the score we wrote';
+  ASSERT (SELECT rubric_version FROM finds_verdicts) = '1.0', 'the rules that produced the score must be stored beside it';
 END \$\$;" >/dev/null
-echo "PASS  a cited verdict commits, carrying all three citations"
+echo "PASS  a cited verdict commits, carrying all three citations and its rubric version"
 
 # --------------------------------------------------------------------------
 # 2. Re-scoring the same generation replaces the citations, never accumulates
 #    them, and leaves exactly one verdict row.
 # --------------------------------------------------------------------------
 run "
-SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid,
+SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.0',
   $(payload C1 2 'CORROBORATED (partial): re-scored against the same generation.' "$CITE_ONE"));
 DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 1, 'a re-score must update, not duplicate';
@@ -166,19 +165,19 @@ refuses() {
 }
 
 refuses "an uncited score is refused by the function, by name of the criterion" "
-SELECT finds_write_verdict(:'cid'::uuid, '33333333-3333-4333-8333-333333333333'::uuid,
+SELECT finds_write_verdict(:'cid'::uuid, '33333333-3333-4333-8333-333333333333'::uuid, '1.0',
   jsonb_build_array(jsonb_build_object('criterion','C2','score',3,
     'rationale','it solves a rare problem','scored_by','rubric/1.0','citations', '[]'::jsonb)));" \
   "C2 cites no evidence"
 
 refuses "an uncited score inserted DIRECTLY still aborts at COMMIT" "
 BEGIN;
-INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by)
-VALUES (:'cid', '33333333-3333-4333-8333-333333333333', 'C2', 3, 'it solves a rare problem', 'rubric/1.0');
+INSERT INTO finds_verdicts (candidate_id, evidence_run_id, criterion, score, rationale, scored_by, rubric_version)
+VALUES (:'cid', '33333333-3333-4333-8333-333333333333', 'C2', 3, 'it solves a rare problem', 'rubric', '1.0');
 COMMIT;" "has no cited evidence"
 
 refuses "citing another product's evidence is a foreign-key violation" "
-SELECT finds_write_verdict(:'cid'::uuid, '44444444-4444-4444-8444-444444444444'::uuid,
+SELECT finds_write_verdict(:'cid'::uuid, '44444444-4444-4444-8444-444444444444'::uuid, '1.0',
   $(payload C3 3 'usable by anyone' "$CITE_FOREIGN"));" "finds_verdict_evidence_evidence_fkey"
 
 refuses "stripping a live score's last citation aborts at COMMIT" "
@@ -186,5 +185,46 @@ BEGIN;
 DELETE FROM finds_verdict_evidence WHERE candidate_id = :'cid';
 COMMIT;" "has no cited evidence"
 
+# The whole point of the third stance value: a score of 1 cites rows that
+# settled nothing, and must be able to say so.
+run "
+SELECT finds_write_verdict(:'cid'::uuid, '55555555-5555-4555-8555-555555555555'::uuid, '1.0',
+  $(payload C4 1 'NO EVIDENCE: no llms.txt, no linked spec, no MCP endpoint.' "$CITE_ONE_INCONCLUSIVE"));
+DO \$\$ BEGIN
+  ASSERT (SELECT stance FROM finds_verdict_evidence ve JOIN finds_verdicts v ON v.id = ve.verdict_id
+           WHERE v.criterion = 'C4') = 'inconclusive',
+         'a score of 1 must cite the rows that settled nothing AS inconclusive';
+END \$\$;" >/dev/null
+echo "PASS  a score of 1 cites its evidence as inconclusive, not as support"
+
+# W3's own review finding, asserted rather than trusted: an omitted stance must
+# take the column default instead of failing NOT NULL on an explicit NULL.
+run "
+SELECT finds_write_verdict(:'cid'::uuid, '66666666-6666-4666-8666-666666666666'::uuid, '1.0',
+  jsonb_build_array(jsonb_build_object('criterion','C2','score',2,'rationale','x','scored_by','rubric',
+    'citations', (SELECT jsonb_agg(jsonb_build_object('evidence_id', id))
+                    FROM (SELECT id FROM finds_evidence WHERE candidate_id = :'cid' ORDER BY url LIMIT 1) f))));
+DO \$\$ BEGIN
+  ASSERT (SELECT stance FROM finds_verdict_evidence ve JOIN finds_verdicts v ON v.id = ve.verdict_id
+           WHERE v.criterion = 'C2') = 'supports', 'an omitted stance must take the column default';
+END \$\$;" >/dev/null
+echo "PASS  a citation with no stance takes the default rather than failing NOT NULL"
+
+# W3's other finding: the re-score path deletes citations before inserting
+# replacements, which is legal only while D7's triggers are deferred. The
+# function now defers them BY NAME, so a caller that already went IMMEDIATE
+# cannot break it.
+run "
+BEGIN;
+SET CONSTRAINTS ALL IMMEDIATE;
+SELECT finds_write_verdict(:'cid'::uuid, '11111111-1111-4111-8111-111111111111'::uuid, '1.1',
+  $(payload C1 2 'CORROBORATED (partial): re-scored under a caller that went IMMEDIATE first.' "$CITE_ONE"));
+COMMIT;
+DO \$\$ BEGIN
+  ASSERT (SELECT rubric_version FROM finds_verdicts WHERE criterion = 'C1') = '1.1',
+         'a re-score must survive a caller that set constraints IMMEDIATE';
+END \$\$;" >/dev/null
+echo "PASS  a re-score survives a caller that already set constraints IMMEDIATE"
+
 echo
-echo "D7 is structural: proven against a real Postgres, through the function W5 asks W3 to migrate."
+echo "D7 is structural: proven against a real Postgres, through W3's merged finds_write_verdict."
