@@ -551,15 +551,14 @@ export const routeMeta: Record<string, RouteMeta> = {
     // WebPage node is the honest fit here: this page isn't an article, a
     // product listing, or a person profile, it's a disclosure document
     // describing a crawler. Do not invent a richer type than that.
-    // Markdown mirror (W2) has not landed yet — checked their pushed tree
-    // (git ls-tree origin/agent-ready/w2-llmstxt), no bot.md — so
-    // hasMarkdownMirror: false until it does, same pattern as
-    // /interesting-finds before its twin landed.
+    // Markdown mirror (W2) has landed at public/bot.md (confirmed against
+    // their pushed tree post-fetch, blob f3f4f4b on
+    // agent-ready/w2-llmstxt) — default hasMarkdownMirror (true) applies,
+    // same as every other route.
     ...meta('/bot', {
       title: 'Interesting Finds Bot — Nikhil Kulkarni',
       description:
         'Public disclosure for InterestingFindsBot: who operates it, what it crawls and why, its exact User-Agent string, how to block it, and what it will never do.',
-      hasMarkdownMirror: false,
     }),
     jsonLd: graph(
       breadcrumb([{ name: 'Home', path: '/' }, { name: 'Interesting Finds Bot', path: '/bot' }]),
