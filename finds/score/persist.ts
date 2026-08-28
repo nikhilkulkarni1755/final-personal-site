@@ -102,6 +102,18 @@ export function buildVerdictWrite(
       );
     }
 
+    const duplicated = score.citations
+      .map((citation) => citation.evidence_id)
+      .filter((id, index, all) => all.indexOf(id) !== index);
+    if (duplicated.length > 0) {
+      throw new Error(
+        `buildVerdictWrite: ${score.criterion} for candidate ${candidateId} cites evidence row(s) ` +
+          `${[...new Set(duplicated)].join(', ')} more than once. finds_verdict_evidence is keyed on ` +
+          '(verdict_id, evidence_id), so the insert would fail on the primary key; merge the citations with ' +
+          'mergeCitations() so one row carries one stance.',
+      );
+    }
+
     const criterion: Criterion = score.criterion;
     const key = [candidateId, evidenceRunId, criterion];
     statements.push({ text: CLEAR_CITATIONS, values: key });
