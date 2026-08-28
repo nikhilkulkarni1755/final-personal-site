@@ -17,10 +17,11 @@ import { diffClaims, extractClaims } from './claims.ts';
 import type { CorpusPage } from './claims.ts';
 import { looksLikeEmptyShell, pageRole, parsePage } from './extract.ts';
 import { gatedFetch, isNeverTouch } from './gate.ts';
+import { createRunState } from './gateAdapter.ts';
 import { renderPage } from './render.ts';
 import { normalise, parseLlmsTxt, parseSitemap, prioritise } from './scope.ts';
 import { collectC2, collectC3, collectC4 } from './signals.ts';
-import type { EvidenceObservation, EvidenceQuote, FetchOutcome, NewEvidence } from './types.ts';
+import type { EvidenceObservation, EvidenceQuote, FetchOutcome, GateDecision, NewEvidence } from './types.ts';
 
 export interface CrawlOptions {
   candidateId: string;
@@ -29,14 +30,29 @@ export interface CrawlOptions {
   crawlRunId?: string;
 }
 
-export interface CrawlResult {
-  crawlRunId: string;
-  evidence: NewEvidence[];
-  /** Every gate answer, in the order it was given. */
-  decisions: { url: string; allowed: boolean; reason_code: string | null; reason_detail: string }[];
+/**
+ * One evidence row and the gate decision that permitted it, kept together.
+ *
+ * `finds_evidence.crawl_verdict_id` is a composite FK on (id, allowed) pinned
+ * to true, so a row cannot be inserted without naming the ALLOW that permitted
+ * it -- "W4 may not fetch a byte except through the gate" is enforced by the
+ * database, not by convention. The id only exists after the verdict is
+ * inserted, so the crawler carries the decision and persist.ts resolves it.
+ */
+export interface CrawlRecord {
+  decision: GateDecision;
+  evidence: Omit<NewEvidence, 'crawl_verdict_id'>;
 }
 
-function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, outcome: FetchOutcome): NewEvidence {
+export interface CrawlResult {
+  crawlRunId: string;
+  /** One per URL asked about, in the order it was asked. */
+  records: CrawlRecord[];
+}
+
+type PartialEvidence = Omit<NewEvidence, 'crawl_verdict_id'>;
+
+function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, outcome: FetchOutcome): PartialEvidence {
   const role = pageRole(outcome.url);
   if (outcome.kind === 'refused') {
     return {
@@ -126,9 +142,13 @@ async function readablePage(
  */
 export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult> {
   const crawlRunId = options.crawlRunId ?? randomUUID();
+  // One RunState for the whole pass. R2 P2/P3 are per-run state: without a
+  // shared one, an origin that refuses us on page 3 gets asked again on pages
+  // 4 through 25, which is precisely the behaviour a blocked site complains
+  // about.
+  const runState = createRunState();
   const base = { candidate_id: options.candidateId, crawl_run_id: crawlRunId };
-  const evidence: NewEvidence[] = [];
-  const decisions: CrawlResult['decisions'] = [];
+  const records: CrawlRecord[] = [];
   const corpus: CorpusPage[] = [];
   const discoveredUrls = new Set<string>();
   const deadline = Date.now() + R2_CAPS.wallClockMs;
@@ -138,22 +158,16 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   const homeUrl = home.toString();
 
   const fetchAndRecord = async (url: string): Promise<FetchOutcome> => {
-    const outcome = await gatedFetch(url);
-    decisions.push({
-      url,
-      allowed: outcome.decision.allowed,
-      reason_code: outcome.decision.reason_code,
-      reason_detail: outcome.decision.reason_detail,
-    });
-    evidence.push(evidenceFor(base, outcome));
+    const outcome = await gatedFetch(url, runState, { candidateId: options.candidateId });
+    records.push({ decision: outcome.decision, evidence: evidenceFor(base, outcome) });
     return outcome;
   };
 
   /* -- the landing page. Everything else is optional; this is not. --------- */
   const homeOutcome = await fetchAndRecord(homeUrl);
-  const homeRow = evidence.at(-1)!;
+  const homeRow = records.at(-1)!.evidence;
   if (homeOutcome.kind !== 'fetched' || homeOutcome.http_status >= 400) {
-    return { crawlRunId, evidence, decisions };
+    return { crawlRunId, records };
   }
 
   const homeObservations = homeRow.observations!;
@@ -179,8 +193,9 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   }
 
   /* -- R2 §5.1 steps 2 and 3: sitemaps ------------------------------------ */
-  const sitemapUrls = homeOutcome.decision.sitemaps.length
-    ? homeOutcome.decision.sitemaps.slice(0, 5)
+  const declaredSitemaps = (homeOutcome.decision.robots.sitemaps as string[] | undefined) ?? [];
+  const sitemapUrls = declaredSitemaps.length
+    ? declaredSitemaps.slice(0, 5)
     : [new URL('/sitemap.xml', homeUrl).toString()];
   for (const sitemapUrl of sitemapUrls) {
     if (Date.now() > deadline) break;
@@ -198,7 +213,7 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   const alreadyRead = new Set([homeUrl, homeOutcome.final_url, llmsUrl, ...sitemapUrls]);
   const queue = prioritise(
     [...discoveredUrls].filter((url) => !alreadyRead.has(url) && !isNeverTouch(url)),
-    budget.page_cap - evidence.length,
+    budget.page_cap - records.length,
   );
 
   for (const url of queue) {
@@ -212,7 +227,7 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
     }
     const outcome = await fetchAndRecord(url);
     if (outcome.kind !== 'fetched' || outcome.http_status !== 200) continue;
-    const row = evidence.at(-1)!;
+    const row = records.at(-1)!.evidence;
     const page = await readablePage(outcome, row.observations!);
     if (page.text.length > 0) corpus.push({ url: outcome.final_url, role: pageRole(url), text: page.text });
     for (const anchor of page.anchors) {
@@ -243,5 +258,5 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
     ...c4.observations,
   );
 
-  return { crawlRunId, evidence, decisions };
+  return { crawlRunId, records };
 }

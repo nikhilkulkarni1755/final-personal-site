@@ -35,11 +35,14 @@ const HIGH_SIGNAL_PATHS: readonly RegExp[] = [
  * R2 P1 denies anything off the candidate's real eTLD+1. This only decides
  * what is worth spending a gate decision on.
  */
+export function registrableDomain(url: string): string {
+  return new URL(url).hostname.toLowerCase().split('.').slice(-2).join('.');
+}
+
 export function sameRegistrableDomain(url: string, candidateUrl: string): boolean {
   try {
-    const a = new URL(url).hostname.toLowerCase().split('.').slice(-2).join('.');
-    const b = new URL(candidateUrl).hostname.toLowerCase().split('.').slice(-2).join('.');
-    return a === b && a !== '';
+    const a = registrableDomain(url);
+    return a !== '' && a === registrableDomain(candidateUrl);
   } catch {
     return false;
   }
