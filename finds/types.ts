@@ -267,15 +267,27 @@ export interface VerdictRow {
   criterion: Criterion;
   score: VerdictScore;
   rationale: string;
-  /** Model id, or 'human'. Needed to compare rubric revisions honestly. */
+  /** Model id, or 'human'. Says WHO scored it, not under which rules. */
   scored_by: string;
+  /**
+   * The scoring rubric revision that produced this score. A bare 0-3 stops
+   * being readable the moment the rules move underneath it, which is the same
+   * reasoning that put rubric_version on CrawlVerdictRow.
+   */
+  rubric_version: string;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
 
 export type NewVerdict = Pick<
   VerdictRow,
-  'candidate_id' | 'evidence_run_id' | 'criterion' | 'score' | 'rationale' | 'scored_by'
+  | 'candidate_id'
+  | 'evidence_run_id'
+  | 'criterion'
+  | 'score'
+  | 'rationale'
+  | 'scored_by'
+  | 'rubric_version'
 >;
 
 /**
