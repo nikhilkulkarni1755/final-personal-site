@@ -203,15 +203,25 @@ function sentenceContaining(text: string, pattern: RegExp): string | null {
   return match ? text.slice(Math.max(0, match.index - 80), match.index + 160).trim() : null;
 }
 
-/** A sentence on `page` that mentions at least two of the claim's key terms. */
+/**
+ * A sentence on `page` that carries most of the claim's distinctive terms.
+ *
+ * Two terms alone is too loose, and the first field run showed why: a download
+ * page listing "hashes" and "SHA-256" was accepted as corroboration for a claim
+ * about a password hash, on the strength of two incidental words. Requiring
+ * half the claim's terms makes the match mean something. It costs recall, which
+ * is the right direction -- a missed corroboration is recorded as
+ * unsubstantiated, while a false one is a claim we said we had checked.
+ */
 function corroboratingSentence(claim: ExtractedClaim, page: CorpusPage): string | null {
   const terms = keyTerms(claim.text);
   if (terms.length < 2) return null;
+  const needed = Math.max(2, Math.ceil(terms.length / 2));
   let best: { sentence: string; hits: number } | null = null;
   for (const sentence of sentences(page.text)) {
     const lower = sentence.toLowerCase();
     const hits = terms.filter((term) => lower.includes(term)).length;
-    if (hits >= 2 && (!best || hits > best.hits)) best = { sentence, hits };
+    if (hits >= needed && (!best || hits > best.hits)) best = { sentence, hits };
   }
   return best?.sentence ?? null;
 }

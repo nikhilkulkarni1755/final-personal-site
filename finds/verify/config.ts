@@ -51,6 +51,11 @@ export const NEVER_TOUCH_PATTERNS: readonly RegExp[] = [
   /^\/wp-admin/i,
   /^\/admin/i,
   /^\/(log|sign)[-_]?(in|out|up)/i,
+  // Not in R2 §5.4's literal list, which names /login, /signin, /signup and
+  // /logout. A registration form is the same thing under a different word and
+  // the first field run walked into one. Being stricter than the rubric is
+  // always allowed; flagged to R2 as a proposed addition to §5.4.
+  /^\/register\b/i,
   /^\/cart/i,
   /^\/checkout/i,
   /^\/account/i,
