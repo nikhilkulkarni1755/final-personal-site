@@ -91,7 +91,10 @@ export interface UseRights {
   /** Constant false, always -- never configurable (§3.2). */
   train: false;
   max_snippet_chars: number | null;
-  reserved_by: Array<{ signal: UseSignal; directive: string; source_url: string }>;
+  /** `restricts` names every field on this object the directive/signal
+   * subtracted -- matches W3's GateUseRights (finds/types.ts) and R2 §6's
+   * sample verdict object field-for-field. */
+  reserved_by: Array<{ signal: UseSignal; directive: string; source_url: string; restricts: string[] }>;
 }
 
 export interface CrawlBudget {
