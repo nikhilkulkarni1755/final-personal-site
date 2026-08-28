@@ -1,16 +1,20 @@
 // OUT direction: ask Nikhil something on Telegram.
 //
 // CLI:
-//   node finds/hitl/ask.ts --render '<question JSON>'   # never touches the network
-//   node finds/hitl/ask.ts --send   '<question JSON>'   # requires live env (D6)
-// question JSON: { "prompt": "...", "context": "...", "options": [{"label":"..."}] }
+//   node finds/hitl/ask.ts --render   '<question JSON>'   # never touches the network
+//   node finds/hitl/ask.ts --send     '<question JSON>'   # requires live env (D6)
+//   node finds/hitl/ask.ts --render-approval '<approval JSON>'
+//   node finds/hitl/ask.ts --send-approval   '<approval JSON>'
+// question JSON:  { "prompt": "...", "context": "...", "options": [{"label":"..."}] }
+// approval JSON:  { "candidateId": "...", "candidateName": "...",
+//                    "evidenceRunId": "...", "context": "..." }
 
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { HITL_CONFIG, TELEGRAM_LIMITS, requireTelegramEnv } from './config.ts';
 import { sendMessage, type TelegramInlineButton } from './telegramClient.ts';
 import { PendingStore } from './pendingStore.ts';
-import type { HitlQuestion, PendingQuestion } from './types.ts';
+import type { ApprovalContext, HitlQuestion, PendingQuestion } from './types.ts';
 
 interface BuiltMessage {
   text: string;
@@ -20,16 +24,19 @@ interface BuiltMessage {
 /**
  * Pure builder: question -> exact Bot API payload shape. Shared by the real
  * send and the render/dry-run path below so a render can never drift from
- * what would actually be sent.
+ * what would actually be sent. `footer` overrides the trailing instruction
+ * line -- askApproval() uses this to spell out that a text reply approves
+ * too (see there for why that has to be explicit).
  */
-export function buildMessage(questionId: string, question: HitlQuestion): BuiltMessage {
+export function buildMessage(questionId: string, question: HitlQuestion, footer?: string): BuiltMessage {
   const parts = [question.prompt];
   if (question.context) parts.push('', question.context);
   parts.push(
     '',
-    question.options && question.options.length > 0
-      ? 'Reply to this message to answer in your own words, or tap a button below.'
-      : 'Reply to this message with your answer.',
+    footer ??
+      (question.options && question.options.length > 0
+        ? 'Reply to this message to answer in your own words, or tap a button below.'
+        : 'Reply to this message with your answer.'),
   );
   const text = parts.join('\n');
 
@@ -65,24 +72,28 @@ export interface RenderedQuestion {
  * requiring any env var. Clearly a render, never to be confused with a
  * send (D6) -- callers must not report this as "sent".
  */
-export function renderQuestion(question: HitlQuestion): RenderedQuestion {
+export function renderQuestion(question: HitlQuestion, footer?: string): RenderedQuestion {
   const questionId = randomUUID();
   const chatId = process.env.TELEGRAM_CHAT_ID ?? '<unset: TELEGRAM_CHAT_ID>';
-  return { questionId, chatId, payload: buildMessage(questionId, question) };
+  return { questionId, chatId, payload: buildMessage(questionId, question, footer) };
 }
 
 /**
- * Live send. Throws loudly if TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID are absent
- * -- never sends and never claims success without them (D6). Returns the
- * question id so a caller can later correlate an answer to it.
+ * Sends `question`, records it in the pending store (so poll.ts can match
+ * the answer back), and returns the question id. Shared by askQuestion()
+ * and askApproval() so the two never drift from a single send-and-track
+ * path. Throws loudly if TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID are absent --
+ * never sends and never claims success without them (D6).
  */
-export async function askQuestion(
+async function sendAndTrack(
   question: HitlQuestion,
-  pendingStorePath: string = HITL_CONFIG.pendingPath,
+  footer: string | undefined,
+  approval: ApprovalContext | undefined,
+  pendingStorePath: string,
 ): Promise<string> {
   const { botToken, chatId } = requireTelegramEnv();
   const questionId = randomUUID();
-  const payload = buildMessage(questionId, question);
+  const payload = buildMessage(questionId, question, footer);
 
   const sent = await sendMessage(botToken, { chatId, text: payload.text, inlineKeyboard: payload.inlineKeyboard });
 
@@ -92,9 +103,81 @@ export async function askQuestion(
     sentMessageId: sent.message_id,
     question,
     createdAt: new Date().toISOString(),
+    approval,
   };
   await new PendingStore(pendingStorePath).add(pending);
   return questionId;
+}
+
+/**
+ * Live send of a plain question. Returns the question id so a caller can
+ * later correlate an answer to it.
+ */
+export async function askQuestion(
+  question: HitlQuestion,
+  pendingStorePath: string = HITL_CONFIG.pendingPath,
+): Promise<string> {
+  return sendAndTrack(question, undefined, undefined, pendingStorePath);
+}
+
+const APPROVE_LABEL = 'Approve';
+const REJECT_LABEL = 'Reject';
+/**
+ * Explicit about what a free-text reply means, because unlike a plain
+ * askQuestion() this one has a real-world side effect: it is what tells
+ * poll.ts to write a finds_approvals row (D29), and D29's schema commits to
+ * only ever recording an approval, never a rejection. A reply that isn't
+ * meant as one has no representation to fall into except "didn't reply" --
+ * so the message has to say, in Nikhil's own reading of it, that typing an
+ * answer here approves.
+ */
+const APPROVAL_FOOTER =
+  'Tap Approve or Reject below. Or reply to this message with your own words for the public ' +
+  'page -- that approves it too, using exactly what you write as the write-up.';
+
+export interface AskApprovalParams {
+  candidateId: string;
+  /** Shown in the prompt. Not stored -- the approval row only ever carries candidateId. */
+  candidateName: string;
+  evidenceRunId: string;
+  /**
+   * Extra context above the buttons -- e.g. a one-line reason this
+   * qualified. W8 doesn't own scoring or evidence (finds/score/**,
+   * finds/verify/**), so building that summary is the caller's job.
+   */
+  context?: string;
+}
+
+function buildApprovalQuestion(params: AskApprovalParams): HitlQuestion {
+  return {
+    prompt: `Publish "${params.candidateName}"?`,
+    context: params.context,
+    options: [{ label: APPROVE_LABEL }, { label: REJECT_LABEL }],
+  };
+}
+
+/** Dry-run counterpart to askApproval(). Never touches the network. */
+export function renderApproval(params: AskApprovalParams): RenderedQuestion {
+  return renderQuestion(buildApprovalQuestion(params), APPROVAL_FOOTER);
+}
+
+/**
+ * Live send of an approval ask. The pending entry it creates carries
+ * candidateId/evidenceRunId so poll.ts's answer routing can write the
+ * finds_approvals row (approvals.ts) when Nikhil answers -- either by
+ * tapping Approve (approveOptionIndex 0; Reject writes nothing) or by
+ * replying with text, which becomes both `answer` and `why_interesting`.
+ */
+export async function askApproval(
+  params: AskApprovalParams,
+  pendingStorePath: string = HITL_CONFIG.pendingPath,
+): Promise<string> {
+  const approval: ApprovalContext = {
+    candidateId: params.candidateId,
+    evidenceRunId: params.evidenceRunId,
+    approveOptionIndex: 0,
+  };
+  return sendAndTrack(buildApprovalQuestion(params), APPROVAL_FOOTER, approval, pendingStorePath);
 }
 
 function printRender(rendered: RenderedQuestion): void {
@@ -109,26 +192,38 @@ function printRender(rendered: RenderedQuestion): void {
   }
 }
 
+const MODES = ['--render', '--send', '--render-approval', '--send-approval'] as const;
+type Mode = (typeof MODES)[number];
+
 async function main(): Promise<void> {
-  const [mode, questionJson] = process.argv.slice(2);
-  if (mode !== '--render' && mode !== '--send') {
+  const [mode, json] = process.argv.slice(2);
+  if (!MODES.includes(mode as Mode)) {
     console.error(
-      "usage: node finds/hitl/ask.ts --render|--send '{\"prompt\":\"...\",\"context\":\"...\",\"options\":[{\"label\":\"...\"}]}'",
+      'usage:\n' +
+        '  node finds/hitl/ask.ts --render|--send \'{"prompt":"...","context":"...","options":[{"label":"..."}]}\'\n' +
+        '  node finds/hitl/ask.ts --render-approval|--send-approval \'{"candidateId":"...","candidateName":"...","evidenceRunId":"...","context":"..."}\'',
     );
     process.exit(1);
   }
-  if (!questionJson) {
-    console.error('missing question JSON argument');
+  if (!json) {
+    console.error('missing JSON argument');
     process.exit(1);
   }
-  const question = JSON.parse(questionJson) as HitlQuestion;
 
   if (mode === '--render') {
-    printRender(renderQuestion(question));
+    printRender(renderQuestion(JSON.parse(json) as HitlQuestion));
     return;
   }
-
-  const questionId = await askQuestion(question);
+  if (mode === '--send') {
+    const questionId = await askQuestion(JSON.parse(json) as HitlQuestion);
+    console.log(`sent. question_id=${questionId}`);
+    return;
+  }
+  if (mode === '--render-approval') {
+    printRender(renderApproval(JSON.parse(json) as AskApprovalParams));
+    return;
+  }
+  const questionId = await askApproval(JSON.parse(json) as AskApprovalParams);
   console.log(`sent. question_id=${questionId}`);
 }
 
