@@ -1,0 +1,98 @@
+# The daily Interesting Finds run.
+#
+# DECISIONS D0: GitHub Actions cron + Supabase Postgres. No new vendor.
+# The orchestrator and its per-stage failure policy live in finds/run/daily.ts;
+# this file is only the schedule, the runtime, and the secrets. Anything that
+# looks like pipeline logic belongs there, not here.
+#
+# WHAT THIS WORKFLOW WILL NOT DO:
+#   - swallow a failed stage and go green. daily.ts exits 0 only when a digest
+#     was actually sent, and this job reports that exit code unchanged. Today,
+#     with no credentials provisioned and W4/W5 not merged, that means a red
+#     run every day, naming the stage that stopped it. That is correct: a
+#     green run that mailed nothing would tell Nikhil the system works while
+#     it silently sends him nothing (DECISIONS D6).
+#   - post a comment. finds/comment/** speaks publicly under Nikhil's name and
+#     is human-initiated only (D4/D13). It is absent here and daily.ts asserts
+#     against it at startup.
+#   - poll Telegram. W8's offset/pending state is file-backed and an Actions
+#     runner is ephemeral, so a scheduled poll would silently re-read or lose
+#     updates. The digest goes out by email (D9); Telegram stays interactive
+#     and is driven from somewhere with durable state.
+
+name: Interesting Finds — daily
+
+on:
+  schedule:
+    # 13:00 UTC daily. Show HN (~134/day) and Uneed are daily sources, so the
+    # supply is daily even though Peerlist is a Monday drop of ~286 (D10).
+    # finds/sources/run-hn.ts looks back 26h by default, so a run delayed or
+    # skipped by GitHub's scheduler loses nothing.
+    # OPEN FOR NIKHIL: this lands ~6am US/Pacific, ~9am US/Eastern. Say the
+    # word and it moves -- it is one line.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+# Never two runs writing candidates at once; a manual run waits for the cron.
+concurrency:
+  group: finds-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The pipeline runs .ts directly under Node's native type-stripping --
+          # no build step anywhere in finds/**. Pinned to the major the lanes
+          # actually tested against; several of them hit real type-stripping
+          # limits on it (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX), so this is a
+          # tested version, not a default.
+          node-version: '26'
+          cache: npm
+
+      # PLAIN `npm ci`. NOT `--omit=dev`.
+      # DECISIONS D16 moved nodemailer, pg and playwright into devDependencies
+      # so Cloudflare Pages stops installing them before `vite build`. They are
+      # all runtime dependencies of this job: pg for every database stage,
+      # nodemailer for the send. `--omit=dev` here fails at import time, deep
+      # in a stage, and reads like a broken module rather than a missing
+      # install. Do not "optimise" this line.
+      - run: npm ci
+
+      # `npm ci` already pays playwright's browser download via its postinstall,
+      # so cache it rather than re-downloading every day.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Turns itself on the moment W2's Peerlist entry point lands on main --
+      # that path drives headless Chromium and needs the system libraries.
+      # Nothing wired today needs a browser (Show HN is a plain JSON API), so
+      # this stays off rather than costing every run an install for nothing.
+      - name: Install Chromium (only once a browser-driven source is wired)
+        if: hashFiles('finds/sources/run-peerlist.ts') != ''
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the daily pipeline
+        env:
+          # D17: never a VITE_ prefix on any of these. Vite bundles VITE_* into
+          # the browser, and the service-role key bypasses RLS entirely.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # D2. Send-only, one recipient.
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        # No `continue-on-error`, no `|| true`, no `if: always()` masking. The
+        # step's exit code is daily.ts's exit code, and daily.ts has already
+        # decided what partial success means.
+        run: node finds/run/daily.ts
