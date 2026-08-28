@@ -59,8 +59,8 @@ function parseContentSignal(value: string): ContentSignal {
     const [rawKey, rawVal] = pair.split('=').map((s) => s.trim().toLowerCase());
     if (!rawKey || (rawVal !== 'yes' && rawVal !== 'no')) continue;
     if (rawKey === 'search') out.search = rawVal;
-    else if (rawKey === 'ai-input') out.aiInput = rawVal;
-    else if (rawKey === 'ai-train') out.aiTrain = rawVal;
+    else if (rawKey === 'ai-input') out.ai_input = rawVal;
+    else if (rawKey === 'ai-train') out.ai_train = rawVal;
     else if (rawKey === 'use') out.use = rawVal;
   }
   return out;
@@ -76,7 +76,7 @@ function parseContentUsage(value: string): ContentUsage | null {
   for (const pair of trimmed.split(/\s+/)) {
     const [rawKey, rawVal] = pair.split('=').map((s) => s.trim().toLowerCase());
     if (!rawKey || (rawVal !== 'y' && rawVal !== 'n')) continue;
-    if (rawKey === 'train-ai') out.trainAi = rawVal;
+    if (rawKey === 'train-ai') out.train_ai = rawVal;
     else if (rawKey === 'search') out.search = rawVal;
   }
   return Object.keys(out).length > 0 ? out : null;
@@ -248,6 +248,7 @@ export async function fetchRobotsTxt(origin: string): Promise<RobotsOutcome> {
       contentType: res.headers.get('content-type'),
       sha256: createHash('sha256').update(capped).digest('hex'),
       elapsedMs: Date.now() - startedAt,
+      bodyText: text,
     };
   }
 
