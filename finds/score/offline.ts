@@ -19,7 +19,7 @@
  *   select: {"date","candidates":[...]}                        -> {selection, digest}
  */
 
-import { buildVerdictWrite, partitionPersistable } from './persist.ts';
+import { buildVerdictWrite } from './persist.ts';
 import { scoreCandidate } from './score.ts';
 import type { ScoreInput } from './score.ts';
 import { selectForDay } from './select.ts';
@@ -34,14 +34,9 @@ if (mode === 'score') {
   if (outcome.kind === 'unscoreable') {
     console.log(JSON.stringify({ unscoreable: outcome.reason, detail: outcome.detail }));
   } else {
-    const { persistable, blocked } = partitionPersistable(outcome.scores);
     console.log(
       JSON.stringify({
-        payload:
-          persistable.length > 0
-            ? buildVerdictWrite(outcome.candidate_id, outcome.evidence_run_id, persistable)
-            : null,
-        withheld: blocked.map((b) => b.score.criterion),
+        payload: buildVerdictWrite(outcome.candidate_id, outcome.evidence_run_id, outcome.scores),
       }),
     );
   }
