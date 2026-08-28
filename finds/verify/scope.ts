@@ -36,7 +36,12 @@ const HIGH_SIGNAL_PATHS: readonly RegExp[] = [
  * what is worth spending a gate decision on.
  */
 export function registrableDomain(url: string): string {
-  return new URL(url).hostname.toLowerCase().split('.').slice(-2).join('.');
+  const hostname = new URL(url).hostname.toLowerCase();
+  // An IP literal has no registrable domain; taking its last two labels turns
+  // 127.0.0.1 into "0.1", which is nonsense written into an audit column.
+  // IPv6 arrives bracketed and contains no dots at all.
+  if (/^\[|^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return hostname;
+  return hostname.split('.').slice(-2).join('.');
 }
 
 export function sameRegistrableDomain(url: string, candidateUrl: string): boolean {
