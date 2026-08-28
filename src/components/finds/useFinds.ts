@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Find } from './types';
 
-/** Raw shape of a `finds` row, until W3's migration lands in generated Database types. */
+/** Raw shape of a `finds_published` row, until W3's migration lands in generated Database types. */
 interface FindRow {
   id: string;
   name: string;
@@ -17,7 +17,7 @@ interface FindRow {
 }
 
 /**
- * Reads the `finds` table -- the only public-readable table in the finds-coord
+ * Reads the `finds_published` table -- the only public-readable table in the finds-coord
  * initiative (see ~/nsk1755/finds-coord/README.md). Follows the fail-closed
  * pattern from useFireworksQuota: a missing table, an RLS error, or a genuinely
  * empty table all resolve to an empty list rather than stub data (DECISIONS
@@ -33,11 +33,11 @@ export function useFinds() {
 
     const load = async () => {
       try {
-        // 'finds' isn't a key of the generated Database type until W3's
+        // 'finds_published' isn't a key of the generated Database type until W3's
         // migration lands, same workaround as useFireworksQuota.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (supabase as any)
-          .from('finds')
+          .from('finds_published')
           .select('*')
           .order('found_at', { ascending: false });
         if (error) throw error;
