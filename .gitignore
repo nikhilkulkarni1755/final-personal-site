@@ -75,3 +75,6 @@ wrangler.toml
 supabase/.temp/
 supabase/.branches/
 .supabase/
+
+# Finds email dry-run output (rendered, never a committed sample digest -- D6)
+finds/email/.dry-run/
