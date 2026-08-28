@@ -30,11 +30,30 @@ function assertConstantUserAgent(headers: RequestInit['headers']): void {
   }
 }
 
-/** GET/HEAD-only wrapper around fetch() enforcing §2.2/§2.3's hard rules. */
+/**
+ * GET/HEAD-only wrapper around fetch() enforcing §2.2/§2.3's hard rules.
+ *
+ * V2-C3: `redirect` defaults to 'manual' and 'follow' is refused outright.
+ * fetch()'s own default ('follow') silently reads whatever a 3xx points at
+ * -- no P0/P1 scope check, no robots.txt consultation, on a destination the
+ * URL we asked about never named. Every guarantee this file's other
+ * assertions make is evaluated against the URL the caller passed in; a
+ * redirect changes the URL actually fetched, so the caller MUST see the 3xx
+ * and decide, hop by hop, whether following it is safe (see gate.ts's
+ * fetchWithGatedRedirects and robots.ts's fetchWithRedirects for that
+ * decision). Passing `redirect: 'manual'` explicitly is fine and matches
+ * this default; passing 'error' is fine too. Only 'follow' is refused.
+ */
 export function safeFetch(url: string, init: RequestInit & { method?: 'GET' | 'HEAD' } = {}): Promise<Response> {
   const method = init.method ?? 'GET';
   if (method !== 'GET' && method !== 'HEAD') {
     throw new Error(`safeFetch: refusing method "${method}" -- the gate only ever reads (§2.3, §5.3)`);
+  }
+  if (init.redirect === 'follow') {
+    throw new Error(
+      'safeFetch: refusing redirect:"follow" -- a redirect changes the URL actually fetched, and every P0/P1/robots.txt ' +
+        'check in this codebase is evaluated against the URL asked about. Use "manual" (the default) and gate each hop yourself.',
+    );
   }
   assertSafeHeaders(init.headers);
   assertConstantUserAgent(init.headers);
@@ -42,6 +61,7 @@ export function safeFetch(url: string, init: RequestInit & { method?: 'GET' | 'H
   return fetch(url, {
     ...init,
     method,
+    redirect: init.redirect ?? 'manual',
     headers: { 'User-Agent': GATE_CONFIG.userAgent, ...GATE_CONFIG.requestHeaders, ...init.headers },
   });
 }
