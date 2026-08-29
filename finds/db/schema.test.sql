@@ -947,6 +947,54 @@ BEGIN
     ASSERT n = 0, 'an answered question was not removable';
 END $$;
 
+-- --------------------------------------------------------------------------
+-- Evidence must cite ITS OWN candidate's gate decision
+-- --------------------------------------------------------------------------
+-- W4 found this by attacking the constraint rather than trusting it: the old
+-- key pinned allowed=true but omitted candidate_id, so a page could be filed
+-- under candidate B while citing the verdict that permitted candidate A. That
+-- is D23's shape -- evidence attributed to a candidate whose gate never covered
+-- it -- expressed at the schema level.
+DO $$
+DECLARE
+    cand       UUID;
+    other      UUID;
+    cand_gate  UUID;
+    deny_gate  UUID;
+BEGIN
+    SELECT id INTO cand  FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id INTO other FROM finds_candidates WHERE name = 'Other';
+    SELECT crawl_verdict_id INTO cand_gate
+      FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+
+    -- the gap W4 found: another candidate's ALLOW verdict
+    BEGIN
+        INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id,
+                                    url, page_role)
+        VALUES (other, cand_gate, gen_random_uuid(), 'https://attack.test/', 'homepage');
+        RAISE EXCEPTION 'evidence was filed under a candidate whose gate never permitted it';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- and the case that already worked must keep working: a DENY verdict
+    INSERT INTO finds_crawl_verdicts (
+        rubric_version, gate_version, candidate_id, url, authority,
+        registrable_domain, allowed, reason_code, reason_detail,
+        deciding_signal, expires_at)
+    VALUES ('R2-permission-rubric/1.1', '1.0.0', cand, 'https://acme.dev/private',
+            'https://acme.dev', 'acme.dev', false, 'robots_disallow',
+            'Disallow: /private', 'ROBOTS_TXT', NOW() + interval '1 day')
+    RETURNING id INTO deny_gate;
+
+    BEGIN
+        INSERT INTO finds_evidence (candidate_id, crawl_verdict_id, crawl_run_id,
+                                    url, page_role)
+        VALUES (cand, deny_gate, gen_random_uuid(), 'https://acme.dev/private', 'other');
+        RAISE EXCEPTION 'a page was crawled under a DENY verdict';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
