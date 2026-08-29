@@ -10,7 +10,9 @@
 #
 # The code is driven through finds/score/offline.ts rather than run.ts, because
 # run.ts speaks supabase-js (D17) and a throwaway cluster has no PostgREST in
-# front of it. Everything under test is the same: scoreCandidate,
+# front of it. It also passes NO novelty judgement, so C2 scores 1 throughout --
+# that is deliberate: this proof covers the deterministic path, and it needs no
+# API key and spends no money to run. Everything under test is the same: scoreCandidate,
 # buildVerdictWrite, selectForDay, toDigestInput, and the real
 # finds_write_verdict function. What is NOT proven here is db.ts's supabase-js
 # binding, which needs a live Supabase project.
@@ -177,8 +179,8 @@ psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
            WHERE c.product_url = 'https://w5-strong.invalid/' AND v.criterion = 'C4') = 3,
          'a linked MCP endpoint must score C4 = 3';
   ASSERT (SELECT score FROM finds_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
-           WHERE c.product_url = 'https://w5-strong.invalid/' AND v.criterion = 'C2') = 2,
-         'C2 is capped at 2 under rubric 1.0';
+           WHERE c.product_url = 'https://w5-strong.invalid/' AND v.criterion = 'C2') = 1,
+         'C2 with no novelty judgement is 1 -- no evidence either way, never 0 (D37/D38)';
   ASSERT (SELECT bool_and(rationale LIKE '%1 URL(s) refused by the permission gate.')
             FROM finds_verdicts v JOIN finds_candidates c ON c.id = v.candidate_id
            WHERE c.product_url = 'https://w5-strong.invalid/'),

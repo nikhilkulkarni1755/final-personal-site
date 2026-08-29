@@ -4,9 +4,17 @@
  *
  * Two properties this file exists to guarantee:
  *
- *   DERIVED AND REPRODUCIBLE. Same evidence in, same score out. Nothing here
- *   reads a clock, a random number, or the network. A verdict is a pure
- *   function of (evidence rows, corpus stats, rubric version).
+ *   DERIVED AND REPRODUCIBLE -- FOR C1, C3 AND C4. Same evidence in, same score
+ *   out; nothing in those three reads a clock, a random number, or the network,
+ *   and re-scoring production reproduced 36 of 36 exactly.
+ *
+ *   *** C2 IS CARVED OUT, since D38. *** Its input is a novelty judgement from
+ *   a model (novelty.ts), so a C2 re-score MAY move where a C1/C3/C4 re-score
+ *   may not. `scoreC2` is still a pure function of that judgement -- the
+ *   non-determinism is in obtaining it, and it is deliberately confined to that
+ *   one module. State the guarantee as "C1, C3 and C4", never as "every
+ *   verdict". An overstated guarantee is worse than a narrower honest one.
+ *   Full statement in c2.ts's header.
  *
  *   INTERPRETABLE LATER. R2's rubric will reach v1.2 and old verdicts must
  *   still be readable, so the version travels with every score.
@@ -21,7 +29,7 @@ import type { CorpusStats, CriterionScore, ScoreCitation } from './types.ts';
  * wording or refactors -- a version that changes when nothing changed is
  * exactly as useless as one that does not change when something did.
  */
-export const RUBRIC_VERSION = '1.2';
+export const RUBRIC_VERSION = '1.3';
 
 /* -------------------------------------------------------------------------- */
 /* looking at a crawl generation                                               */

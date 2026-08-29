@@ -13,6 +13,8 @@ import { test } from 'node:test';
 import type { EvidenceObservation, EvidenceRow } from '../types.ts';
 import type { CriterionScore } from './types.ts';
 import { scoreC2 } from './c2.ts';
+import type { NoveltyJudgement } from './novelty.ts';
+import { bindClaim, requireApiKey } from './novelty.ts';
 import { scoreC3 } from './c3.ts';
 
 let seq = 0;
@@ -46,45 +48,116 @@ function scored(result: { kind: string; score?: CriterionScore }): CriterionScor
 /* ========================================================================== */
 
 const problemStated: EvidenceObservation = { kind: 'c2_problem_statement', detail: 'why we built this', value: 'https://x/' };
-const problemNotStated: EvidenceObservation = { kind: 'c2_problem_statement_absent', detail: 'no such statement', value: false };
-const alternatives = (n: number): EvidenceObservation => ({ kind: 'c2_named_alternatives', detail: `names ${n}`, value: n });
 
-test('C2 has no 3 under rubric 1.0, and the rationale says why', () => {
-  const score = scored(scoreC2([row([problemStated, alternatives(0)])]));
-  assert.equal(score.score, 2);
-  assert.match(score.rationale, /caps C2 at 2/);
-  assert.match(score.rationale, /nothing on a product's own site can establish that a problem is rare/);
+const CLAIM = 'The AI Cursor for Motion Design';
+function claimRow(observations: EvidenceObservation[] = [problemStated]): EvidenceRow {
+  return { ...row(observations), claims: [{ text: CLAIM, locator: 'h1' }] };
+}
+function judgement(over: Partial<NoveltyJudgement> & { evidence_id: string }): NoveltyJudgement {
+  return {
+    form: 'established', prior_art: null, reason: 'because', cited_claim: CLAIM,
+    model: 'claude-opus-5', ...over,
+  };
+}
+
+test('named prior art is a 0, and the citation contradicts', () => {
+  const r = claimRow();
+  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'established', prior_art: 'After Effects' })));
+  assert.equal(score.score, 0);
+  assert.deepEqual(score.citations.map((c) => c.stance), ['contradicts']);
+  assert.match(score.rationale, /already done by After Effects/);
+  assert.match(score.rationale, /however narrow the niche/, 'narrow is not novel');
 });
 
-test('named alternatives are reported, never scored -- rubric 1.1 gives C2 no 0', () => {
-  // Retracted in 1.1 against real data: of three sites this disqualified, two
-  // were prose nouns ("CSV", "JSON", "After") caught by W4's capture regex, and
-  // a false disqualification removes a good find silently.
-  for (const n of [3, 8, 23]) {
-    const score = scored(scoreC2([row([problemStated, alternatives(n)])]));
-    assert.equal(score.score, 2, `${n} named alternatives must not disqualify`);
-    assert.match(score.rationale, new RegExp(`names ${n} existing alternative`));
-    assert.match(score.rationale, /Reported, not scored/);
+test('D37 form (1), a fusion of two established apps, scores 2', () => {
+  const r = claimRow();
+  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion' })));
+  assert.equal(score.score, 2);
+  assert.match(score.rationale, /form \(1\)/);
+  assert.deepEqual(score.citations.map((c) => c.stance), ['supports']);
+});
+
+test('D37 forms (2) and (3) score 3', () => {
+  const r = claimRow();
+  assert.equal(scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'new_paradigm' }))).score, 3);
+  assert.equal(scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'new_task' }))).score, 3);
+});
+
+test('every C2 verdict quotes the claim it rests on and names its judge', () => {
+  const r = claimRow();
+  for (const form of ['established', 'fusion', 'new_paradigm'] as const) {
+    const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form, prior_art: 'Something' })));
+    assert.match(score.rationale, /It rests on the product's own claim: "The AI Cursor for Motion Design"/);
+    assert.match(score.rationale, /Judged by claude-opus-5 under rubric/);
+    assert.deepEqual(score.citations.map((c) => c.evidence_id), [r.id]);
   }
 });
 
-test('C2 has no 0 and no 3: the site cannot prove rarity, nor the opposite', () => {
-  const scores = [0, 2, 3, 23].map((n) => scored(scoreC2([row([problemStated, alternatives(n)])])).score);
-  assert.deepEqual([...new Set(scores)], [2]);
-  assert.equal(scored(scoreC2([row([problemNotStated, alternatives(9)])])).score, 1);
+/* -- the failure modes that must never become an accusation ---------------- */
+
+test('no judgement scores 1, never 0', () => {
+  const score = scored(scoreC2([claimRow()], null));
+  assert.equal(score.score, 1);
+  assert.notEqual(score.score, 0);
+  assert.deepEqual(score.citations.map((c) => c.stance), ['inconclusive']);
 });
 
-test('a site that never states its problem scores 1, and cites the absence', () => {
-  const score = scored(scoreC2([row([problemNotStated, alternatives(0)])]));
+test('an unsure judgement scores 1, never 0', () => {
+  const r = claimRow();
+  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'unsure' })));
   assert.equal(score.score, 1);
-  assert.deepEqual(score.citations.map((c) => c.stance), ['inconclusive']);
   assert.match(score.rationale, /not a mark against the product/);
 });
 
-test('C2 with no c2_* observation at all is unscoreable', () => {
-  const result = scoreC2([row([{ kind: 'c1_corroborated', detail: 'a' }])]);
+test('a form other than established can never carry prior art into the rationale', () => {
+  const r = claimRow();
+  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion', prior_art: 'Hallucinated Inc' })));
+  assert.doesNotMatch(score.rationale, /Hallucinated Inc/);
+});
+
+test('an absent problem statement still lets a no-judgement C2 score 1, not vanish', () => {
+  const r = { ...row([{ kind: 'c2_problem_statement_absent', detail: 'none', value: false }]), claims: [] };
+  assert.equal(scored(scoreC2([r], null)).score, 1);
+});
+
+test('C2 with no judgement and no c2_* observation is unscoreable', () => {
+  const result = scoreC2([row([{ kind: 'c1_corroborated', detail: 'a' }])], null);
   assert.equal(result.kind, 'unscoreable');
   assert.equal(result.kind === 'unscoreable' && result.reason, 'no_claims_extracted');
+});
+
+/* -- trap 4: the instrument failing in its new form ------------------------ */
+
+test('a fabricated claim is rejected outright, not scored on trust', () => {
+  // The model quoting text we never sent is the hallucination we CAN detect
+  // mechanically. bindClaim returns null and judgeNovelty discards the verdict.
+  const supplied = [{ row: claimRow(), claim: { text: CLAIM } }];
+  assert.equal(bindClaim('A claim nobody ever made', supplied), null);
+  assert.equal(bindClaim(CLAIM, supplied)?.claim.text, CLAIM);
+});
+
+test('a re-quoted claim differing only in whitespace still binds', () => {
+  const supplied = [{ row: claimRow(), claim: { text: CLAIM } }];
+  assert.equal(bindClaim(`  The AI   Cursor for Motion Design `, supplied)?.claim.text, CLAIM);
+});
+
+test('binding is not fuzzy: a near-miss must NOT bind', () => {
+  // A "close enough" match is how a fabricated claim gets accepted.
+  const supplied = [{ row: claimRow(), claim: { text: CLAIM } }];
+  assert.equal(bindClaim('The AI Cursor for Video Design', supplied), null);
+});
+
+test('an absent API key is a hard stop, not a silent pattern fallback', () => {
+  const saved = [process.env.ANTHROPIC_API_KEY, process.env.ANTHROPIC_AUTH_TOKEN];
+  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_AUTH_TOKEN;
+  try {
+    assert.throws(() => requireApiKey(), /hard stop, not a skip/);
+    assert.throws(() => requireApiKey(), /no pattern fallback/);
+  } finally {
+    if (saved[0]) process.env.ANTHROPIC_API_KEY = saved[0];
+    if (saved[1]) process.env.ANTHROPIC_AUTH_TOKEN = saved[1];
+  }
 });
 
 /* ========================================================================== */

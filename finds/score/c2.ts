@@ -1,137 +1,152 @@
 /**
- * C2 -- "solves a rare problem".
+ * C2 -- "solves a rare problem", under DECISIONS D37.
  *
- * THE HONEST LIMIT, STATED UP FRONT: nothing W4 can collect from a product's
- * own website establishes that a problem is RARE. A site is not a survey of
- * its category. So under rubric 1.0 **C2 has no 3** -- "clearly supported by
- * quoted or measured evidence" is not a claim this evidence can carry, and
- * manufacturing one would be exactly the LLM-vibes-dressed-as-a-rubric that
- * D7 forbids. The ceiling is 2, deliberately, and the rationale says so.
+ * D37 defines rarity as NOVELTY IN KIND, not category crowdedness: mixing two
+ * common apps into one, a new paradigm of thinking, or solving a new type of
+ * task. Every earlier version of this criterion measured how crowded a category
+ * was, which is a different question that happened to share an answer on one
+ * example. Narrow is not novel -- a stock tracker for one appliance model is
+ * still a stock tracker.
  *
- * That costs nothing in ranking: a cap applied to every candidate alike moves
- * no candidate past another. It costs a little in the scale, and it buys the
- * property that a C2 of 3 never appears in a digest claiming evidence we do
- * not have. Reaching 3 would need a signal from outside the product's own site
- * -- a category search, a count of competing launches -- which is a change to
- * W4's collection and a rubric version, not something to fake here.
+ * *** DETERMINISM CARVE-OUT -- READ THIS BEFORE REPEATING THE GUARANTEE ***
  *
- * What the site DOES tell us, and what W4 collects in `collectC2()`:
+ * Every other criterion is a pure function of fetched bytes: same evidence in,
+ * same score out, proven 36/36 against production. C2 IS NOT, and any statement
+ * of that guarantee must now say "C1, C3 and C4" rather than "every verdict".
  *
- *   c2_problem_statement    they articulate the problem they exist to solve
- *   c2_named_alternatives   how many existing tools they position against
+ * What is still true, and worth keeping precise:
+ *   - `scoreC2` itself is pure. Given the same judgement it returns the same
+ *     score, rationale and citation, forever.
+ *   - The JUDGEMENT is not reproducible. It comes from a model (novelty.ts),
+ *     and re-running may return a different form, prior art, or cited claim.
+ *   - So a C2 re-score may move where a C1/C3/C4 re-score may not, and
+ *     `finds_verdicts.scored_by` carries the model id for exactly this reason:
+ *     it is the only criterion where "who scored it" is not "the rubric".
  *
- * The second is the load-bearing one, and it points DOWNWARD. A crowded
- * category names its incumbents -- "unlike Notion", "instead of Airtable" --
- * because it has to. A site that names three of them has told us, in its own
- * words, that the problem is not rare. That is real contradicting evidence and
- * it is what a 0 cites.
+ * This is the cost D38 accepted knowingly. It is bounded to one criterion by
+ * keeping the model call out of this file entirely.
  */
 
 import type { EvidenceRow } from '../types.ts';
 import type { CriterionScore, UnscoreableReason } from './types.ts';
+import type { NoveltyJudgement } from './novelty.ts';
 import { RUBRIC_VERSION, citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
 
 const PROBLEM_STATEMENT = 'c2_problem_statement';
 const PROBLEM_STATEMENT_ABSENT = 'c2_problem_statement_absent';
-const NAMED_ALTERNATIVES = 'c2_named_alternatives';
-
-/**
- * NAMED ALTERNATIVES NO LONGER SCORE. Rubric 1.1, and this is a retraction.
- *
- * Rubric 1.0 scored 0 -- disqualifying -- at three or more named alternatives,
- * on the reasoning that a crowded category names its incumbents. The threshold
- * was set at three rather than two precisely because W4's capture regex can
- * pick up a capitalised word that is not a product. Measured against the first
- * ten real crawls, three was nowhere near enough:
- *
- *   gmplus.io                 "Google, Bulk, Email, International, Phone,
- *                              CSV, JSON, Coordinates"   -> 8, all noise
- *   motiongraphicseditor.ai   "After, Now, Industry, After."
- *                              -> 4, and "After" is half of "After Effects"
- *   teamretro.com             "EasyRetro, Miro, Parabol, Retrium, ..."
- *                              -> 23, genuine -- and it lists ITSELF too
- *
- * Two of the three disqualifications were pure artifacts of prose like "export
- * to CSV, JSON". No threshold separates 8 noise tokens from 23 real ones, so
- * the count is not the signal and never was.
- *
- * The cost is asymmetric, which settles it. A false disqualification removes a
- * good find SILENTLY -- Nikhil never learns the product existed. A missed
- * disqualification just means he sees a crowded-category product and judges it
- * himself, with the names in front of him. So the alternatives are REPORTED in
- * the rationale and score nothing.
- *
- * This is also the symmetric half of the position C2 already took: if nothing
- * on a product's own site can establish that a problem is rare, then nothing on
- * it establishes the opposite either. C2 is now {1, 2} -- an honest range
- * rather than a wide one.
- */
 
 export type C2Result =
   | { kind: 'scored'; score: CriterionScore }
   | { kind: 'unscoreable'; reason: UnscoreableReason; detail: string };
 
-/** Score C2 for one crawl generation. `rows` must be one crawl_run_id. */
-export function scoreC2(rows: readonly EvidenceRow[], urlsRefused = 0): C2Result {
+/**
+ * Score C2 from a novelty judgement.
+ *
+ * `judgement` is null when the model could not be asked, declined, or cited a
+ * claim we never supplied. That is scored 1 -- "no evidence either way" -- and
+ * NEVER 0. An unverifiable judgement must not become an accusation, and a
+ * criterion-level unscoreable would be worse still: it makes scoreCandidate
+ * return three scores of four, which selection rejects as `incomplete_scores`,
+ * dropping the candidate silently.
+ */
+export function scoreC2(
+  rows: readonly EvidenceRow[],
+  judgement: NoveltyJudgement | null,
+  urlsRefused = 0,
+): C2Result {
   if (rows.length === 0) {
     return { kind: 'unscoreable', reason: 'no_evidence', detail: 'No evidence rows in this crawl generation.' };
   }
 
   const stated = findings(rows, PROBLEM_STATEMENT);
   const notStated = findings(rows, PROBLEM_STATEMENT_ABSENT);
-  const alternatives = findings(rows, NAMED_ALTERNATIVES);
-
-  if (stated.length + notStated.length + alternatives.length === 0) {
+  if (judgement === null && stated.length + notStated.length === 0) {
     return {
       kind: 'unscoreable',
       reason: 'no_claims_extracted',
       detail:
-        `${rows.length} evidence row(s) carry no c2_* observation, present or absent, so the rare-problem ` +
-        'pass did not run against this generation.',
+        `${rows.length} evidence row(s) carry no c2_* observation and no novelty judgement was obtained, ` +
+        'so there is nothing to score this criterion from.',
     };
   }
 
-  const named = alternatives.reduce(
-    (most, finding) => Math.max(most, typeof finding.value === 'number' ? finding.value : 0),
-    0,
-  );
   const stats = corpusStats(rows, urlsRefused);
-  const ceiling =
-    ` Rubric ${RUBRIC_VERSION} caps C2 at 2 and gives it no 0: nothing on a product's own site can ` +
-    'establish that a problem is rare, and nothing on it establishes the opposite either.';
-  const context =
-    named > 0
-      ? ` The site names ${named} existing alternative(s) it positions against. Reported, not scored: ` +
-        'measured against real sites that capture yields prose nouns ("CSV", "After") as often as products, ' +
-        'so it is context for a human rather than evidence for a number.'
-      : ' The site names no existing alternative it positions against.';
+  const cited = judgement === null ? [] : rows.filter((row) => row.id === judgement.evidence_id);
+  const quote = (j: NoveltyJudgement) => ` It rests on the product's own claim: "${j.cited_claim}". ${j.reason}`;
+  const by = (j: NoveltyJudgement) => ` Judged by ${j.model} under rubric ${RUBRIC_VERSION}.`;
 
-  // ---- 1: they never say what problem they solve. -------------------------
-  if (stated.length === 0) {
+  // ---- no usable judgement: 1, never 0. ------------------------------------
+  if (judgement === null || judgement.form === 'unsure') {
     return {
       kind: 'scored',
       score: criterionScore(
         'C2',
         1,
-        'NO EVIDENCE: the pages we were permitted to read never state the problem this product exists to ' +
-          'solve, so there is nothing to judge rarity against. An absence of evidence, not a mark against ' +
-          'the product.' +
-          context +
-          ceiling,
-        citeRows(notStated, 'inconclusive', 'missing problem-statement observation(s)'),
+        'NO EVIDENCE: novelty could not be established either way. Either no judgement was obtained, or the ' +
+          'judgement could not name prior art and could not identify a new kind of task. An absence of ' +
+          'evidence, not a mark against the product.',
+        citeRows(
+          cited.length > 0 ? cited.map((row) => ({ row, detail: '', value: null })) : stated.concat(notStated),
+          'inconclusive',
+          'unsettled novelty observation(s)',
+        ),
         stats,
       ),
     };
   }
 
-  // ---- 2: the ceiling. ----------------------------------------------------
+  const finding = { row: cited[0]!, detail: judgement.reason, value: judgement.prior_art };
+
+  // ---- 0: prior art exists, and it is named. -------------------------------
+  // Reachable again, unlike the crowdedness signal it replaces, because this
+  // rests on positive checkable evidence rather than on a pattern's silence.
+  // A reader can look up the named product and disagree in one glance.
+  if (judgement.form === 'established') {
+    return {
+      kind: 'scored',
+      score: criterionScore(
+        'C2',
+        0,
+        `CONTRADICTED: this is an established task, already done by ${judgement.prior_art ?? 'existing products'}. ` +
+          'D37 counts a problem as rare only when it fuses two common applications, introduces a new paradigm, ' +
+          'or solves a new type of task; doing an old task well is none of those, however narrow the niche.' +
+          quote(judgement) +
+          by(judgement),
+        citeRows([finding], 'contradicts', 'claim showing an established task'),
+        stats,
+      ),
+    };
+  }
+
+  // ---- 2: D37 form (1), a fusion of two established things. ----------------
+  if (judgement.form === 'fusion') {
+    return {
+      kind: 'scored',
+      score: criterionScore(
+        'C2',
+        2,
+        'PARTIALLY SUPPORTED: D37 form (1) -- the product combines two established applications into one. ' +
+          'Real novelty, but assembled from parts that already existed, which is why it scores below a new ' +
+          'paradigm or a new type of task.' +
+          quote(judgement) +
+          by(judgement),
+        citeRows([finding], 'supports', 'claim showing a fusion of two established applications'),
+        stats,
+      ),
+    };
+  }
+
+  // ---- 3: D37 forms (2) and (3). -------------------------------------------
   return {
     kind: 'scored',
     score: criterionScore(
       'C2',
-      2,
-      'PARTIALLY SUPPORTED: the site states the problem it exists to solve.' + context + ceiling,
-      citeRows(stated, 'supports', 'problem-statement observation(s)'),
+      3,
+      `CLEARLY SUPPORTED: D37 form ${judgement.form === 'new_paradigm' ? '(2), a new paradigm of thinking' : '(3), a new type of task'}, ` +
+        'and no existing product could be named that already does it.' +
+        quote(judgement) +
+        by(judgement),
+      citeRows([finding], 'supports', 'claim showing novelty in kind'),
       stats,
     ),
   };
