@@ -60,6 +60,45 @@ const CLEAR_SUPPORT_MIN_CLAIMS = 3;
 const CLEAR_SUPPORT_MIN_RATIO = 0.6;
 
 /**
+ * A PAGE DOES NOT CORROBORATE ITSELF IN ANOTHER LANGUAGE. Rubric 1.1.
+ *
+ * Found on the first real crawl. aircoalert.com serves the same landing page at
+ * /eu, /es, /gb, /fr, /de and /nl, so every claim on /eu was "echoed on" /es
+ * and /gb and scored a clean 3. Those are not two pages agreeing; they are one
+ * page in three languages. C1 asks whether what is advertised is TRUE, and a
+ * site repeating itself is not evidence of anything -- it is the same
+ * assertion, counted twice.
+ *
+ * The count floor above was written for exactly this risk ("one hit can be
+ * shared vocabulary") and does not help, because a locale duplicate produces
+ * three or thirty matches just as easily as one.
+ *
+ * So a corroboration is discounted when the corroborating URL is the claim's
+ * own page with a locale segment swapped. Same host, same path once a leading
+ * two-letter (or xx-yy) segment is removed. A genuinely different page --
+ * /blog/, /pricing, another subdomain -- is untouched, which is the case that
+ * carries real corroboration.
+ */
+function withoutLocale(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    const segments = url.pathname.split('/').filter(Boolean);
+    if (segments.length > 0 && /^[a-z]{2}(-[a-z]{2})?$/i.test(segments[0])) segments.shift();
+    return `${url.host}/${segments.join('/')}`;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `corroborating` is `claimPage` under a different locale prefix. */
+function isLocaleTwin(claimPage: string, corroborating: unknown): boolean {
+  if (typeof corroborating !== 'string' || corroborating === claimPage) return false;
+  const a = withoutLocale(claimPage);
+  const b = withoutLocale(corroborating);
+  return a !== null && a === b;
+}
+
+/**
  * The C1 score and its three-way status are 1:1 by construction -- every branch
  * of scoreC1() pairs them this way and nothing else can produce a C1 verdict.
  * This is the exact inverse, for readers (like the selection loader) that have
@@ -91,13 +130,17 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
   }
 
   const contradicted = findings(rows, CONTRADICTED);
-  const corroborated = findings(rows, CORROBORATED);
+  const allCorroborated = findings(rows, CORROBORATED);
+  // A claim echoed on a locale variant of the page it was made on is the same
+  // page speaking twice. Discounted, and counted, so the rationale can say so.
+  const corroborated = allCorroborated.filter((finding) => !isLocaleTwin(finding.row.url, finding.value));
+  const localeTwins = allCorroborated.length - corroborated.length;
   const unsubstantiated = findings(rows, UNSUBSTANTIATED);
-  const checkable = corroborated.length + unsubstantiated.length;
+  const checkable = corroborated.length + unsubstantiated.length + localeTwins;
 
   // No claims diff in the evidence at all. NOT "we checked and found nothing"
   // -- we never checked, and saying otherwise would invent a finding.
-  if (contradicted.length === 0 && checkable === 0) {
+  if (contradicted.length === 0 && checkable === 0 && allCorroborated.length === 0) {
     return {
       kind: 'unscoreable',
       reason: 'no_claims_extracted',
@@ -113,7 +156,15 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
     status: C1Status,
     rationale: string,
     citations: ScoreCitation[],
-  ): C1Result => ({ kind: 'scored', score: { ...criterionScore('C1', score, rationale, citations, stats), status } });
+  ): C1Result => ({
+    kind: 'scored',
+    score: { ...criterionScore('C1', score, rationale + twinClause, citations, stats), status },
+  });
+  const twinClause =
+    localeTwins > 0
+      ? ` ${localeTwins} further "corroboration(s)" were discounted as the same page under a different ` +
+        'locale prefix, which is one assertion counted twice rather than two pages agreeing.'
+      : '';
 
   // ---- CONTRADICTED. Disqualifying, and it cites what disproves the claim. --
   if (contradicted.length > 0) {
@@ -137,7 +188,7 @@ export function scoreC1(rows: readonly EvidenceRow[], urlsRefused = 0): C1Result
       `UNSUBSTANTIATED: none of the ${checkable} checkable claim(s) found corroborating OR contradicting ` +
         'evidence among the pages we were permitted to read. This is an absence of evidence, not evidence ' +
         'against the product, and it scores 1 ("no evidence either way") rather than 0.',
-      citeRows(unsubstantiated, 'inconclusive', 'unsubstantiated claim(s)'),
+      citeRows(unsubstantiated.length > 0 ? unsubstantiated : allCorroborated, 'inconclusive', 'unsettled claim(s)'),
     );
   }
 

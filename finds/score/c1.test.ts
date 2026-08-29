@@ -174,3 +174,47 @@ test('c1StatusIsExact: the status a score maps back to is the one scoreC1 set', 
     assert.equal(score.status, c1StatusFromScore(score.score), `score ${score.score} disagreed with its status`);
   }
 });
+
+/* -------------------------------------------------------------------------- */
+/* rubric 1.1: a page does not corroborate itself in another language          */
+/* -------------------------------------------------------------------------- */
+
+const echoedOn = (url: string) => ({ kind: 'c1_corroborated', detail: `echoed on ${url}`, value: url });
+
+test('a claim echoed on a locale variant of its own page is not corroboration', () => {
+  // aircoalert.com, from the first real crawl: the same landing page at /eu,
+  // /es and /gb, so every claim "corroborated" itself into a clean 3.
+  const result = scoreC1([
+    row('https://aircoalert.com/eu', 'homepage', [
+      echoedOn('https://aircoalert.com/es'),
+      echoedOn('https://aircoalert.com/gb'),
+      echoedOn('https://aircoalert.com/fr'),
+    ]),
+  ]);
+  const score = scored(result);
+  assert.equal(score.score, 1, 'one page in three languages is one assertion, not three');
+  assert.equal(score.status, 'unsubstantiated');
+  assert.match(score.rationale, /discounted as the same page under a different locale prefix/);
+});
+
+test('a genuinely different page still corroborates', () => {
+  const score = scored(
+    scoreC1([
+      row('https://teamretro.com/', 'homepage', [
+        echoedOn('https://teamretro.com/blog/'),
+        echoedOn('https://trust.teamretro.com/'),
+        echoedOn('https://teamretro.com/pricing'),
+      ]),
+    ]),
+  );
+  assert.equal(score.score, 3);
+  assert.equal(score.status, 'corroborated');
+});
+
+test('locale discounting does not turn corroboration into a contradiction', () => {
+  const score = scored(
+    scoreC1([row('https://x.com/en', 'homepage', [echoedOn('https://x.com/de'), echoedOn('https://x.com/docs')])]),
+  );
+  assert.notEqual(score.score, 0, 'a discounted echo is never evidence against the product');
+  assert.equal(score.score, 2);
+});

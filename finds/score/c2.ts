@@ -36,15 +36,36 @@ const PROBLEM_STATEMENT_ABSENT = 'c2_problem_statement_absent';
 const NAMED_ALTERNATIVES = 'c2_named_alternatives';
 
 /**
- * How many named incumbents make a category crowded.
+ * NAMED ALTERNATIVES NO LONGER SCORE. Rubric 1.1, and this is a retraction.
  *
- * Three, not two, on purpose. W4 captures the name with
- * `/(?:unlike|instead of|vs\.?)\s+([A-Z]...)/`, which can pick up a
- * capitalised word that is not a product at all, and one or two comparisons is
- * ordinary positioning rather than a crowded field. A false "not rare" costs
- * Nikhil a good find silently, so the threshold errs toward keeping it.
+ * Rubric 1.0 scored 0 -- disqualifying -- at three or more named alternatives,
+ * on the reasoning that a crowded category names its incumbents. The threshold
+ * was set at three rather than two precisely because W4's capture regex can
+ * pick up a capitalised word that is not a product. Measured against the first
+ * ten real crawls, three was nowhere near enough:
+ *
+ *   gmplus.io                 "Google, Bulk, Email, International, Phone,
+ *                              CSV, JSON, Coordinates"   -> 8, all noise
+ *   motiongraphicseditor.ai   "After, Now, Industry, After."
+ *                              -> 4, and "After" is half of "After Effects"
+ *   teamretro.com             "EasyRetro, Miro, Parabol, Retrium, ..."
+ *                              -> 23, genuine -- and it lists ITSELF too
+ *
+ * Two of the three disqualifications were pure artifacts of prose like "export
+ * to CSV, JSON". No threshold separates 8 noise tokens from 23 real ones, so
+ * the count is not the signal and never was.
+ *
+ * The cost is asymmetric, which settles it. A false disqualification removes a
+ * good find SILENTLY -- Nikhil never learns the product existed. A missed
+ * disqualification just means he sees a crowded-category product and judges it
+ * himself, with the names in front of him. So the alternatives are REPORTED in
+ * the rationale and score nothing.
+ *
+ * This is also the symmetric half of the position C2 already took: if nothing
+ * on a product's own site can establish that a problem is rare, then nothing on
+ * it establishes the opposite either. C2 is now {1, 2} -- an honest range
+ * rather than a wide one.
  */
-const CROWDED_CATEGORY = 3;
 
 export type C2Result =
   | { kind: 'scored'; score: CriterionScore }
@@ -76,23 +97,14 @@ export function scoreC2(rows: readonly EvidenceRow[], urlsRefused = 0): C2Result
   );
   const stats = corpusStats(rows, urlsRefused);
   const ceiling =
-    ' Rubric 1.0 caps C2 at 2: nothing on a product\'s own site can establish that a problem is rare, and ' +
-    'claiming 3 would assert evidence we do not hold.';
-
-  // ---- 0: they told us the category is crowded. ---------------------------
-  if (named >= CROWDED_CATEGORY) {
-    return {
-      kind: 'scored',
-      score: criterionScore(
-        'C2',
-        0,
-        `CONTRADICTED: the site positions itself against ${named} existing alternatives by name. A category ` +
-          'with that many incumbents is not a rare problem, and this is the site saying so in its own words.',
-        citeRows(alternatives, 'contradicts', 'named-alternative observation(s)'),
-        stats,
-      ),
-    };
-  }
+    ' Rubric 1.1 caps C2 at 2 and gives it no 0: nothing on a product\'s own site can establish that a ' +
+    'problem is rare, and nothing on it establishes the opposite either.';
+  const context =
+    named > 0
+      ? ` The site names ${named} existing alternative(s) it positions against. Reported, not scored: ` +
+        'measured against real sites that capture yields prose nouns ("CSV", "After") as often as products, ' +
+        'so it is context for a human rather than evidence for a number.'
+      : ' The site names no existing alternative it positions against.';
 
   // ---- 1: they never say what problem they solve. -------------------------
   if (stated.length === 0) {
@@ -104,6 +116,7 @@ export function scoreC2(rows: readonly EvidenceRow[], urlsRefused = 0): C2Result
         'NO EVIDENCE: the pages we were permitted to read never state the problem this product exists to ' +
           'solve, so there is nothing to judge rarity against. An absence of evidence, not a mark against ' +
           'the product.' +
+          context +
           ceiling,
         citeRows(notStated, 'inconclusive', 'missing problem-statement observation(s)'),
         stats,
@@ -117,9 +130,7 @@ export function scoreC2(rows: readonly EvidenceRow[], urlsRefused = 0): C2Result
     score: criterionScore(
       'C2',
       2,
-      `PARTIALLY SUPPORTED: the site states the problem it exists to solve and names ${named} existing ` +
-        `alternative(s), below the ${CROWDED_CATEGORY} that would mark a crowded category.` +
-        ceiling,
+      'PARTIALLY SUPPORTED: the site states the problem it exists to solve.' + context + ceiling,
       citeRows(stated, 'supports', 'problem-statement observation(s)'),
       stats,
     ),
