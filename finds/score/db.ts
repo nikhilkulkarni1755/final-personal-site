@@ -260,3 +260,66 @@ export async function loadSelectionCandidates(db: SupabaseClient): Promise<Selec
   }
   return out;
 }
+
+/* ========================================================================== */
+/* audit -- the invariants of what is already written                          */
+/* ========================================================================== */
+
+export interface AuditFinding {
+  ok: boolean;
+  what: string;
+  detail: string;
+}
+
+/**
+ * Check, against the live database, the properties every verdict is supposed to
+ * have. READ ONLY: it asserts, it never repairs. A repair here would hide the
+ * thing worth knowing.
+ *
+ * This exists because "I verified it in a terminal once" is a weaker claim than
+ * a command anyone can re-run, and because the two properties it checks are the
+ * ones the schema cannot enforce on its own today -- the same-candidate gap in
+ * finds_evidence (W3 has the fix merged, not yet applied) and the fact that a
+ * verdict's citations should all belong to the generation it scored.
+ */
+export async function auditVerdicts(db: SupabaseClient): Promise<AuditFinding[]> {
+  const [verdicts, citations, evidence] = await Promise.all([
+    db.from('finds_verdicts').select('id,candidate_id,evidence_run_id,criterion,score,rubric_version,scored_by'),
+    db.from('finds_verdict_evidence').select('verdict_id,evidence_id,candidate_id,evidence_run_id,stance'),
+    db.from('finds_evidence').select('id,candidate_id,crawl_run_id'),
+  ]);
+  fail('auditing verdicts', verdicts.error);
+  fail('auditing citations', citations.error);
+  fail('auditing evidence', evidence.error);
+
+  const v = verdicts.data ?? [];
+  const ve = citations.data ?? [];
+  const evById = new Map((evidence.data ?? []).map((e) => [e.id as string, e]));
+  const verdictById = new Map(v.map((x) => [x.id as string, x]));
+  const findings: AuditFinding[] = [];
+  const check = (ok: boolean, what: string, detail: string) => findings.push({ ok, what, detail });
+
+  const uncited = v.filter((x) => !ve.some((c) => c.verdict_id === x.id));
+  check(uncited.length === 0, 'every verdict cites evidence (D7)', `${uncited.length} uncited`);
+
+  const noVersion = v.filter((x) => !x.rubric_version);
+  check(noVersion.length === 0, 'every verdict names the rubric that produced it', `${noVersion.length} without one`);
+
+  const wrongRun = ve.filter((c) => verdictById.get(c.verdict_id as string)?.evidence_run_id !== c.evidence_run_id);
+  check(wrongRun.length === 0, "each citation carries its verdict's generation", `${wrongRun.length} mismatched`);
+
+  const strayEvidence = ve.filter((c) => {
+    const e = evById.get(c.evidence_id as string);
+    return !e || e.crawl_run_id !== c.evidence_run_id || e.candidate_id !== c.candidate_id;
+  });
+  check(
+    strayEvidence.length === 0,
+    'every cited row is in that generation, for that candidate',
+    `${strayEvidence.length} outside it`,
+  );
+
+  const scales = v.filter((x) => (x.score as number) < 0 || (x.score as number) > 3);
+  check(scales.length === 0, 'every score is inside 0-3', `${scales.length} outside`);
+
+  return findings;
+}

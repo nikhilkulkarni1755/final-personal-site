@@ -3,6 +3,7 @@
  *
  *   node finds/score/run.ts score [--dry-run]            score every crawled candidate
  *   node finds/score/run.ts select [DATE] [OUT.json]     pick the day's digest
+ *   node finds/score/run.ts audit                        check what is written
  *
  * `select` writes NOTHING. The digest tables are W6's, and W6 selects from
  * `finds_undigested_candidates` for exactly the reason this prints instead:
@@ -27,7 +28,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { buildVerdictWrite } from './persist.ts';
-import { candidatesToScore, getSupabaseClient, loadCandidateEvidence, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
+import { auditVerdicts, candidatesToScore, getSupabaseClient, loadCandidateEvidence, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
 import { toDigestSelection } from './digest.ts';
@@ -105,6 +106,15 @@ async function score(dryRun: boolean): Promise<number> {
   return 0;
 }
 
+/** Read only. Asserts the invariants of what is already written; repairs nothing. */
+async function audit(): Promise<number> {
+  const findings = await auditVerdicts(getSupabaseClient());
+  for (const f of findings) console.log(`${f.ok ? 'PASS ' : 'FAIL '} ${f.what} (${f.detail})`);
+  const failed = findings.filter((f) => !f.ok).length;
+  console.log(`\n${findings.length - failed}/${findings.length} invariants hold.`);
+  return failed === 0 ? 0 : 1;
+}
+
 async function select(date: string, outputPath?: string): Promise<number> {
   const selection = selectForDay(date, await loadSelectionCandidates(getSupabaseClient()));
   console.log(selection.summary);
@@ -141,11 +151,12 @@ const dryRun = args.includes('--dry-run');
 const [verb, argument, outputPath] = args.filter((a) => a !== '--dry-run');
 const today = new Date().toISOString().slice(0, 10);
 
-if (verb !== 'score' && verb !== 'select') {
+if (verb !== 'score' && verb !== 'select' && verb !== 'audit') {
   console.error(
-    'usage: node finds/score/run.ts score [--dry-run] | select [YYYY-MM-DD] [digest-input.json]',
+    'usage: node finds/score/run.ts score [--dry-run] | select [YYYY-MM-DD] [out.json] | audit',
   );
   process.exit(2);
 }
 
-process.exitCode = verb === 'score' ? await score(dryRun) : await select(argument ?? today, outputPath);
+process.exitCode =
+  verb === 'score' ? await score(dryRun) : verb === 'audit' ? await audit() : await select(argument ?? today, outputPath);

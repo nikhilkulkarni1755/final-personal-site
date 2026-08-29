@@ -33,6 +33,7 @@
     "run:prove": "bash finds/run/prove-daily.sh",
     "score:prove-pipeline": "bash finds/score/prove-pipeline.sh",
     "score:run": "node finds/score/run.ts",
+    "score:audit": "node finds/score/run.ts audit",
     "verify:daily": "node finds/verify/daily.ts",
     "publish:test": "node --test finds/publish/snapshot.test.ts",
     "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
