@@ -108,6 +108,14 @@ export type UnscoreableReason =
   | 'not_evaluable'
   /** The gate denied every URL, so there is no evidence generation to score. */
   | 'gate_denied'
+  /**
+   * The pages were fetched, but the landing page came back as an unrendered
+   * JS shell (W4's `spa_shell_not_rendered`, D24 keeps rendering OFF), so
+   * there was no text to extract claims from. We could not READ the site.
+   * Distinct from every other reason here: this is not the product being
+   * quiet, it is us being unable to see it.
+   */
+  | 'not_rendered'
   /** The candidate has not been crawled yet. Not a finding, just a queue state. */
   | 'no_evidence'
   /** Evidence exists, but W4 recorded no claims diff in it, so C1 has no

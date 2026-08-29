@@ -166,3 +166,68 @@ test('the generation filter is the single choke point, so this cannot regress qu
   });
   assert.equal(outcome.kind === 'unscoreable' && outcome.reason, 'no_evidence');
 });
+
+/* -------------------------------------------------------------------------- */
+/* D24: rendering is off, so a JS app comes back as an empty shell             */
+/* -------------------------------------------------------------------------- */
+
+/** What W4 actually records over an unrendered shell: the shell marker, and a
+ *  full set of C2/C3/C4 ABSENCES, because every pattern misses on empty text. */
+const shellWithAbsences: EvidenceObservation[] = [
+  { kind: 'spa_shell_not_rendered', detail: 'a plain GET returned 41 characters of text', value: 41 },
+  { kind: 'c2_problem_statement_absent', detail: 'no such statement', value: false },
+  { kind: 'c2_named_alternatives', detail: 'names none', value: 0 },
+  { kind: 'c3_free_tier_absent', detail: 'none found', value: false },
+  { kind: 'c3_no_card_required_absent', detail: 'none found', value: false },
+  { kind: 'c3_pricing_page', detail: 'no pricing page was permitted', value: null },
+  { kind: 'c4_api_absent', detail: 'not mentioned', value: false },
+  { kind: 'c4_llms_txt_absent', detail: 'never reachable', value: null },
+];
+
+test('a site we could not read is not scored at all, in either direction', () => {
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: RUN,
+    rows: [row(shellWithAbsences)],
+  });
+  assert.equal(outcome.kind, 'unscoreable');
+  assert.equal(outcome.kind === 'unscoreable' && outcome.reason, 'not_rendered');
+});
+
+test('the absences over an empty shell must NOT become three verdicts of 1', () => {
+  // The failure this guard exists to prevent: C2/C3/C4 pattern-match over the
+  // corpus and record every miss explicitly, so without the guard this evidence
+  // yields "no evidence either way" for a free tier, an API and a problem
+  // statement -- three findings about a page we never received.
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: RUN,
+    rows: [row(shellWithAbsences)],
+  });
+  assert.notEqual(outcome.kind, 'scored', 'no verdict may be written about an unreadable page');
+});
+
+test('a shell that still yielded claims IS scored -- the guard is about readability, not the marker', () => {
+  // A page can be flagged as a shell and still have had claims extracted (a
+  // partial render, or a sub-page that carried the text). Then C1 has a real
+  // left-hand side and there is something honest to score.
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: RUN,
+    rows: [row([...shellWithAbsences, { kind: 'c1_corroborated', detail: 'a claim is echoed', value: 'https://x/docs' }])],
+  });
+  assert.equal(outcome.kind, 'scored');
+});
+
+test('a readable page with genuine absences still scores them -- the guard is not a blanket', () => {
+  const outcome = scoreCandidate({
+    candidate_id: CANDIDATE,
+    candidate_status: 'crawled',
+    evidence_run_id: RUN,
+    rows: [row(shellWithAbsences.filter((o) => o.kind !== 'spa_shell_not_rendered').concat(everyPass[0]))],
+  });
+  assert.equal(outcome.kind, 'scored');
+});
