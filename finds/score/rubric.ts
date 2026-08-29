@@ -21,7 +21,7 @@ import type { CorpusStats, CriterionScore, ScoreCitation } from './types.ts';
  * wording or refactors -- a version that changes when nothing changed is
  * exactly as useless as one that does not change when something did.
  */
-export const RUBRIC_VERSION = '1.0';
+export const RUBRIC_VERSION = '1.1';
 
 /* -------------------------------------------------------------------------- */
 /* looking at a crawl generation                                               */

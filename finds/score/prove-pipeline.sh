@@ -185,8 +185,9 @@ psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
          'every rationale must state the gate refusal it could not see in evidence';
   ASSERT (SELECT bool_and(scored_by = 'rubric') FROM finds_verdicts),
          'scored_by says WHO scored it';
-  ASSERT (SELECT bool_and(rubric_version = '1.0') FROM finds_verdicts),
-         'rubric_version says under WHICH RULES, in its own column';
+  ASSERT (SELECT count(DISTINCT rubric_version) FROM finds_verdicts) = 1
+         AND (SELECT bool_and(rubric_version ~ '^[0-9]+\\.[0-9]+$') FROM finds_verdicts),
+         'rubric_version says under WHICH RULES, in its own column, and one run writes one revision';
   ASSERT (SELECT count(*) FROM finds_verdict_evidence WHERE stance = 'inconclusive') > 0,
          'a score of 1 must cite the rows that settled nothing AS inconclusive';
   ASSERT (SELECT bool_and(e.crawl_run_id = v.evidence_run_id)
@@ -244,7 +245,8 @@ INPUT=$(q "
   SELECT json_build_object('candidate_id','$CID','candidate_status','crawled','evidence_run_id','$RUN',
     'urls_refused',1,'rows',(SELECT json_agg(e) FROM finds_evidence e WHERE e.candidate_id='$CID'));")
 PAYLOAD=$(node finds/score/offline.ts score <<<"$INPUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).payload.p_verdicts)))')
-q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, '1.0', \$w5\$$PAYLOAD\$w5\$::jsonb);" >/dev/null
+RUBRIC=$(node finds/score/offline.ts score <<<"$INPUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).payload.p_rubric_version))')
+q "SELECT finds_write_verdict('$CID'::uuid, '$RUN'::uuid, '$RUBRIC', \$w5\$$PAYLOAD\$w5\$::jsonb);" >/dev/null
 psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
   ASSERT (SELECT count(*) FROM finds_verdicts) = 8, 're-scoring must update in place, not duplicate';
 END \$\$;" >/dev/null

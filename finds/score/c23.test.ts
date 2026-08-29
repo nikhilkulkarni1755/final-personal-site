@@ -56,15 +56,22 @@ test('C2 has no 3 under rubric 1.0, and the rationale says why', () => {
   assert.match(score.rationale, /nothing on a product's own site can establish that a problem is rare/);
 });
 
-test('a site naming three incumbents has told us the category is crowded', () => {
-  const score = scored(scoreC2([row([problemStated, alternatives(3)])]));
-  assert.equal(score.score, 0);
-  assert.deepEqual(score.citations.map((c) => c.stance), ['contradicts']);
-  assert.match(score.rationale, /in its own words/);
+test('named alternatives are reported, never scored -- rubric 1.1 gives C2 no 0', () => {
+  // Retracted in 1.1 against real data: of three sites this disqualified, two
+  // were prose nouns ("CSV", "JSON", "After") caught by W4's capture regex, and
+  // a false disqualification removes a good find silently.
+  for (const n of [3, 8, 23]) {
+    const score = scored(scoreC2([row([problemStated, alternatives(n)])]));
+    assert.equal(score.score, 2, `${n} named alternatives must not disqualify`);
+    assert.match(score.rationale, new RegExp(`names ${n} existing alternative`));
+    assert.match(score.rationale, /Reported, not scored/);
+  }
 });
 
-test('two named alternatives is ordinary positioning, not a crowded category', () => {
-  assert.equal(scored(scoreC2([row([problemStated, alternatives(2)])])).score, 2);
+test('C2 has no 0 and no 3: the site cannot prove rarity, nor the opposite', () => {
+  const scores = [0, 2, 3, 23].map((n) => scored(scoreC2([row([problemStated, alternatives(n)])])).score);
+  assert.deepEqual([...new Set(scores)], [2]);
+  assert.equal(scored(scoreC2([row([problemNotStated, alternatives(9)])])).score, 1);
 });
 
 test('a site that never states its problem scores 1, and cites the absence', () => {
