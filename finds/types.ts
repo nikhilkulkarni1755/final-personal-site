@@ -226,7 +226,10 @@ export interface EvidenceRow {
   candidate_id: string;
   /**
    * The gate decision that permitted this fetch. The FK is composite on
-   * (id, allowed), so evidence from a DENIED verdict cannot be inserted at all.
+   * (id, candidate_id, allowed), so the verdict must be an ALLOW *and* must
+   * belong to this candidate. Filing a page under a candidate whose gate never
+   * covered it is D23's shape one table over, and it is a foreign-key
+   * violation.
    */
   crawl_verdict_id: string;
   /** Groups one crawl pass. Verdicts record which generation they scored. */
