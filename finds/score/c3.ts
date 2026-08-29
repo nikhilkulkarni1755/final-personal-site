@@ -9,9 +9,31 @@
  * (finds/verify/signals.ts `collectC3()`).
  *
  *     0  a waitlist or invite gate, OR two independent barriers
- *     3  two or more open-access signals AND no barrier at all
- *     2  some open-access signal, at most one barrier
- *     1  we found neither, so we could not tell
+ *     3  no barrier at all, AND an explicit way in
+ *     2  no barrier at all              <- "it is just a website that works"
+ *     2  one barrier, but an explicit way in
+ *     1  one barrier and nothing explicit
+ *
+ * RUBRIC 1.2 CORRECTS A POLARITY ERROR, and it is worth stating what was wrong
+ * because the mistake is easy to make again. Until 1.1 this criterion required
+ * open-access SIGNALS -- a free tier, "no credit card", a readable pricing page
+ * -- before it would score above 1. Those are markers of being a COMPANY, not
+ * of being usable. A one-person stock tracker and a GitHub project scored 1
+ * while being trivially usable, because neither has a pricing page.
+ *
+ * "Usable by any person" is the DEFAULT. Barriers subtract from it. A site with
+ * nothing in the way is usable, whether or not anyone published a price list.
+ *
+ * So a readable pricing page is no longer a way in, and its ABSENCE is no
+ * longer a penalty: for a product with nothing to sell there is nothing to
+ * price, and reading that as missing evidence is what inverted the criterion.
+ * It is recorded and scores nothing.
+ *
+ * And absence of a BARRIER is positive evidence here, unlike absence of
+ * corroboration in C1. We went looking for a waitlist, a terminal requirement,
+ * a platform restriction and a demand for your own API key, and found none.
+ * That is a finding about the product, so those observations are cited as
+ * SUPPORTING rather than as inconclusive.
  *
  * A WAITLIST IS A 0, not a low 1. "Join the waitlist" is not weak evidence of
  * usability -- it is direct evidence that no person can use it today, which is
@@ -29,28 +51,32 @@ import type { EvidenceRow } from '../types.ts';
 import type { CriterionScore, UnscoreableReason } from './types.ts';
 import { citeRows, corpusStats, criterionScore, findings, mergeCitations } from './rubric.ts';
 
-/** Ways in. */
+/** Ways in. An explicit, published invitation to start without paying. */
 const FREE_TIER = 'c3_free_tier';
 const NO_CARD = 'c3_no_card_required';
+/** Recorded, never scored. Neither its presence nor its absence is evidence. */
 const PRICING_PAGE = 'c3_pricing_page';
 
 /** Ways barred. */
 const WAITLIST = 'c3_waitlist';
 const BARRIERS = ['c3_terminal_required', 'c3_platform_restriction', 'c3_own_key_required'] as const;
 
-const ABSENT = [
-  'c3_free_tier_absent',
-  'c3_no_card_required_absent',
+/**
+ * We looked for a wall and there was none. Positive evidence of accessibility,
+ * and what a score of 2 cites when a product simply has nothing in the way.
+ */
+const BARRIERS_ABSENT = [
   'c3_waitlist_absent',
   'c3_terminal_required_absent',
   'c3_platform_restriction_absent',
   'c3_own_key_required_absent',
 ] as const;
 
+/** Absence of a way IN is genuinely inconclusive -- it settles nothing. */
+const WAYS_IN_ABSENT = ['c3_free_tier_absent', 'c3_no_card_required_absent'] as const;
+
 /** Two independent barriers is a product for a narrow audience. */
 const TOO_MANY_BARRIERS = 2;
-/** Two ways in, and nothing in the way, is what "any person" looks like. */
-const CLEARLY_OPEN = 2;
 
 export type C3Result =
   | { kind: 'scored'; score: CriterionScore }
@@ -64,15 +90,18 @@ export function scoreC3(rows: readonly EvidenceRow[], urlsRefused = 0): C3Result
 
   const waitlist = findings(rows, WAITLIST);
   const barriers = findings(rows, ...BARRIERS);
-  // W4 emits c3_pricing_page either way, carrying the URL or null, so a
-  // readable pricing page counts as a way in and an unreadable one does not.
-  const open = [
-    ...findings(rows, FREE_TIER, NO_CARD),
-    ...findings(rows, PRICING_PAGE).filter((finding) => finding.value !== null),
-  ];
-  const absent = findings(rows, ...ABSENT);
+  // Ways IN are explicit invitations only. The pricing page is read for
+  // neither side now -- see the header.
+  const open = findings(rows, FREE_TIER, NO_CARD);
+  const barriersAbsent = findings(rows, ...BARRIERS_ABSENT);
+  const waysInAbsent = findings(rows, ...WAYS_IN_ABSENT);
+  const pricing = findings(rows, PRICING_PAGE);
 
-  if (waitlist.length + barriers.length + open.length + absent.length + findings(rows, PRICING_PAGE).length === 0) {
+  if (
+    waitlist.length + barriers.length + open.length + barriersAbsent.length +
+      waysInAbsent.length + pricing.length ===
+    0
+  ) {
     return {
       kind: 'unscoreable',
       reason: 'no_claims_extracted',
@@ -87,6 +116,10 @@ export function scoreC3(rows: readonly EvidenceRow[], urlsRefused = 0): C3Result
     kind: 'scored',
     score: criterionScore('C3', score, rationale, citations, stats),
   });
+  // "We looked for a wall and found none" is the evidence for an unobstructed
+  // product. When W4 recorded no such absence, fall back to whatever c3 rows
+  // exist so a score still cites something real rather than failing to write.
+  const clearPath = barriersAbsent.length > 0 ? barriersAbsent : [...waysInAbsent, ...pricing];
 
   // ---- 0: nobody can use it, or almost nobody. ----------------------------
   if (waitlist.length > 0) {
@@ -107,23 +140,38 @@ export function scoreC3(rows: readonly EvidenceRow[], urlsRefused = 0): C3Result
     );
   }
 
-  // ---- 3: open, with nothing in the way. ----------------------------------
-  if (open.length >= CLEARLY_OPEN && barriers.length === 0) {
+  // ---- 3: nothing in the way, and an explicit invitation to start. --------
+  if (barriers.length === 0 && open.length > 0) {
     return done(
       3,
-      `CLEARLY SUPPORTED: ${open.length} independent open-access signals (a free tier, no card required, a ` +
-        'readable pricing page) and not one barrier found across the pages we read.',
-      citeRows(open, 'supports', 'open-access observation(s)'),
+      `CLEARLY SUPPORTED: not one barrier found across the pages we read, and ${open.length} explicit ` +
+        'open-access signal(s) -- a free tier, or no card required. Nothing stands between a visitor and ' +
+        'the product, and the site says so itself.',
+      mergeCitations(
+        citeRows(open, 'supports', 'open-access observation(s)'),
+        citeRows(barriersAbsent, 'supports', 'barrier(s) looked for and not found'),
+      ),
     );
   }
 
-  // ---- 2: a way in, and at most one thing in the way. ---------------------
+  // ---- 2: nothing in the way. That is the criterion, met. -----------------
+  if (barriers.length === 0) {
+    return done(
+      2,
+      'SUPPORTED: no waitlist, no terminal requirement, no platform restriction and no demand for your own ' +
+        'API key. Nothing published invites you in either, but "usable by any person" is the default and ' +
+        'nothing here subtracts from it. A product with no pricing page most often has nothing to sell.',
+      citeRows(clearPath, 'supports', 'barrier(s) looked for and not found'),
+    );
+  }
+
+  // ---- 2: one barrier, but a real way in past it. -------------------------
   if (open.length > 0) {
     return done(
       2,
-      `PARTIALLY SUPPORTED: ${open.length} open-access signal(s) against ${barriers.length} barrier(s). ` +
-        'One barrier is not disqualifying -- a CLI-first tool with a real free tier is still a find, and ' +
-        'the barrier is named here so he can judge it himself.',
+      `SUPPORTED: ${open.length} open-access signal(s) against ${barriers.length} barrier(s). One barrier is ` +
+        'not disqualifying -- a CLI-first tool with a real free tier is still a find -- and the barrier is ' +
+        'cited here as contradicting so he can judge it himself.',
       mergeCitations(
         citeRows(open, 'supports', 'open-access observation(s)'),
         citeRows(barriers, 'contradicts', 'access-barrier observation(s)'),
@@ -131,15 +179,15 @@ export function scoreC3(rows: readonly EvidenceRow[], urlsRefused = 0): C3Result
     );
   }
 
-  // ---- 1: we could not tell. ----------------------------------------------
+  // ---- 1: one barrier, and nothing inviting anyone past it. --------------
   return done(
     1,
-    `NO EVIDENCE: no free tier, no "no credit card", no readable pricing page, and ${barriers.length} ` +
-      'barrier(s) found. Nothing we were permitted to read says what it costs or who can use it, so this ' +
-      'is an absence of evidence rather than a mark against the product.',
+    `BARELY EVIDENCED: ${barriers.length} barrier stands between a general visitor and this product, and ` +
+      'nothing published offers a way past it. Not disqualifying on its own, but not "usable by any person" ' +
+      'either, and there is nothing on the other side of the scale.',
     mergeCitations(
-      citeRows(absent, 'inconclusive', 'absent access-signal observation(s)'),
       citeRows(barriers, 'contradicts', 'access-barrier observation(s)'),
+      citeRows(waysInAbsent, 'inconclusive', 'absent open-access observation(s)'),
     ),
   );
 }

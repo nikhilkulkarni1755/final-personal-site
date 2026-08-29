@@ -118,10 +118,33 @@ test('two independent barriers is not "usable by any person"', () => {
   assert.match(score.rationale, /2 independent barriers/);
 });
 
-test('one barrier is not disqualifying, and is named so he can judge it', () => {
+/* -- rubric 1.2: usability is the DEFAULT, barriers subtract ---------------- */
+
+test('nothing in the way scores 2, even with nothing published inviting you in', () => {
+  // The inversion 1.2 fixes. AircoAlert and Thuki are trivially usable and
+  // scored 1 under 1.1 purely for having no pricing page.
+  const score = scored(scoreC3([row([...c3Absent, noPricing])]));
+  assert.equal(score.score, 2);
+  assert.match(score.rationale, /"usable by any person" is the default/);
+  assert.deepEqual(new Set(score.citations.map((c) => c.stance)), new Set(['supports']),
+    'a barrier looked for and not found is positive evidence, not an inconclusive one');
+});
+
+test('a missing pricing page is not a penalty, and a present one is not a credit', () => {
+  const withPricing = scored(scoreC3([row([...c3Absent, pricing])]));
+  const without = scored(scoreC3([row([...c3Absent, noPricing])]));
+  assert.equal(withPricing.score, without.score, 'the pricing page must move nothing');
+  assert.equal(withPricing.score, 2);
+});
+
+test('nothing in the way plus an explicit way in scores 3', () => {
+  assert.equal(scored(scoreC3([row([...c3Absent, freeTier])])).score, 3);
+  assert.equal(scored(scoreC3([row([freeTier, noCard, pricing])])).score, 3);
+});
+
+test('one barrier with a way past it is still supported', () => {
   const score = scored(scoreC3([row([freeTier, noCard]), row([terminal], 'https://x/docs')]));
   assert.equal(score.score, 2);
-  assert.match(score.rationale, /still a find/);
   assert.deepEqual(
     new Set(score.citations.map((c) => c.stance)),
     new Set(['supports', 'contradicts']),
@@ -129,20 +152,10 @@ test('one barrier is not disqualifying, and is named so he can judge it', () => 
   );
 });
 
-test('open on two counts with nothing in the way scores 3', () => {
-  assert.equal(scored(scoreC3([row([freeTier, noCard, pricing])])).score, 3);
-});
-
-test('an unreadable pricing page is not a way in', () => {
-  // free tier alone (1 open signal) with no barriers: supported, not clearly.
-  assert.equal(scored(scoreC3([row([freeTier, noPricing])])).score, 2);
-});
-
-test('nothing found either way scores 1 and cites the absences', () => {
-  const score = scored(scoreC3([row([...c3Absent, noPricing])]));
+test('one barrier and nothing published past it scores 1', () => {
+  const score = scored(scoreC3([row([terminal, { kind: 'c3_free_tier_absent', detail: 'none', value: false }])]));
   assert.equal(score.score, 1);
-  assert.deepEqual(new Set(score.citations.map((c) => c.stance)), new Set(['inconclusive']));
-  assert.match(score.rationale, /absence of evidence rather than a mark against the product/);
+  assert.match(score.rationale, /nothing on the other side of the scale/);
 });
 
 test('one evidence row cited for two reasons is cited once, with the stronger stance', () => {
@@ -151,7 +164,6 @@ test('one evidence row cited for two reasons is cited once, with the stronger st
   const score = scored(scoreC3([row([freeTier, terminal])]));
   assert.equal(score.citations.length, 1);
   assert.equal(score.citations[0].stance, 'contradicts');
-  assert.match(score.citations[0].note, /open-access.*access-barrier/);
 });
 
 test('C3 with no c3_* observation at all is unscoreable', () => {
@@ -165,6 +177,6 @@ test('signals spread across pages are gathered, and the corpus is stated', () =>
     scoreC3([row([freeTier], 'https://x/'), row([noCard], 'https://x/pricing'), row([pricing], 'https://x/docs')], 2),
   );
   assert.equal(score.score, 3);
-  assert.equal(score.citations.length, 3);
+  assert.equal(score.citations.length, 2, 'the pricing-page row is not cited: it is evidence of nothing');
   assert.match(score.rationale, /3 page\(s\) fetched \(3 answered 2xx\), 2 URL\(s\) refused/);
 });
