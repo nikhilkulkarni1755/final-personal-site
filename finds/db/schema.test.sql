@@ -838,6 +838,115 @@ BEGIN
     END;
 END $$;
 
+-- --------------------------------------------------------------------------
+-- finds_hitl_pending: one store for the asker and the poller (D34)
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    cand     UUID;
+    run      UUID;
+    ev       UUID;
+    unscored UUID := gen_random_uuid();
+    qid      UUID := gen_random_uuid();
+    note     TEXT;
+    n        INTEGER;
+BEGIN
+    SET CONSTRAINTS ALL DEFERRED;
+    SELECT id INTO cand FROM finds_candidates ORDER BY name LIMIT 1;
+    SELECT id, crawl_run_id INTO ev, run FROM finds_evidence WHERE candidate_id = cand LIMIT 1;
+    PERFORM finds_write_verdict(cand, run, 'test/1', jsonb_build_array(
+        jsonb_build_object('criterion','C1','score',3,'rationale','r','scored_by','t',
+            'citations', jsonb_build_array(jsonb_build_object('evidence_id', ev)))));
+    SET CONSTRAINTS ALL IMMEDIATE;
+
+    -- the id must come from the caller: it is already in the callback_data, so
+    -- a server-generated one would produce a row no tap could ever match
+    BEGIN
+        INSERT INTO finds_hitl_pending (chat_id, sent_message_id, prompt)
+        VALUES ('12345', 1, 'Publish this?');
+        RAISE EXCEPTION 'a pending question was accepted with no caller-supplied id';
+    EXCEPTION WHEN not_null_violation THEN NULL;
+    END;
+
+    -- a plain ask carries no approval payload
+    INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt)
+    VALUES (gen_random_uuid(), '12345', 10, 'Which source next?');
+
+    -- an approval ask about a generation that was never scored cannot even be
+    -- ASKED -- one layer earlier than finds_approvals catches it
+    BEGIN
+        INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt, options, kind,
+            approval_candidate_id, approval_evidence_run_id, approval_criterion, approve_option_index)
+        VALUES (gen_random_uuid(), '12345', 11, 'Publish?',
+                '[{"label":"Publish"},{"label":"Skip"}]'::jsonb, 'approval',
+                cand, unscored, 'C1', 0);
+        RAISE EXCEPTION 'a question was asked about a never-scored generation';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- D32 makes the tap the only thing that can approve, so the approving
+    -- button has to exist. An index past the end of the list is a find he
+    -- could never say yes to, failing as a question that never resolves.
+    BEGIN
+        INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt, options, kind,
+            approval_candidate_id, approval_evidence_run_id, approval_criterion, approve_option_index)
+        VALUES (gen_random_uuid(), '12345', 12, 'Publish?',
+                '[{"label":"Publish"}]'::jsonb, 'approval', cand, run, 'C1', 3);
+        RAISE EXCEPTION 'an approve index past the end of the options was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- ...and an approval ask with no buttons at all is the same defect
+    BEGIN
+        INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt, kind,
+            approval_candidate_id, approval_evidence_run_id, approval_criterion, approve_option_index)
+        VALUES (gen_random_uuid(), '12345', 13, 'Publish?', 'approval', cand, run, 'C1', 0);
+        RAISE EXCEPTION 'an approval question with no options was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- a half-filled approval payload is refused
+    BEGIN
+        INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt, options, kind,
+            approval_candidate_id, approval_criterion, approve_option_index)
+        VALUES (gen_random_uuid(), '12345', 14, 'Publish?',
+                '[{"label":"Publish"}]'::jsonb, 'approval', cand, 'C1', 0);
+        RAISE EXCEPTION 'a partial approval payload was accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- the real approval ask
+    INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt, context, options, kind,
+        approval_candidate_id, approval_evidence_run_id, approval_criterion, approve_option_index)
+    VALUES (qid, '12345', 20, 'Publish this find?', 'Acme -- C1 3, C3 1',
+            '[{"label":"Publish"},{"label":"Skip"}]'::jsonb, 'approval',
+            cand, run, 'C1', 0);
+
+    -- sent_message_id is a per-chat counter, so the chat is part of the key
+    BEGIN
+        INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt)
+        VALUES (gen_random_uuid(), '12345', 20, 'A different question');
+        RAISE EXCEPTION 'two pending questions claimed one message in one chat';
+    EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+    -- ...but the same counter value in ANOTHER chat is a different message
+    INSERT INTO finds_hitl_pending (id, chat_id, sent_message_id, prompt)
+    VALUES (gen_random_uuid(), '99999', 20, 'Same id, other chat');
+
+    -- D32: free text is CAPTURED against the pending question, never acted on.
+    -- This is a work queue, so unlike finds_approvals it really does UPDATE.
+    UPDATE finds_hitl_pending SET draft_note = 'Solved a problem I actually had.'
+     WHERE id = qid;
+    SELECT draft_note INTO note FROM finds_hitl_pending WHERE id = qid;
+    ASSERT note = 'Solved a problem I actually had.', 'the draft note was not captured';
+
+    -- and answering deletes the row: "is there a row?" is the open/closed test,
+    -- with no resolved_at flag for a reader to forget
+    DELETE FROM finds_hitl_pending WHERE id = qid;
+    SELECT count(*) INTO n FROM finds_hitl_pending WHERE id = qid;
+    ASSERT n = 0, 'an answered question was not removable';
+END $$;
+
 ROLLBACK;
 
 -- Proof that the transaction above left nothing behind.
