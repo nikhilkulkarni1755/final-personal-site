@@ -17,10 +17,19 @@
  * What is still true, and worth keeping precise:
  *   - `scoreC2` itself is pure. Given the same judgement it returns the same
  *     score, rationale and citation, forever.
- *   - The JUDGEMENT is not reproducible. It comes from a model (novelty.ts),
- *     and re-running may return a different form, prior art, or cited claim.
- *   - So a C2 re-score may move where a C1/C3/C4 re-score may not, and
- *     `finds_verdicts.scored_by` carries the model id for exactly this reason:
+ *   - The JUDGEMENT is not reproducible in principle. It comes from a model
+ *     (novelty.ts), so nothing guarantees two runs agree.
+ *   - MEASURED, four passes over nine real candidates: the SCORE was stable
+ *     every time -- 9/9 form and 9/9 C2 score, under both the old question and
+ *     the current one. What moved was the JUSTIFICATION: the cited claim was
+ *     7/9 stable under the old question and 9/9 under the current one, and the
+ *     wording and ordering of the named products still varies run to run.
+ *   - So the honest statement is not "the score may move" but "the score has
+ *     been stable and the evidence recorded for it has not been". That matters
+ *     for D7 specifically: two runs can put the same number on record against
+ *     differently-worded justification. Do not read this as a guarantee -- it
+ *     is a measurement on nine candidates, not a property of the design.
+ *   - `finds_verdicts.scored_by` carries the model id for exactly this reason:
  *     it is the only criterion where "who scored it" is not "the rubric".
  *
  * This is the cost D38 accepted knowingly. It is bounded to one criterion by
