@@ -66,21 +66,25 @@ export async function gatedFetch(url: string, runState: RunState, options: Gated
   if (!decision.allowed) return { kind: 'refused', url, decision };
 
   const page = decision.page;
-  if (!page) {
+
+  if (page.kind === 'not_fetched') {
     // No second request to fall back on -- that fallback WAS the defect. A
-    // gate that allows a URL without handing back what it read leaves W4 with
-    // nothing to record, and D6 says that is reported, not worked around.
+    // gate that allows a URL without fetching it leaves W4 nothing to record,
+    // and D6 says that is reported, not worked around.
     return {
       kind: 'error',
       url,
       decision,
       error:
-        `The gate allowed ${url} but returned no response body. W4 does not fetch it a second time: ` +
-        `that doubled every request on the wire (D21/D22). This build of the gate is older than the ` +
-        `handover contract.`,
+        `The gate allowed ${url} but did not fetch it. W4 does not fetch it a second time: ` +
+        `that doubled every request on the wire (D21/D22).`,
       fetched_at: decision.decided_at,
       elapsed_ms: 0,
     };
+  }
+
+  if (page.kind === 'error') {
+    return { kind: 'error', url, decision, error: page.error, fetched_at: page.fetched_at, elapsed_ms: page.elapsed_ms };
   }
 
   // R2 §3.6: a page-level refusal denies the whole origin for the rest of this
@@ -102,8 +106,8 @@ export async function gatedFetch(url: string, runState: RunState, options: Gated
     final_url: page.final_url,
     http_status: page.http_status,
     content_type: page.content_type,
-    body: page.body_read ? page.body : '',
-    content_sha256: page.sha256 ?? '',
+    body: page.body,
+    content_sha256: page.content_sha256,
     truncated: page.truncated,
     fetched_at: page.fetched_at,
     elapsed_ms: page.elapsed_ms,

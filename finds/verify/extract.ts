@@ -96,15 +96,24 @@ function firstMatch(html: string, pattern: RegExp): string | null {
 
 export function parsePage(html: string): ParsedPage {
   const body = html.replace(STRIPPED_ELEMENTS, ' ');
+  // Anchors come from the WHOLE document, because the nav is where a site
+  // links its own /pricing and /docs -- stripping chrome from link discovery
+  // once cut a crawl from twelve pages to four. Everything that becomes a
+  // CLAIM comes from the content region only: the first production run
+  // recorded GitHub's "Navigation Menu", "Latest commit" and "Folders and
+  // files" as things a maker's project asserts about itself. That is D23's
+  // error one layer down -- the landlord's words attributed to the tenant --
+  // and on a shared host the chrome IS most of the page.
+  const content = body.replace(CHROME_ELEMENTS, ' ');
 
   const headings: Heading[] = [];
-  for (const match of body.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)) {
+  for (const match of content.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)) {
     const text = toText(match[2]!);
     if (text) headings.push({ level: Number(match[1]), text });
   }
 
   const listItems: string[] = [];
-  for (const match of body.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)) {
+  for (const match of content.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)) {
     const text = toText(match[1]!);
     if (text) listItems.push(text);
   }
@@ -122,7 +131,7 @@ export function parsePage(html: string): ParsedPage {
     headings,
     listItems,
     anchors,
-    text: toText(body.replace(CHROME_ELEMENTS, ' ')),
+    text: toText(content),
   };
 }
 

@@ -21,9 +21,9 @@
 import { createRunState, recordAuthorityDenial } from '../gate/access.ts';
 import type { RunState } from '../gate/access.ts';
 import { checkPage } from '../gate/gate.ts';
-import type { GateVerdict } from '../gate/types.ts';
+import type { GateVerdictWithPage } from '../gate/types.ts';
 import { R2_CAPS } from './config.ts';
-import type { GateCrawlBudget, GateDecision, GatePageBody } from './types.ts';
+import type { GateCrawlBudget, GateDecision } from './types.ts';
 
 export { createRunState };
 export type { RunState };
@@ -45,17 +45,7 @@ function clampBudget(fromGate: Partial<GateCrawlBudget> | null): GateCrawlBudget
   };
 }
 
-/**
- * The response the gate already fetched, if this build of the gate hands it
- * over. Optional on purpose: W4 must work against a gate that does not yet,
- * and must say so rather than silently fetching twice.
- */
-function pageFrom(verdict: GateVerdict): GatePageBody | null {
-  const page = (verdict as GateVerdict & { page?: GatePageBody | null }).page;
-  return page ?? null;
-}
-
-function adapt(verdict: GateVerdict): GateDecision {
+function adapt(verdict: GateVerdictWithPage): GateDecision {
   if (verdict.allowed && !verdict.reason_code) {
     throw new Error(
       `The gate allowed ${verdict.url} without naming which R2 §6.1 rule allowed it. W4 does not act ` +
@@ -82,7 +72,8 @@ function adapt(verdict: GateVerdict): GateDecision {
     // One evidence entry per request the gate made. Reported by the gate, not
     // inferred from what we think it does.
     gate_requests: verdict.evidence.length,
-    page: pageFrom(verdict),
+    // W1's PageFetchOutcome, passed through unchanged.
+    page: verdict.page,
   };
 }
 
