@@ -60,7 +60,12 @@ portfolio/
 
 ### Prerequisites
 
-- Node.js 18+
+- **Node.js 22.18+**, pinned in `.node-version`. `npm run build` runs a prerender
+  pass that imports `src/data/routeMeta.ts` directly, which needs Node's native
+  TypeScript type stripping (unflagged in 22.18.0).
+- **Headless Chromium**, downloaded by the `playwright` dev dependency during
+  `npm install`. The prerender pass drives a real browser, so the build cannot
+  run without it.
 - npm or yarn
 
 ### Installation
@@ -153,6 +158,17 @@ The navy/white theme is configured in `src/index.css`. To change colors:
    - **Build output directory**: `dist`
    - **Root directory**: `/`
 6. Click "Save and Deploy"
+
+> **Build environment.** `npm run build` prerenders every route with a real
+> headless browser, so the build needs both of the prerequisites above.
+>
+> - **Node.js.** Pages reads `.nvmrc`, `.node-version`, and the `NODE_VERSION`
+>   environment variable — it does **not** read `package.json` `engines`. The
+>   `.node-version` file in the repo root pins 22.18.0; without it the v3 build
+>   image defaults to Node 22.16.0, which is too old and fails the build.
+> - **Chromium.** `npm install` fetches it. If the build image turns out to be
+>   missing the shared libraries Chromium needs, set the build command to
+>   `npx playwright install --with-deps chromium && npm run build`.
 
 ### Option 2: Direct Upload
 

@@ -1,11 +1,14 @@
 {
   "name": "portfolio",
   "private": true,
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run prerender",
     "lint": "eslint .",
     "preview": "vite preview",
     "email:test": "node --test finds/email/*.test.ts",
@@ -41,7 +44,8 @@
     "hitl:typecheck": "tsc --noEmit -p finds/hitl/tsconfig.json",
     "hitl:verify": "node finds/hitl/verifyFidelity.ts",
     "hitl:ask": "node finds/hitl/ask.ts",
-    "hitl:poll": "node finds/hitl/poll.ts"
+    "hitl:poll": "node finds/hitl/poll.ts",
+    "prerender": "node scripts/prerender.mjs && node scripts/prerender-verify.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
