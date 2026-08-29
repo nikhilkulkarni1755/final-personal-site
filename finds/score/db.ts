@@ -50,32 +50,97 @@ export async function candidatesToScore(
   return (data ?? []) as { id: string; status: CandidateStatus }[];
 }
 
-/** The most recent crawl generation for a candidate, or null if never crawled. */
-export async function latestGeneration(db: SupabaseClient, candidateId: string): Promise<string | null> {
-  const { data, error } = await db
-    .from('finds_evidence')
-    .select('crawl_run_id')
-    .eq('candidate_id', candidateId)
-    .order('fetched_at', { ascending: false })
-    .limit(1);
-  fail('reading the latest crawl generation', error);
-  return (data?.[0] as { crawl_run_id: string } | undefined)?.crawl_run_id ?? null;
+/** An evidence row whose gate verdict was issued for a DIFFERENT candidate. */
+export interface UnattributableEvidence {
+  evidence_id: string;
+  url: string;
+  crawl_run_id: string;
+  /** The candidate the permitting verdict actually belongs to. */
+  verdict_candidate_id: string;
 }
 
-/** Every evidence row of one generation. JSONB arrives already parsed. */
-export async function loadGeneration(
+export interface CandidateEvidence {
+  /** The generation to score: the newest one with attributable rows. */
+  latest: string | null;
+  /** Attributable rows, every generation. scoreCandidate() narrows to `latest`. */
+  rows: EvidenceRow[];
+  /** Rows excluded, and why. Never silently dropped -- the caller reports these. */
+  unattributable: UnattributableEvidence[];
+}
+
+/**
+ * A candidate's evidence, with rows that are not actually about this candidate
+ * removed and named.
+ *
+ * WHY THIS CHECK EXISTS. `finds_evidence.crawl_verdict_id` is a composite FK on
+ * `(id, allowed)` pinned to true, so a row must name an ALLOW verdict -- but
+ * nothing requires that verdict to have been issued for the SAME candidate. A
+ * row can therefore claim to be evidence about candidate A while citing
+ * permission granted for candidate B, at a URL neither of them owns. That is
+ * not hypothetical: production holds exactly such a row (W4 wrote it to
+ * demonstrate the gap, and finds_evidence is append-only so it cannot be
+ * removed).
+ *
+ * Two distinct harms, and the second is the dangerous one:
+ *
+ *   1. It SHADOWS a real generation. Generations are ordered by fetched_at, so
+ *      a later bogus row makes a candidate's genuine crawl invisible and the
+ *      candidate silently unscoreable -- forever, because evidence is
+ *      append-only. A silent omission is the failure this whole initiative
+ *      exists to avoid.
+ *   2. Its observations would be READ AS EVIDENCE. A row carrying fabricated
+ *      `c1_corroborated` observations, inserted under another candidate's
+ *      verdict but with this candidate's id and crawl_run_id, would be scored
+ *      as corroboration and cited as such -- and the citation would satisfy
+ *      every composite FK, because candidate and run both match.
+ *
+ * So attribution is checked on READ, in one place, for both the choice of
+ * generation and the rows handed to the rubric. Excluded rows are returned
+ * rather than dropped: the caller says so out loud (D6), because a filter that
+ * hides its own work is how the next one of these goes unnoticed.
+ */
+export async function loadCandidateEvidence(
   db: SupabaseClient,
   candidateId: string,
-  crawlRunId: string,
-): Promise<EvidenceRow[]> {
+): Promise<CandidateEvidence> {
   const { data, error } = await db
     .from('finds_evidence')
     .select('*')
     .eq('candidate_id', candidateId)
-    .eq('crawl_run_id', crawlRunId)
-    .order('url');
-  fail('reading an evidence generation', error);
-  return (data ?? []) as EvidenceRow[];
+    .order('fetched_at', { ascending: false });
+  fail('reading candidate evidence', error);
+  const all = (data ?? []) as EvidenceRow[];
+  if (all.length === 0) return { latest: null, rows: [], unattributable: [] };
+
+  const verdictIds = [...new Set(all.map((row) => row.crawl_verdict_id))];
+  const { data: verdicts, error: verdictError } = await db
+    .from('finds_crawl_verdicts')
+    .select('id,candidate_id')
+    .in('id', verdictIds);
+  fail('reading the gate verdicts that permitted this evidence', verdictError);
+  const ownerOf = new Map((verdicts ?? []).map((v) => [v.id as string, v.candidate_id as string]));
+
+  const rows: EvidenceRow[] = [];
+  const unattributable: UnattributableEvidence[] = [];
+  for (const row of all) {
+    const owner = ownerOf.get(row.crawl_verdict_id);
+    // An unknown verdict is not a pass: if we cannot establish that this row
+    // was permitted for THIS candidate, it is not evidence about it.
+    if (owner === candidateId) {
+      rows.push(row);
+      continue;
+    }
+    unattributable.push({
+      evidence_id: row.id,
+      url: row.url,
+      crawl_run_id: row.crawl_run_id,
+      verdict_candidate_id: owner ?? '(no such verdict)',
+    });
+  }
+
+  // Rows are already newest-first, so the first attributable row names the
+  // generation to score.
+  return { latest: rows[0]?.crawl_run_id ?? null, rows, unattributable };
 }
 
 /**

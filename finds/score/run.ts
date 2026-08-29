@@ -27,7 +27,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { buildVerdictWrite } from './persist.ts';
-import { candidatesToScore, getSupabaseClient, latestGeneration, loadGeneration, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
+import { candidatesToScore, getSupabaseClient, loadCandidateEvidence, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
 import { toDigestSelection } from './digest.ts';
@@ -49,14 +49,23 @@ async function score(dryRun: boolean): Promise<number> {
   // than after his first email.
   const c1Status = new Map<string, number>();
   const notScored = new Map<string, number>();
+  let unattributed = 0;
 
   for (const candidate of candidates) {
-    const crawlRunId = await latestGeneration(db, candidate.id);
+    const evidence = await loadCandidateEvidence(db, candidate.id);
+    for (const row of evidence.unattributable) {
+      unattributed += 1;
+      console.log(
+        `  ${candidate.id}  EXCLUDED ${row.evidence_id} (${row.url}, run ${row.crawl_run_id.slice(0, 8)}): ` +
+          `permitted by a gate verdict issued for candidate ${row.verdict_candidate_id}, not this one. ` +
+          'Not evidence about this product.',
+      );
+    }
     const outcome = scoreCandidate({
       candidate_id: candidate.id,
       candidate_status: candidate.status,
-      evidence_run_id: crawlRunId ?? '',
-      rows: crawlRunId ? await loadGeneration(db, candidate.id, crawlRunId) : [],
+      evidence_run_id: evidence.latest ?? '',
+      rows: evidence.rows,
       urls_refused: await refusedUrlCount(db, candidate.id),
     });
 
@@ -89,6 +98,9 @@ async function score(dryRun: boolean): Promise<number> {
       `${unscoreable} not scoreable.`,
   );
   console.log(`  not scored by reason: ${tally(notScored)}`);
+  if (unattributed > 0) {
+    console.log(`  evidence rows excluded as not attributable to their candidate: ${unattributed}`);
+  }
   console.log(`  C1 by status:         ${tally(c1Status)}`);
   return 0;
 }
