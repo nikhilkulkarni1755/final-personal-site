@@ -17,8 +17,8 @@
  *
  * This file only ROLLS UP those per-claim findings into one auditable verdict.
  * Keeping extraction there and judgment here is what makes the score
- * reproducible: re-scoring reads the same immutable rows and must reach the
- * same number, and the numbers below are the whole of the judgment.
+ * reproducible -- C1 has no model in it, so re-scoring reads the same immutable
+ * rows and must reach the same number (unlike C2 since D38; see rubric.ts), and the numbers below are the whole of the judgment.
  *
  * THE TWO RULES THAT MATTER, and neither is a threshold:
  *

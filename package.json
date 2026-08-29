@@ -45,6 +45,7 @@
     "hitl:poll": "node finds/hitl/poll.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/vite": "^4.1.18",
     "framer-motion": "^12.23.26",
@@ -53,7 +54,8 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.10.1",
-    "rehype-raw": "^7.0.0"
+    "rehype-raw": "^7.0.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

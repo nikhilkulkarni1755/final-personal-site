@@ -30,10 +30,17 @@ import { writeFileSync } from 'node:fs';
 import { buildVerdictWrite } from './persist.ts';
 import { auditVerdicts, candidatesToScore, getSupabaseClient, loadCandidateEvidence, loadSelectionCandidates, markStatus, refusedUrlCount, writeVerdicts } from './db.ts';
 import { scoreCandidate } from './score.ts';
+import { judgeNovelty, noveltyClient, requireApiKey } from './novelty.ts';
 import { selectForDay } from './select.ts';
 import { toDigestSelection } from './digest.ts';
 
 async function score(dryRun: boolean): Promise<number> {
+  // D6/D38: no key is a hard stop, checked BEFORE anything is read or written.
+  // There is no pattern fallback for C2 -- three measured attempts established
+  // that patterns cannot read D37's axis -- and scoring every candidate 1
+  // instead would silently ship a digest with a dead criterion.
+  requireApiKey();
+  const judge = noveltyClient();
   const db = getSupabaseClient();
   const candidates = await candidatesToScore(db);
   if (candidates.length === 0) {
@@ -49,6 +56,8 @@ async function score(dryRun: boolean): Promise<number> {
   // shrugs. That is a rubric problem worth seeing on the first run rather
   // than after his first email.
   const c1Status = new Map<string, number>();
+  const judged = new Map<string, number>();
+  let unjudged = 0;
   const notScored = new Map<string, number>();
   let unattributed = 0;
 
@@ -62,13 +71,20 @@ async function score(dryRun: boolean): Promise<number> {
           'Not evidence about this product.',
       );
     }
-    const outcome = scoreCandidate({
-      candidate_id: candidate.id,
-      candidate_status: candidate.status,
-      evidence_run_id: evidence.latest ?? '',
-      rows: evidence.rows,
-      urls_refused: await refusedUrlCount(db, candidate.id),
-    });
+    const refused = await refusedUrlCount(db, candidate.id);
+    const base = { candidate_id: candidate.id, candidate_status: candidate.status,
+      evidence_run_id: evidence.latest ?? '', rows: evidence.rows, urls_refused: refused };
+
+    // C2 is computed LAST and only for survivors. A model call on a candidate
+    // that cannot reach the digest anyway is money spent to learn nothing, and
+    // on a Monday that is the difference between ~15 calls and ~286.
+    let outcome = scoreCandidate(base);
+    if (outcome.kind === 'scored' && worthJudging(outcome.scores)) {
+      const novelty = await judgeNovelty(judge, candidate, evidence.rows);
+      if (novelty === null) unjudged += 1;
+      else judged.set(novelty.form, (judged.get(novelty.form) ?? 0) + 1);
+      outcome = scoreCandidate({ ...base, novelty });
+    }
 
     if (outcome.kind === 'unscoreable') {
       unscoreable += 1;
@@ -103,7 +119,21 @@ async function score(dryRun: boolean): Promise<number> {
     console.log(`  evidence rows excluded as not attributable to their candidate: ${unattributed}`);
   }
   console.log(`  C1 by status:         ${tally(c1Status)}`);
+  console.log(`  C2 novelty verdicts:  ${tally(judged)}${unjudged > 0 ? `, ungrounded ${unjudged}` : ''}`);
   return 0;
+}
+
+/**
+ * Could this candidate still reach a digest? C2 is asked only of those.
+ *
+ * Selection needs two of C2/C3/C4 at 2 or better, and C2 can supply at most one
+ * of them, so a candidate with neither C3 nor C4 at 2 cannot clear the floor
+ * whatever C2 says. A 0 anywhere is already disqualifying.
+ */
+function worthJudging(scores: readonly { criterion: string; score: number }[]): boolean {
+  const at = (c: string) => scores.find((s) => s.criterion === c)?.score;
+  if (scores.some((s) => s.score === 0)) return false;
+  return [at('C3'), at('C4')].filter((v) => v !== undefined && v >= 2).length >= 1;
 }
 
 /** Read only. Asserts the invariants of what is already written; repairs nothing. */

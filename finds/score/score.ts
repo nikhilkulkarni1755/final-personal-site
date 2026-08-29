@@ -25,6 +25,7 @@
 import type { CandidateStatus, EvidenceRow } from '../types.ts';
 import type { ScoreOutcome, UnscoreableReason } from './types.ts';
 import { findings, generation } from './rubric.ts';
+import type { NoveltyJudgement } from './novelty.ts';
 import { scoreC1 } from './c1.ts';
 import { scoreC2 } from './c2.ts';
 import { scoreC3 } from './c3.ts';
@@ -42,6 +43,13 @@ export interface ScoreInput {
    * rationales only; a site that showed us less is not thereby a worse product.
    */
   urls_refused?: number;
+  /**
+   * C2's novelty judgement (D37/D38). Null or absent means no judgement was
+   * obtained, which scoreC2 turns into 1 -- never into 0. Passed IN rather
+   * than fetched here so this function stays pure and testable; see the
+   * determinism carve-out in c2.ts.
+   */
+  novelty?: NoveltyJudgement | null;
 }
 
 const BLOCKED: Partial<Record<CandidateStatus, { reason: UnscoreableReason; detail: string }>> = {
@@ -111,7 +119,12 @@ export function scoreCandidate(input: ScoreInput): ScoreOutcome {
   }
 
   const refused = input.urls_refused ?? 0;
-  const results = [scoreC1(rows, refused), scoreC2(rows, refused), scoreC3(rows, refused), scoreC4(rows, refused)];
+  const results = [
+    scoreC1(rows, refused),
+    scoreC2(rows, input.novelty ?? null, refused),
+    scoreC3(rows, refused),
+    scoreC4(rows, refused),
+  ];
   const scores = results.flatMap((result) => (result.kind === 'scored' ? [result.score] : []));
 
   if (scores.length === 0) {

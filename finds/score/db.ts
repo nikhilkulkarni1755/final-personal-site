@@ -34,20 +34,28 @@ function fail(what: string, error: { message: string; hint?: string | null } | n
   throw new Error(`${what}: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
 }
 
+/** What the novelty judge needs alongside the queue marker. */
+export interface ScorableCandidate {
+  id: string;
+  status: CandidateStatus;
+  name: string;
+  tagline: string | null;
+}
+
 /** Candidates whose evidence has been collected and not yet scored. */
 export async function candidatesToScore(
   db: SupabaseClient,
   status: CandidateStatus = 'crawled',
   limit = 500,
-): Promise<{ id: string; status: CandidateStatus }[]> {
+): Promise<ScorableCandidate[]> {
   const { data, error } = await db
     .from('finds_candidates')
-    .select('id,status')
+    .select('id,status,name,tagline')
     .eq('status', status)
     .order('first_seen_at')
     .limit(limit);
   fail('reading candidates to score', error);
-  return (data ?? []) as { id: string; status: CandidateStatus }[];
+  return (data ?? []) as ScorableCandidate[];
 }
 
 /** An evidence row whose gate verdict was issued for a DIFFERENT candidate. */
