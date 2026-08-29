@@ -35,7 +35,7 @@
 
 import type { EvidenceRow } from '../types.ts';
 import type { CriterionScore, UnscoreableReason } from './types.ts';
-import { citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
+import { RUBRIC_VERSION, citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
 
 /**
  * MEASURED. Each of these is a status code or a URL the crawl actually saw,
@@ -147,8 +147,8 @@ export function scoreC4(rows: readonly EvidenceRow[], urlsRefused = 0): C4Result
     return done(
       2,
       `PARTIALLY SUPPORTED: ${measured.length} measured surface(s) and ${advertised.length} advertised one(s). ` +
-        'Rubric 1.0 reserves 3 for a linked MCP endpoint or two measured surfaces, because a landing page ' +
-        'saying "API" is a claim and a linked OpenAPI document is a fact.',
+        `Rubric ${RUBRIC_VERSION} reserves 3 for a linked MCP endpoint or two measured surfaces, because a ` +
+        'landing page saying "API" is a claim and a linked OpenAPI document is a fact.',
       citeRows(supporting, 'supports', 'agent surface(s)'),
     );
   }

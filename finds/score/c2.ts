@@ -29,7 +29,7 @@
 
 import type { EvidenceRow } from '../types.ts';
 import type { CriterionScore, UnscoreableReason } from './types.ts';
-import { citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
+import { RUBRIC_VERSION, citeRows, corpusStats, criterionScore, findings } from './rubric.ts';
 
 const PROBLEM_STATEMENT = 'c2_problem_statement';
 const PROBLEM_STATEMENT_ABSENT = 'c2_problem_statement_absent';
@@ -97,8 +97,8 @@ export function scoreC2(rows: readonly EvidenceRow[], urlsRefused = 0): C2Result
   );
   const stats = corpusStats(rows, urlsRefused);
   const ceiling =
-    ' Rubric 1.1 caps C2 at 2 and gives it no 0: nothing on a product\'s own site can establish that a ' +
-    'problem is rare, and nothing on it establishes the opposite either.';
+    ` Rubric ${RUBRIC_VERSION} caps C2 at 2 and gives it no 0: nothing on a product's own site can ` +
+    'establish that a problem is rare, and nothing on it establishes the opposite either.';
   const context =
     named > 0
       ? ` The site names ${named} existing alternative(s) it positions against. Reported, not scored: ` +
