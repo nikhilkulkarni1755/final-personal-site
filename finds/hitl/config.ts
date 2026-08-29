@@ -2,6 +2,19 @@
 // tunables live here, not scattered through telegramClient.ts / ask.ts /
 // poll.ts (same convention as finds/gate/config.ts).
 
+import { fileURLToPath } from 'node:url';
+
+// Anchored to this file's own location, not process.cwd(): D34 (2026-08-29)
+// traced "his taps looked dead" to ask.ts and poll.ts having been run from
+// two different working directories, so each wrote/read a different
+// finds/hitl/.state/*.json. Anchoring removes cwd as a variable for two
+// invocations of the SAME checkout. It does NOT fix two different
+// checkouts/worktrees each running their own copy of this file -- that is
+// exactly why the pending store is moving into Postgres (see
+// finds-coord/lanes/W8.md); this is a cheap stopgap alongside it, not a
+// substitute for it.
+const STATE_DIR = fileURLToPath(new URL('./.state', import.meta.url));
+
 export interface TelegramEnvConfig {
   botToken: string;
   chatId: string;
@@ -41,12 +54,14 @@ export const TELEGRAM_LIMITS = {
 export const HITL_CONFIG = {
   /** getUpdates long-poll window, seconds. Telegram caps this at 50. */
   pollTimeoutSec: Number(process.env.TELEGRAM_POLL_TIMEOUT_SEC ?? 30),
-  /** Where offset + pending-question state persist between runs. File-backed
-   *  for now -- see finds-coord/lanes/W8.md for the known gap this leaves on
-   *  ephemeral GitHub Actions runners and the proposed durable-store
-   *  follow-up. */
-  offsetPath: process.env.TELEGRAM_OFFSET_PATH ?? 'finds/hitl/.state/offset.json',
-  pendingPath: process.env.TELEGRAM_PENDING_PATH ?? 'finds/hitl/.state/pending.json',
+  /** Offset: still file-backed, anchored to this checkout (see STATE_DIR
+   *  above). Durability across an ephemeral runner is a separate, not-yet-
+   *  hit concern (finds-coord/lanes/W8.md).
+   *  Pending questions: file-backed here only until W3 lands the proposed
+   *  finds_hitl_pending table (D34) -- once that exists this path stops
+   *  being read at all. */
+  offsetPath: process.env.TELEGRAM_OFFSET_PATH ?? `${STATE_DIR}/offset.json`,
+  pendingPath: process.env.TELEGRAM_PENDING_PATH ?? `${STATE_DIR}/pending.json`,
   /** Consecutive 409s (another poller already holds this bot's getUpdates)
    *  before giving up loudly instead of conflict-looping forever. */
   maxConsecutiveConflicts: 5,
