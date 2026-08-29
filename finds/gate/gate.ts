@@ -46,6 +46,8 @@ import type { CrawlBudget, EvidenceEntry, GateVerdict, GateVerdictWithPage, Page
 
 const robotsCache = new TtlCache<RobotsOutcome>(GATE_CONFIG.ttl.allowMs);
 const verdictCache = new TtlCache<GateVerdictWithPage>(GATE_CONFIG.ttl.allowMs);
+/** Single-flight guard for robots.txt fetches -- see getRobotsOutcome. */
+const robotsInFlight = new Map<string, Promise<RobotsOutcome>>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,15 +72,42 @@ async function throttle(runState: RunState, authority: string, delayMs: number):
   runState.lastRequestAt.set(authority, Date.now());
 }
 
+/**
+ * A production run measured this fetched twice for one authority, 1983ms
+ * apart -- not a wrong cache key, a TOCTOU race: checkPage is called
+ * concurrently (W4's crawler fires several URLs on one authority via
+ * Promise.all), so two callers can both see a cache miss before either
+ * finishes the fetch that would have populated it. Reproduced directly:
+ * the pre-fix shape (check cache, await a slow fetch, then set cache)
+ * issues N fetches for N concurrent callers of the same key every time;
+ * confirmed with node:test-free inline script, 3 concurrent calls -> 3
+ * fetches. Fixed with single-flight: the SECOND caller in past this
+ * point awaits the SAME in-flight promise instead of starting its own
+ * fetch, so the population of the cache (and the pacing/counting inside
+ * fetchRobotsTxt's caller) happens exactly once per authority regardless
+ * of how many callers arrive concurrently.
+ */
 async function getRobotsOutcome(origin: string, runState: RunState): Promise<RobotsOutcome> {
   const cached = robotsCache.get(origin);
   if (cached) return cached;
-  // First-ever request to a fresh authority: we don't know its Crawl-delay
-  // yet (that's what this fetch determines), so pace against our own floor.
-  await throttle(runState, origin, GATE_CONFIG.baseDelayMs);
-  const outcome = await fetchRobotsTxt(origin);
-  robotsCache.set(origin, outcome, ttlForRobotsOutcome(outcome));
-  return outcome;
+
+  const inFlight = robotsInFlight.get(origin);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
+    // First-ever request to a fresh authority: we don't know its Crawl-delay
+    // yet (that's what this fetch determines), so pace against our own floor.
+    await throttle(runState, origin, GATE_CONFIG.baseDelayMs);
+    const outcome = await fetchRobotsTxt(origin);
+    robotsCache.set(origin, outcome, ttlForRobotsOutcome(outcome));
+    return outcome;
+  })();
+  robotsInFlight.set(origin, promise);
+  try {
+    return await promise;
+  } finally {
+    robotsInFlight.delete(origin);
+  }
 }
 
 /** The known Crawl-delay for an authority whose robots.txt has already been
@@ -537,12 +566,16 @@ export async function checkPage(
   if (decision.allowed) {
     crawlBudget = crawlBudgetFor(decision.crawlDelaySeconds);
 
-    // D22: the physical page-cap ceiling. Enforced here, not by counting on
-    // the caller's side, so it holds no matter how many times checkPage is
-    // called for this authority -- ACCESS still says yes (robots.txt
-    // permits it), we are simply choosing not to spend more of the budget
-    // bot.txt promises a site owner. No request is made; use_rights is null
-    // because it was never read, same as any other not-evaluated page.
+    // D22/D26: the physical page-cap ceiling -- both per-authority (this
+    // specific subdomain's own Crawl-delay-derived cap) AND candidate-wide
+    // (GATE_CONFIG.maxPagesAbsoluteCap total, across every authority this
+    // RunState touches). Enforced here via the same trySpendPageBudget a
+    // redirect hop uses, not by counting on the caller's side, so it holds
+    // no matter how many times checkPage is called. ACCESS still says yes
+    // (robots.txt permits it); we are simply choosing not to spend more of
+    // the budget bot.txt promises a site owner. No request is made;
+    // use_rights is null because it was never read, same as any other
+    // not-evaluated page.
     const spentSoFar = runState.pageFetchCount.get(authority) ?? 0;
     if (spentSoFar >= crawlBudget.page_cap) {
       const verdict = finalize({
