@@ -123,17 +123,18 @@ export async function askQuestion(
 const APPROVE_LABEL = 'Approve';
 const REJECT_LABEL = 'Reject';
 /**
- * Explicit about what a free-text reply means, because unlike a plain
- * askQuestion() this one has a real-world side effect: it is what tells
- * poll.ts to write a finds_approvals row (D29), and D29's schema commits to
- * only ever recording an approval, never a rejection. A reply that isn't
- * meant as one has no representation to fall into except "didn't reply" --
- * so the message has to say, in Nikhil's own reading of it, that typing an
- * answer here approves.
+ * D32: only the button tap approves -- a reply, alone, never does. Publishing
+ * is the one irreversible, outward-facing action in this system, and reading
+ * ambiguous free text as consent would make it the one decision this bridge
+ * makes EASIER to reach by accident, working against every other lane's
+ * posture (D29's missing view, W10's refusal to run finds/comment/**, W11's
+ * re-check of chat_id even on a trusted write). So the footer says this
+ * outright rather than leaving it to be inferred: a reply is saved as the
+ * write-up for the page, but nothing publishes until Approve is tapped.
  */
 const APPROVAL_FOOTER =
-  'Tap Approve or Reject below. Or reply to this message with your own words for the public ' +
-  'page -- that approves it too, using exactly what you write as the write-up.';
+  'Tap Approve or Reject to decide. Replying with text first just saves it as the write-up for ' +
+  'the page (you can still send it any time before tapping) -- only the tap publishes anything.';
 
 export interface AskApprovalParams {
   candidateId: string;
@@ -164,9 +165,10 @@ export function renderApproval(params: AskApprovalParams): RenderedQuestion {
 /**
  * Live send of an approval ask. The pending entry it creates carries
  * candidateId/evidenceRunId so poll.ts's answer routing can write the
- * finds_approvals row (approvals.ts) when Nikhil answers -- either by
- * tapping Approve (approveOptionIndex 0; Reject writes nothing) or by
- * replying with text, which becomes both `answer` and `why_interesting`.
+ * finds_approvals row (approvals.ts) -- but only when Nikhil taps Approve
+ * (approveOptionIndex 0; Reject writes nothing). A free-text reply is never
+ * enough on its own (D32): poll.ts saves it as a draft why_interesting and
+ * keeps the question pending until a tap actually approves it.
  */
 export async function askApproval(
   params: AskApprovalParams,

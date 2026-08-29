@@ -1,6 +1,9 @@
 {
   "name": "portfolio",
   "private": true,
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -38,10 +41,11 @@
     "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
     "publish:prove": "bash finds/publish/prove-publish.sh",
     "publish:find": "node finds/publish/cli.ts",
+    "hitl:typecheck": "tsc --noEmit -p finds/hitl/tsconfig.json",
+    "hitl:verify": "node finds/hitl/verifyFidelity.ts",
+    "hitl:ask": "node finds/hitl/ask.ts",
+    "hitl:poll": "node finds/hitl/poll.ts",
     "prerender": "node scripts/prerender.mjs && node scripts/prerender-verify.mjs"
-  },
-  "engines": {
-    "node": ">=22.18.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
