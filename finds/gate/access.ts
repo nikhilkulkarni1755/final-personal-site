@@ -34,17 +34,32 @@ export interface RunState {
    * of them paced. */
   lastRequestAt: Map<string, number>;
   /** D22: how many page-content requests (never robots.txt) the gate has
-   * actually issued for this authority, this run. checkPage refuses to
-   * issue another once this reaches the authority's crawl_budget.page_cap
-   * -- a physical ceiling on requests, not a caller's loop bound that a
-   * double-fetch or an eager caller could exceed. The 25-page, 2-second
-   * promise on https://nikhilkulkarni1755.com/bot.txt is enforced here and
-   * nowhere else (D21/D22). */
+   * actually issued for THIS authority specifically, this run -- still
+   * bounded by that authority's own crawl_budget.page_cap (its own
+   * Crawl-delay can make that number lower than 25, and a single very slow
+   * subdomain must not be allowed to eat the whole wall-clock budget). D26
+   * added `totalPagesFetched` below as the real ceiling the promise means;
+   * this map is now a per-authority SUB-limit under that ceiling, not the
+   * limit itself. */
   pageFetchCount: Map<string, number>;
+  /**
+   * D26: how many page-content requests the gate has issued for this
+   * CANDIDATE, total, across every authority (subdomain) it touches this
+   * run. A production run measured one product (teamretro.com) answering
+   * across 7 subdomains, each under its own 25-page authority limit, for
+   * 34 pages total -- correct per-authority enforcement, wrong promise:
+   * https://nikhilkulkarni1755.com/bot.txt says "at most 25 pages per
+   * SITE", and a site owner reading that means their whole product, not
+   * one subdomain of it. checkPage refuses once this reaches
+   * GATE_CONFIG.maxPagesAbsoluteCap, in addition to (not instead of) the
+   * per-authority sub-limit above. Never reset mid-run; a RunState is
+   * meant to be one candidate's whole crawl.
+   */
+  totalPagesFetched: number;
 }
 
 export function createRunState(): RunState {
-  return { deniedAuthorities: new Map(), lastRequestAt: new Map(), pageFetchCount: new Map() };
+  return { deniedAuthorities: new Map(), lastRequestAt: new Map(), pageFetchCount: new Map(), totalPagesFetched: 0 };
 }
 
 /** Called by gate.ts after any page-level fetch (not robots.txt, which
