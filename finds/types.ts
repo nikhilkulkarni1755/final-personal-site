@@ -771,3 +771,78 @@ export type NewApproval = Pick<
   'candidate_id' | 'evidence_run_id' | 'chat_id' | 'message_id' | 'answer' | 'answered_at'
 > &
   Partial<Pick<ApprovalRow, 'channel' | 'telegram_update_id' | 'why_interesting'>>;
+
+/* ========================================================================== */
+/* HITL pending questions -- one store for asker and poller (D34)             */
+/* ========================================================================== */
+
+export type HitlPendingKind = 'plain' | 'approval';
+
+/** One inline-keyboard button. */
+export interface HitlPendingOption {
+  label: string;
+}
+
+/**
+ * A row of `finds_hitl_pending`. Private, service-role only.
+ *
+ * Unlike `ApprovalRow` and `EvidenceRow` this is MUTABLE and DELETABLE, and the
+ * difference is principled rather than convenient: append-only guards a record
+ * something else relies on as evidence. Nothing relies on a pending question
+ * once it is answered -- the approval row is what W11 reads, and D29 settled
+ * that rejections leave no trace. A resolved question is simply gone, so
+ * "is there a row?" is the open/closed test and no reader has to remember a
+ * `resolved_at` filter.
+ */
+export interface HitlPendingRow {
+  /**
+   * Caller-generated, with no database default. It is embedded in Telegram's
+   * callback_data (`q:<id>:<idx>`) before the row exists, so a server-generated
+   * id would produce a row that no tap could ever match.
+   */
+  id: string;
+  chat_id: string;
+  /** Bot API message id of the ask. A per-chat counter, hence unique with chat_id. */
+  sent_message_id: number;
+  prompt: string;
+  context: string | null;
+  /** NULL for a free-text-only ask. Required when `kind` is 'approval'. */
+  options: HitlPendingOption[] | null;
+  kind: HitlPendingKind;
+  approval_candidate_id: string | null;
+  approval_evidence_run_id: string | null;
+  /** Pinned to 'C1'. Makes the FK composite; never set it yourself. */
+  approval_criterion: 'C1' | null;
+  /** Which option approves. Bounded against `options` by CHECK. */
+  approve_option_index: number | null;
+  /**
+   * D32: free text is captured here, never acted on. Only an explicit tap
+   * approves. Becomes `finds_approvals.why_interesting` if a later tap
+   * approves. His prose verbatim -- per D4 nothing generated goes here.
+   */
+  draft_note: string | null;
+  created_at: Timestamp;
+}
+
+/**
+ * What the ask inserts. `id` is required because the caller minted it for the
+ * callback_data. An 'approval' ask must supply the whole approval payload and
+ * non-empty `options`; a half-filled one is refused by CHECK, and one naming an
+ * unscored generation is a foreign-key violation.
+ */
+export type NewHitlPending = Pick<
+  HitlPendingRow,
+  'id' | 'chat_id' | 'sent_message_id' | 'prompt'
+> &
+  Partial<
+    Pick<
+      HitlPendingRow,
+      | 'context'
+      | 'options'
+      | 'kind'
+      | 'approval_candidate_id'
+      | 'approval_evidence_run_id'
+      | 'approval_criterion'
+      | 'approve_option_index'
+    >
+  >;
