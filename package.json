@@ -37,7 +37,11 @@
     "publish:test": "node --test finds/publish/snapshot.test.ts",
     "publish:typecheck": "tsc --noEmit -p finds/publish/tsconfig.json",
     "publish:prove": "bash finds/publish/prove-publish.sh",
-    "publish:find": "node finds/publish/cli.ts"
+    "publish:find": "node finds/publish/cli.ts",
+    "hitl:typecheck": "tsc --noEmit -p finds/hitl/tsconfig.json",
+    "hitl:verify": "node finds/hitl/verifyFidelity.ts",
+    "hitl:ask": "node finds/hitl/ask.ts",
+    "hitl:poll": "node finds/hitl/poll.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
