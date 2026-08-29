@@ -106,6 +106,6 @@ describe('W4 opens no sockets of its own (D22)', () => {
 
   it('reports a gate that hands back no body instead of fetching it itself', async () => {
     const source = await readSource(new URL('./gate.ts', import.meta.url), 'utf8');
-    assert.match(source, /returned no response body/);
+    assert.match(source, /allowed \${url} but did not fetch it/);
   });
 });

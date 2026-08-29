@@ -10,7 +10,9 @@
  */
 
 import type { GateCrawlBudget, GateDecidingSignal, GateReasonCode } from '../types.ts';
-import type { UseRights } from '../gate/types.ts';
+import type { PageFetchOutcome, UseRights } from '../gate/types.ts';
+
+export type { PageFetchOutcome } from '../gate/types.ts';
 
 export type {
   EvidenceClaim,
@@ -83,31 +85,20 @@ export interface GateDecision {
   gate_requests: number;
 
   /**
-   * The page body the gate already fetched, when it hands it over.
+   * The page the gate already fetched.
    *
    * The gate MUST fetch the page itself to read X-Robots-Tag, meta robots and
-   * tdm-reservation -- those signals only exist in the response. So when W4
-   * fetched it a second time for the body, every URL was requested twice, ~170
-   * ms apart, inside a 2 s sleep that only spaced the pairs. Null means the
-   * gate did not hand a body over and W4 must fetch it, which is the old
-   * two-request behaviour and is reported as such.
+   * tdm-reservation -- those signals only exist in the response -- so it hands
+   * that response over and nothing fetches the URL again (D21/D22).
+   *
+   * This is W1's `PageFetchOutcome` verbatim, not a local restatement of it.
+   * The first production run failed because I had guessed a `body_read` flag
+   * that the shipped contract does not have: `body_read ? body : ''` read
+   * undefined as false and threw away 388 KB of real HTML on every page of
+   * every candidate. Importing the type makes that class of drift a compile
+   * error instead of a silent empty crawl.
    */
-  page: GatePageBody | null;
-}
-
-/** A response the gate already has, so nobody fetches it twice. */
-export interface GatePageBody {
-  final_url: string;
-  http_status: number;
-  content_type: string | null;
-  /** Empty when `body_read` is false. Never a substitute for the real body. */
-  body: string;
-  /** False when the gate did not read the body (unaccepted content type). */
-  body_read: boolean;
-  sha256: string | null;
-  truncated: boolean;
-  fetched_at: string;
-  elapsed_ms: number;
+  page: PageFetchOutcome;
 }
 
 /**

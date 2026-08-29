@@ -44,6 +44,7 @@ const BROKEN: QueuedCandidate = {
   product_url: 'not-a-url',
   name: 'Malformed URL',
   first_seen_at: '2026-08-28T10:00:00Z',
+  product_url_kind: 'unknown',
   sightings: 1,
 };
 
@@ -53,6 +54,7 @@ const LOOPBACK: QueuedCandidate = {
   product_url: 'http://127.0.0.1:1/',
   name: 'Loopback',
   first_seen_at: '2026-08-28T09:00:00Z',
+  product_url_kind: 'dedicated',
   sightings: 1,
 };
 

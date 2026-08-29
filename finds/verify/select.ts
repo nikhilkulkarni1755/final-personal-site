@@ -30,6 +30,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ProductUrlKind } from '../types.ts';
 import { DatastoreError } from './persist.ts';
 
 /** A candidate the runner may crawl, with the numbers that ordered it. */
@@ -38,6 +39,13 @@ export interface QueuedCandidate {
   product_url: string;
   name: string;
   first_seen_at: string;
+  /**
+   * W2's classification of what product_url is (D23). W4 derives the same
+   * thing independently from the URL's path, and records both -- a
+   * disagreement between two independent derivations is a finding, not
+   * something to silently reconcile.
+   */
+  product_url_kind: ProductUrlKind;
   /** Distinct sources that reported this product. */
   sightings: number;
 }
@@ -63,7 +71,7 @@ const CONSIDER_LIMIT = 500;
 export async function selectQueue(client: SupabaseClient, limit: number): Promise<QueuedCandidate[]> {
   const { data: candidates, error } = await client
     .from('finds_candidates')
-    .select('id, product_url, name, first_seen_at')
+    .select('id, product_url, name, first_seen_at, product_url_kind')
     .eq('status', 'new')
     .order('first_seen_at', { ascending: false })
     .limit(CONSIDER_LIMIT);
@@ -98,6 +106,7 @@ export async function selectQueue(client: SupabaseClient, limit: number): Promis
       product_url: row.product_url as string,
       name: row.name as string,
       first_seen_at: row.first_seen_at as string,
+      product_url_kind: (row.product_url_kind as ProductUrlKind | null) ?? 'unknown',
       sightings: sources.get(row.id as string)?.size ?? 0,
     }))
     .sort((a, b) => b.sightings - a.sightings || b.first_seen_at.localeCompare(a.first_seen_at))

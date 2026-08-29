@@ -48,11 +48,14 @@ import { createRunState } from './gateAdapter.ts';
 import { renderPage } from './render.ts';
 import { normalise, parseLlmsTxt, parseSitemap, prioritise, projectScope, withinScope } from './scope.ts';
 import { collectC2, collectC3, collectC4 } from './signals.ts';
+import type { ProductUrlKind } from '../types.ts';
 import type { EvidenceObservation, EvidenceQuote, FetchOutcome, GateDecision, NewEvidence } from './types.ts';
 
 export interface CrawlOptions {
   candidateId: string;
   productUrl: string;
+  /** W2's D23 classification, recorded alongside W4's own derivation. */
+  declaredUrlKind?: ProductUrlKind;
   /** Defaults to a fresh UUID: one crawl pass, one id, per W3's schema note. */
   crawlRunId?: string;
 }
@@ -119,6 +122,21 @@ function describeUseRights(decision: GateDecision): EvidenceObservation {
   };
 }
 
+/**
+ * Every row carries all three JSONB arrays, even when empty.
+ *
+ * Found on the first real run against production. PostgREST unifies the column
+ * set across a bulk INSERT: because the landing-page row supplies `claims`,
+ * every OTHER row in the same statement gets `claims` too -- as an explicit
+ * null, since they never set it -- and the column is NOT NULL. The whole
+ * candidate then fails on "null value in column claims violates not-null
+ * constraint", and the abort was correct but the cause was mine. Relying on a
+ * column default only works while no row in the batch sets the column.
+ */
+function emptyArrays(): Pick<NewEvidence, 'claims' | 'quotes'> {
+  return { claims: [], quotes: [] };
+}
+
 function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, outcome: FetchOutcome): PartialEvidence {
   const role = pageRole(outcome.url);
   if (outcome.kind === 'refused') {
@@ -128,6 +146,7 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
       page_role: role,
       http_status: null,
       fetched_at: outcome.decision.decided_at,
+      ...emptyArrays(),
       observations: [
         {
           kind: 'gate_refused',
@@ -144,6 +163,7 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
       page_role: role,
       http_status: null,
       fetched_at: outcome.fetched_at,
+      ...emptyArrays(),
       observations: [
         { kind: 'fetch_failed', detail: `The gate allowed this URL but the fetch failed: ${outcome.error}`, value: null },
       ],
@@ -162,6 +182,7 @@ function evidenceFor(base: Pick<NewEvidence, 'candidate_id' | 'crawl_run_id'>, o
     content_type: outcome.content_type,
     content_sha256: outcome.content_sha256,
     fetched_at: outcome.fetched_at,
+    ...emptyArrays(),
     observations: [
       {
         kind: 'fetched',
@@ -195,6 +216,27 @@ async function readablePage(
 ): Promise<ReturnType<typeof parsePage>> {
   const parsed = parsePage(outcome.body);
   const isHtml = (outcome.content_type ?? '').includes('html');
+
+  // "We received no body" and "we received a JS-only shell" are different
+  // facts, and the first production run reported the first as the second --
+  // github.com/quiet-node/thuki was recorded as an unrendered SPA when what
+  // actually happened is that a field-name mismatch discarded 388 KB of real
+  // HTML. Saying "JS-rendered shell" about a page we never read is a claim
+  // about someone's site that we did not check.
+  if (outcome.body.length === 0) {
+    observations.push({
+      kind: 'no_body_received',
+      detail:
+        `${outcome.url} returned ${outcome.http_status} with content-type ` +
+        `${outcome.content_type ?? 'unknown'}, but no body reached this lane. R2 §5.3 does not read ` +
+        `bodies for content types outside its allowlist, so this is expected for a PDF or an image ` +
+        `and a defect for anything else. No claims were extracted; this is not a statement about ` +
+        `the page's content.`,
+      value: outcome.content_type,
+    });
+    return parsed;
+  }
+
   if (!isHtml || !looksLikeEmptyShell(parsed)) return parsed;
 
   if (!RENDER_ENABLED) {
@@ -286,6 +328,25 @@ export async function crawlCandidate(options: CrawlOptions): Promise<CrawlResult
   // Recorded before anything can return early, so the audit trail always says
   // which pages this crawl considered to be the candidate's -- including on the
   // runs that collected nothing.
+  // W2 classifies product_url at ingest; W4 derives the same fact from the
+  // path at crawl time. Recording both means a disagreement shows up as a
+  // finding rather than being silently resolved in favour of whichever ran
+  // last -- and D23 is the bug that taught us what an unchecked assumption
+  // about this costs.
+  const derivedKind: ProductUrlKind = scope.ownsAuthority ? 'dedicated' : 'shared_host';
+  const declaredKind = options.declaredUrlKind ?? 'unknown';
+  homeObservations.push({
+    kind: declaredKind === 'unknown' || declaredKind === derivedKind ? 'url_kind' : 'url_kind_disagreement',
+    detail:
+      `W2 classified this product_url as '${declaredKind}'; W4 derives '${derivedKind}' from its path. ` +
+      (declaredKind === derivedKind
+        ? 'The two independent derivations agree.'
+        : declaredKind === 'unknown'
+          ? 'Unclassified at ingest, so W4 scoped the crawl on its own derivation. Unknown is never read as dedicated (D23).'
+          : 'THEY DISAGREE. W4 scoped the crawl on its own derivation, which is the conservative one; ' +
+            'somebody should find out which is right.'),
+    value: `${declaredKind}/${derivedKind}`,
+  });
   homeObservations.push({
     kind: 'crawl_scope',
     detail: scope.ownsAuthority

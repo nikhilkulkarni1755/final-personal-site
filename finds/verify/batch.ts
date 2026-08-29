@@ -106,7 +106,11 @@ export async function runVerifyBatch(options: BatchOptions): Promise<BatchSummar
 
     const label = `${index + 1}/${queue.length} ${candidate.name} <${candidate.product_url}>`;
     try {
-      const result = await crawlCandidate({ candidateId: candidate.id, productUrl: candidate.product_url });
+      const result = await crawlCandidate({
+        candidateId: candidate.id,
+        productUrl: candidate.product_url,
+        declaredUrlKind: candidate.product_url_kind,
+      });
       const written = await persistCrawl(candidate.id, result, client);
       const status = classify(result.records);
 
