@@ -24,7 +24,7 @@
 
 import type { CandidateStatus, EvidenceRow } from '../types.ts';
 import type { ScoreOutcome, UnscoreableReason } from './types.ts';
-import { generation } from './rubric.ts';
+import { findings, generation } from './rubric.ts';
 import { scoreC1 } from './c1.ts';
 import { scoreC2 } from './c2.ts';
 import { scoreC3 } from './c3.ts';
@@ -73,6 +73,40 @@ export function scoreCandidate(input: ScoreInput): ScoreOutcome {
       candidate_id: input.candidate_id,
       reason: 'no_evidence',
       detail: `No finds_evidence rows for crawl generation ${input.evidence_run_id}.`,
+    };
+  }
+
+  // ---- A SITE WE COULD NOT READ IS NOT A SITE THAT SAID NOTHING. ----------
+  //
+  // With rendering off (D24), a JS app's landing page comes back as an empty
+  // shell. W4 records that honestly as `spa_shell_not_rendered` and extracts
+  // no claims from it -- so C1 has no left-hand side and is unscoreable.
+  //
+  // But C2/C3/C4 are collected by pattern-matching over the corpus, and
+  // W4's collectors record an ABSENCE explicitly whenever a pattern misses.
+  // Over an empty shell every pattern misses, so the evidence would carry a
+  // full set of `*_absent` observations and this lane would happily write
+  // three verdicts of 1: "no evidence either way" for a free tier, for an
+  // API, for a problem statement. Every one of those would be a finding about
+  // a page we never received.
+  //
+  // That is the difference between an honest omission and a false accusation,
+  // and it is the whole reason this branch exists. No verdict is written; the
+  // candidate keeps its 'crawled' status, so a later render-enabled re-crawl
+  // produces a new generation and it is scored properly then.
+  const shell = findings(rows, 'spa_shell_not_rendered');
+  const claimsDiff = findings(rows, 'c1_corroborated', 'c1_contradicted', 'c1_unsubstantiated');
+  if (shell.length > 0 && claimsDiff.length === 0) {
+    return {
+      kind: 'unscoreable',
+      candidate_id: input.candidate_id,
+      reason: 'not_rendered',
+      detail:
+        `The landing page returned an unrendered JS shell, so no claim could be extracted from it ` +
+        `(${shell.length} page(s) affected; rendering is off per D24). The C2/C3/C4 collectors would ` +
+        'still report every pattern as absent, but an absence measured over a page we never received ' +
+        'is not evidence about the product. Nothing is scored. A re-crawl with rendering enabled ' +
+        'produces a new generation and this candidate is scored from that.',
     };
   }
 

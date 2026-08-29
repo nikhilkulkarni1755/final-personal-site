@@ -1,7 +1,7 @@
 /**
  * The lane's CLI. Two verbs, both read-only about the world:
  *
- *   node finds/score/run.ts score                        score every crawled candidate
+ *   node finds/score/run.ts score [--dry-run]            score every crawled candidate
  *   node finds/score/run.ts select [DATE] [OUT.json]     pick the day's digest
  *
  * `select` writes NOTHING. The digest tables are W6's, and W6 selects from
@@ -13,6 +13,12 @@
  * and the real candidate ids send.ts needs for finds_digest_items. Nothing else
  * writes that file, and it is NOT written on a day with no picks: an empty day
  * must not become an empty digest.
+ *
+ * `--dry-run` scores and reports and WRITES NOTHING -- no verdicts, no status
+ * changes. It exists because the first run against a real database should be a
+ * look, not a write: evidence is append-only and a verdict is not, so a bad
+ * write is recoverable, but reading the distribution first is free and tells us
+ * whether the rubric is behaving before it leaves a record.
  *
  * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (D17). Absent, W2's
  * getSupabaseClient() fails loud and this exits non-zero rather than
@@ -26,16 +32,23 @@ import { scoreCandidate } from './score.ts';
 import { selectForDay } from './select.ts';
 import { toDigestSelection } from './digest.ts';
 
-async function score(): Promise<number> {
+async function score(dryRun: boolean): Promise<number> {
   const db = getSupabaseClient();
   const candidates = await candidatesToScore(db);
   if (candidates.length === 0) {
     console.log('Nothing to score: no candidate is in status "crawled".');
     return 0;
   }
+  if (dryRun) console.log('DRY RUN: scoring and reporting only. Nothing will be written.\n');
 
   let scored = 0;
   let unscoreable = 0;
+  // Why this tally: C1 is the criterion Nikhil put first, and if nearly
+  // everything lands on `unsubstantiated` the digest reads as a list of
+  // shrugs. That is a rubric problem worth seeing on the first run rather
+  // than after his first email.
+  const c1Status = new Map<string, number>();
+  const notScored = new Map<string, number>();
 
   for (const candidate of candidates) {
     const crawlRunId = await latestGeneration(db, candidate.id);
@@ -49,20 +62,34 @@ async function score(): Promise<number> {
 
     if (outcome.kind === 'unscoreable') {
       unscoreable += 1;
+      notScored.set(outcome.reason, (notScored.get(outcome.reason) ?? 0) + 1);
       console.log(`  ${candidate.id}  NOT SCORED (${outcome.reason}): ${outcome.detail}`);
       continue;
     }
 
-    await writeVerdicts(db, buildVerdictWrite(candidate.id, outcome.evidence_run_id, outcome.scores));
-    await markStatus(db, candidate.id, 'scored');
+    const c1 = outcome.scores.find((s) => s.criterion === 'C1');
+    if (c1?.status) c1Status.set(c1.status, (c1Status.get(c1.status) ?? 0) + 1);
+
+    if (!dryRun) {
+      await writeVerdicts(db, buildVerdictWrite(candidate.id, outcome.evidence_run_id, outcome.scores));
+      await markStatus(db, candidate.id, 'scored');
+    }
     scored += 1;
     console.log(
       `  ${candidate.id}  ${outcome.scores.map((s) => `${s.criterion}=${s.score}`).join(' ')}` +
-        `  (${outcome.scores.reduce((n, s) => n + s.citations.length, 0)} citations)`,
+        `  (${outcome.scores.reduce((n, s) => n + s.citations.length, 0)} citations)` +
+        (c1?.status ? `  C1 ${c1.status}` : ''),
     );
   }
 
-  console.log(`\n${candidates.length} candidate(s): ${scored} scored, ${unscoreable} not scoreable.`);
+  const tally = (m: Map<string, number>) =>
+    [...m.entries()].sort().map(([k, n]) => `${k} ${n}`).join(', ') || 'none';
+  console.log(
+    `\n${candidates.length} candidate(s): ${scored} scored${dryRun ? ' (nothing written)' : ''}, ` +
+      `${unscoreable} not scoreable.`,
+  );
+  console.log(`  not scored by reason: ${tally(notScored)}`);
+  console.log(`  C1 by status:         ${tally(c1Status)}`);
   return 0;
 }
 
@@ -97,12 +124,16 @@ async function select(date: string, outputPath?: string): Promise<number> {
   return 0;
 }
 
-const [verb, argument, outputPath] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+const [verb, argument, outputPath] = args.filter((a) => a !== '--dry-run');
 const today = new Date().toISOString().slice(0, 10);
 
 if (verb !== 'score' && verb !== 'select') {
-  console.error('usage: node finds/score/run.ts score | select [YYYY-MM-DD] [digest-input.json]');
+  console.error(
+    'usage: node finds/score/run.ts score [--dry-run] | select [YYYY-MM-DD] [digest-input.json]',
+  );
   process.exit(2);
 }
 
-process.exitCode = verb === 'score' ? await score() : await select(argument ?? today, outputPath);
+process.exitCode = verb === 'score' ? await score(dryRun) : await select(argument ?? today, outputPath);
