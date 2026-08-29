@@ -17,10 +17,23 @@
  *
  *  2. THE QUESTION IS INVERTED. It is not asked "is this novel", which reads
  *     marketing register and rewards the most polished page. It is asked to
- *     NAME AN EXISTING PRODUCT that already does this task. That draws on world
- *     knowledge rather than the page's rhetoric, and no amount of copywriting
- *     helps a product evade it -- a landing page cannot make Cursor stop
- *     existing.
+ *     NAME AN EXISTING PRODUCT that already does this. World knowledge, not the
+ *     page's rhetoric -- a landing page cannot make Cursor stop existing.
+ *
+ *     THE QUESTION IS "DOES ONE PRODUCT DO ALL OF IT", NOT "DOES PRIOR ART
+ *     EXIST". The first version asked the latter, and that made D37 form (1)
+ *     unreachable by construction: a fusion is by definition built from COMMON
+ *     parts, so prior art for each half always exists and "established" always
+ *     won. Measured: 0 fusion verdicts in 18 judgements, on a corpus containing
+ *     a plain fusion. Nikhil decided fusion counts as novel, so the question
+ *     now asks whether a SINGLE product covers the whole claim.
+ *
+ *     THE OPPOSITE FAILURE IS EQUALLY REAL and step 2 of the prompt guards it:
+ *     almost any two features can be framed as a combination nobody has fused,
+ *     and a criterion that calls everything novel is exactly as useless as one
+ *     that calls everything established. So a fusion must NAME the separate
+ *     established things being combined -- `fused_from`, at least two -- and
+ *     features that routinely ship together in one category do not qualify.
  *
  *  3. EVERY VERDICT CITES A CLAIM, AND THE CITATION IS VERIFIED. The model must
  *     return the exact claim its judgement rests on. `bindClaim` checks that
@@ -78,9 +91,17 @@ const Verdict = z.object({
     .string()
     .nullable()
     .describe(
-      'For "established", the real existing product or category that already does this, named specifically. ' +
-        'Null for every other form. Never invent a name: if you cannot name one you are confident is real, ' +
-        'answer "unsure" instead.',
+      'For "established", the ONE real existing product that already does substantially all of this, named ' +
+        'specifically. Null for every other form. Never invent a name: if you cannot name one you are ' +
+        'confident is real, answer "unsure" instead.',
+    ),
+  fused_from: z
+    .array(z.string())
+    .nullable()
+    .describe(
+      'For "fusion" only: the two or more separate established products or categories this combines, each ' +
+        'named specifically. At least two. Null for every other form. If you cannot name two distinct ' +
+        'established things, it is not a fusion.',
     ),
   claim: z
     .string()
@@ -93,7 +114,10 @@ export type NoveltyForm = z.infer<typeof Verdict>['form'];
 /** A judgement that has been checked against the claims actually supplied. */
 export interface NoveltyJudgement {
   form: NoveltyForm;
+  /** For 'established' only: the one product that already does all of it. */
   prior_art: string | null;
+  /** For 'fusion' only: the established things being combined. Two or more. */
+  fused_from: string[] | null;
   reason: string;
   /** The evidence row carrying the cited claim. Non-null by construction. */
   evidence_id: string;
@@ -104,23 +128,39 @@ export interface NoveltyJudgement {
 const SYSTEM = `You judge whether a software product solves a RARE problem, where rare means novel in kind.
 
 Three things count as novel:
-  1. it mixes two common, established applications into one
+  1. it combines two or more established products into something no single existing product does
   2. it is a new paradigm of thinking
   3. it solves a new type of task
 
-Nothing else counts. In particular NARROW IS NOT NOVEL: a product serving a very
-specific niche is still doing an old task if the task itself is old. A stock
-tracker for one appliance model is a stock tracker.
+Work these steps IN ORDER and stop at the first that applies.
 
-YOUR FIRST DUTY IS TO NAME PRIOR ART. Before considering novelty, try to name a
-real existing product, or a long-established category of product, that already
-does this task. If you can name one, the answer is "established" and you name
-it. Only if you genuinely cannot name any prior art may you judge the product
-novel.
+STEP 1 - ONE PRODUCT, ALL OF IT.
+Can you name a SINGLE existing product that already does substantially everything
+this product claims? One product covering the whole claim - not one product per
+feature. If yes, answer "established" and name that one product. It does not
+matter that the existing product also does other things besides.
 
-Never invent a product name. If you cannot name prior art you are confident
-actually exists, and you are also not confident the product is novel, answer
-"unsure".
+STEP 2 - A COMBINATION NO SINGLE PRODUCT COVERS.
+If no single product covers it, can you name two or more separate, established
+products or categories whose combination this is? If yes, answer "fusion" and
+name them in fused_from. This counts as novel.
+  Be strict here. Do NOT call something a fusion merely because it has two
+  features. If those features routinely ship together in one product category,
+  then a single product covers them and the answer is "established". A fusion
+  requires BOTH that you can name the separate established things being brought
+  together, AND that no one product already does all of it.
+
+STEP 3 - Otherwise, is it a new paradigm of thinking, or a new type of task that
+was not previously done? Answer "new_paradigm" or "new_task".
+
+STEP 4 - If you cannot answer any of the above confidently, answer "unsure".
+
+NARROW IS NOT NOVEL: a product serving a very specific niche is still doing an
+old task if the task itself is old. A stock tracker for one appliance model is a
+stock tracker.
+
+Never invent a product name. If you cannot name what you need to be confident it
+actually exists, answer "unsure".
 
 Judge ONLY the claims given to you. Do not speculate about features not claimed.
 Marketing language is not evidence: words like "revolutionary", "rethink" or
@@ -215,11 +255,18 @@ export async function judgeNovelty(
   const bound = bindClaim(parsed.claim, supplied);
   if (!bound) return null;
 
+  // A fusion that cannot name two things it fuses is not a fusion -- it is the
+  // opposite failure, a combination asserted rather than shown. Demote it to
+  // 'unsure', which scores 1, rather than letting it score 2 unevidenced.
+  const form =
+    parsed.form === 'fusion' && (parsed.fused_from?.length ?? 0) < 2 ? 'unsure' : parsed.form;
+
   return {
-    form: parsed.form,
-    // A form other than 'established' has no prior art by definition; drop
-    // anything the model attached so a stray name cannot reach the rationale.
-    prior_art: parsed.form === 'established' ? parsed.prior_art : null,
+    form,
+    // Each name belongs to exactly one form; drop anything attached to the
+    // wrong one so a stray product cannot reach the rationale.
+    prior_art: form === 'established' ? parsed.prior_art : null,
+    fused_from: form === 'fusion' ? parsed.fused_from : null,
     reason: parsed.reason,
     evidence_id: bound.row.id,
     cited_claim: bound.claim.text,
