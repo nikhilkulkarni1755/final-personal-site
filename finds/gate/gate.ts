@@ -196,16 +196,28 @@ function budgetForAuthority(authority: string): CrawlBudget {
   return crawlBudgetFor(knownCrawlDelaySecondsFor(authority));
 }
 
-/** D22, extended to redirect hops (V2-C3): the physical page-cap ceiling
- * for one authority. Refuses and returns false once `pageFetchCount`
- * reaches that authority's own `page_cap` -- never incremented on refusal,
- * so it holds no matter who calls it or how a redirect chain crosses
- * authorities within one run. */
+/**
+ * D22/D26: the physical page-cap ceiling, now checked at BOTH scopes.
+ * A production run measured one candidate (teamretro.com) answering across
+ * 7 subdomains, each correctly capped at 25 on its own, for 34 pages total
+ * -- per-authority enforcement was right, the promise ("at most 25 pages
+ * per SITE") is about the whole product, not one subdomain of it. Refuses
+ * and returns false, incrementing neither counter, once EITHER: this
+ * authority's own `pageFetchCount` reaches its own crawl_budget.page_cap
+ * (a slow authority's own Crawl-delay can make that lower than 25, and
+ * must not be allowed to eat the whole wall-clock budget just because
+ * other subdomains haven't spent theirs), OR the candidate-wide
+ * `totalPagesFetched` reaches GATE_CONFIG.maxPagesAbsoluteCap (25) --
+ * whichever bites first. Holds no matter who calls it or how a redirect
+ * chain crosses authorities within one run.
+ */
 function trySpendPageBudget(runState: RunState, authority: string): { ok: boolean; budget: CrawlBudget } {
   const budget = budgetForAuthority(authority);
-  const spent = runState.pageFetchCount.get(authority) ?? 0;
-  if (spent >= budget.page_cap) return { ok: false, budget };
-  runState.pageFetchCount.set(authority, spent + 1);
+  const spentThisAuthority = runState.pageFetchCount.get(authority) ?? 0;
+  if (spentThisAuthority >= budget.page_cap) return { ok: false, budget };
+  if (runState.totalPagesFetched >= GATE_CONFIG.maxPagesAbsoluteCap) return { ok: false, budget };
+  runState.pageFetchCount.set(authority, spentThisAuthority + 1);
+  runState.totalPagesFetched += 1;
   return { ok: true, budget };
 }
 
@@ -576,13 +588,13 @@ export async function checkPage(
     // the budget bot.txt promises a site owner. No request is made;
     // use_rights is null because it was never read, same as any other
     // not-evaluated page.
-    const spentSoFar = runState.pageFetchCount.get(authority) ?? 0;
-    if (spentSoFar >= crawlBudget.page_cap) {
+    const spend = trySpendPageBudget(runState, authority);
+    if (!spend.ok) {
       const verdict = finalize({
         url, authority, candidateId: opts.candidateId ?? null,
         allowed: true,
         reasonCode: decision.reasonCode,
-        reasonDetail: `${decision.reasonDetail} (page cap of ${crawlBudget.page_cap} for this authority already spent this run; not fetched)`,
+        reasonDetail: `${decision.reasonDetail} (page cap already spent this run -- ${runState.pageFetchCount.get(authority) ?? 0}/${spend.budget.page_cap} for this authority, ${runState.totalPagesFetched}/${GATE_CONFIG.maxPagesAbsoluteCap} for the candidate; not fetched)`,
         decidingSignal: decision.decidingSignal,
         decidingRule: decision.decidingRule,
         decidingGroup: decision.decidingGroup,
@@ -592,7 +604,6 @@ export async function checkPage(
       verdictCache.set(url, verdict, ttlForReasonCode(verdict.reason_code) ?? undefined);
       return verdict;
     }
-    runState.pageFetchCount.set(authority, spentSoFar + 1);
 
     const pageFetch = await fetchPageForUseSignals(url, candidateOrigin, runState);
     evidence.push(...pageFetch.evidence);
