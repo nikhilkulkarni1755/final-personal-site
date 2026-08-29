@@ -55,8 +55,8 @@ function claimRow(observations: EvidenceObservation[] = [problemStated]): Eviden
 }
 function judgement(over: Partial<NoveltyJudgement> & { evidence_id: string }): NoveltyJudgement {
   return {
-    form: 'established', prior_art: null, reason: 'because', cited_claim: CLAIM,
-    model: 'claude-opus-5', ...over,
+    form: 'established', prior_art: null, fused_from: null, reason: 'because',
+    cited_claim: CLAIM, model: 'claude-opus-5', ...over,
   };
 }
 
@@ -69,11 +69,15 @@ test('named prior art is a 0, and the citation contradicts', () => {
   assert.match(score.rationale, /however narrow the niche/, 'narrow is not novel');
 });
 
-test('D37 form (1), a fusion of two established apps, scores 2', () => {
+test('D37 form (1), a fusion no single product covers, scores 2 and names the parts', () => {
   const r = claimRow();
-  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion' })));
+  const score = scored(
+    scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion', fused_from: ['Cursor', 'After Effects'] })),
+  );
   assert.equal(score.score, 2);
   assert.match(score.rationale, /form \(1\)/);
+  assert.match(score.rationale, /combines Cursor \+ After Effects/);
+  assert.match(score.rationale, /no single existing product was nameable/);
   assert.deepEqual(score.citations.map((c) => c.stance), ['supports']);
 });
 
@@ -111,8 +115,20 @@ test('an unsure judgement scores 1, never 0', () => {
 
 test('a form other than established can never carry prior art into the rationale', () => {
   const r = claimRow();
-  const score = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion', prior_art: 'Hallucinated Inc' })));
+  const score = scored(
+    scoreC2([r], judgement({ evidence_id: r.id, form: 'fusion', prior_art: 'Hallucinated Inc', fused_from: ['A', 'B'] })),
+  );
   assert.doesNotMatch(score.rationale, /Hallucinated Inc/);
+});
+
+test('the opposite failure: a fusion that cannot name two parts is not scored as one', () => {
+  // "these two features together are new" is assertable about almost anything,
+  // so a fusion must SHOW its parts. Asserted without them, it is demoted to
+  // unsure -- score 1 -- rather than scoring 2 unevidenced. Enforced in
+  // judgeNovelty before scoreC2 ever sees it; this asserts the scoring half.
+  const r = claimRow();
+  const one = scored(scoreC2([r], judgement({ evidence_id: r.id, form: 'unsure' })));
+  assert.equal(one.score, 1);
 });
 
 test('an absent problem statement still lets a no-judgement C2 score 1, not vanish', () => {

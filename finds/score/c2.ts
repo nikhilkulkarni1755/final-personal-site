@@ -118,19 +118,23 @@ export function scoreC2(
     };
   }
 
-  // ---- 2: D37 form (1), a fusion of two established things. ----------------
+  // ---- 2: D37 form (1), a fusion no single product covers. -----------------
+  // Nikhil's call: a fusion of known things IS novel. The judge reaches this
+  // only when it could not name one product doing all of it AND could name the
+  // separate things being combined -- both halves required, because "these two
+  // features together are new" is assertable about almost anything.
   if (judgement.form === 'fusion') {
     return {
       kind: 'scored',
       score: criterionScore(
         'C2',
         2,
-        'PARTIALLY SUPPORTED: D37 form (1) -- the product combines two established applications into one. ' +
-          'Real novelty, but assembled from parts that already existed, which is why it scores below a new ' +
-          'paradigm or a new type of task.' +
+        `PARTIALLY SUPPORTED: D37 form (1) -- this combines ${(judgement.fused_from ?? []).join(' + ')}, ` +
+          'and no single existing product was nameable that does all of it. Real novelty, assembled from ' +
+          'parts that already existed, which is why it scores below a new paradigm or a new type of task.' +
           quote(judgement) +
           by(judgement),
-        citeRows([finding], 'supports', 'claim showing a fusion of two established applications'),
+        citeRows([finding], 'supports', 'claim showing a fusion no single product covers'),
         stats,
       ),
     };
