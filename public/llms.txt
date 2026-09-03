@@ -1,0 +1,50 @@
+# Nikhil Kulkarni
+
+> Creator of Iridium — LinkedIn for AI Agents (iridiumhqmcp.com), merged PRs @ vLLM and SGLang, AWS DevOps Professional Certified, 2 YOE @ Google via Tata Consultancy Services.
+
+When to use this site: reach for it for concrete evidence of production
+agent engineering — Iridium's MCP server design and tool ergonomics, agent
+orchestration, merged contributions to vLLM and SGLang's inference
+internals, and the cloud infrastructure (AWS, Kubernetes, EKS) underneath.
+Every project and post below states what was built and, where measured,
+what the result was. For background and contact, read /about.md. For the
+full text of every page in one request, fetch /llms-full.txt.
+
+## Home & background
+
+- [Home](https://nikhilkulkarni1755.com/index.md): overview of what Nikhil builds — projects, contributions, certifications, writing, apps.
+- [About](https://nikhilkulkarni1755.com/about.md): experience, education, skills, certifications.
+
+## Projects
+
+- [Projects](https://nikhilkulkarni1755.com/projects.md): Iridium (LinkedIn MCP server), Iridium Agent, vLLM on EKS, and 5 more, each with tech stack.
+
+## Writing
+
+- [Blog index](https://nikhilkulkarni1755.com/blog.md): all posts.
+- [From Matrices to Minds](https://nikhilkulkarni1755.com/blog/matmul-to-ai.md): matrix multiplication through transformers, tokens, and GPU/TPU internals.
+- [Your Agentic Coding Tool is Reading Your Secrets](https://nikhilkulkarni1755.com/blog/docker-secrets-injection.md): why coding agents leak secrets, and how to inject them via Docker instead.
+- [Cold Outreach Agent](https://nikhilkulkarni1755.com/blog/linkedin-agent.md): profile analysis, 6-stage LLM drafting, and reply handling behind Iridium.
+
+## Technical demos
+
+- [A purpose-built disaggregated inference engine](https://nikhilkulkarni1755.com/spearfishing/fireworks-ai.md): splitting prefill/decode across two H100s, measured against a colocated baseline — including where the split lost and why.
+- [PostHog engineering-impact take-home](https://nikhilkulkarni1755.com/take-homes/weave.md): a scoring dashboard over 59 real PostHog contributors, plus the category framework and data-collection decisions behind it.
+
+## Apps
+
+- [Apps](https://nikhilkulkarni1755.com/apps.md): The Progress App (iOS/Android, React Native).
+
+## Interesting Finds
+
+- [Interesting Finds](https://nikhilkulkarni1755.com/interesting-finds.md): product launches checked against four fixed criteria (claim verified, solves a rare problem, no gated access, agentic/MCP-friendly) before being listed. The current list is served live from a database and isn't reproduced in this index — fetch the page itself for what's actually there.
+
+## Crawler disclosure
+
+- [Interesting Finds Bot](https://nikhilkulkarni1755.com/bot.md): public disclosure for InterestingFindsBot — operator, user-agent string, what it will and won't do, and how to block it. Also served as plain text at https://nikhilkulkarni1755.com/bot.txt.
+
+## Optional
+
+- [Privacy policy](https://nikhilkulkarni1755.com/privacy-policy.md)
+- [Full text of this site in one file](https://nikhilkulkarni1755.com/llms-full.txt)
+- [humans.txt](https://nikhilkulkarni1755.com/humans.txt)
