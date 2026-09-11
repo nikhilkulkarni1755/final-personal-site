@@ -42,7 +42,10 @@ const describeEngine = (live: LiveState): Stage => {
   const past = live.phase === 'thinking' || live.phase === 'tool' || live.phase === 'done';
   if (past) return { label: 'Engine', detail: live.model ? live.model.split('/').pop()! : 'serving', tone: 'done' };
   if (live.phase !== 'waking') return { label: 'Engine', detail: 'not running', tone: live.phase === 'failed' ? 'failed' : 'dark' };
-  if (!e || e.heartbeat_age_s === null || e.heartbeat_age_s > 30) return { label: 'Engine', detail: 'container not up', tone: 'dark' };
+  // No snapshot at all means the Pushgateway did not answer the gateway (seen
+  // 2026-09-11: Docker was down on the host); that is not the container's state.
+  if (!e) return { label: 'Engine', detail: 'no telemetry reaching the gateway', tone: 'dark' };
+  if (e.heartbeat_age_s === null || e.heartbeat_age_s > 30) return { label: 'Engine', detail: 'container not up', tone: 'dark' };
   if (e.startup.scheduler_e2e) return { label: 'Engine', detail: `booted in ${e.startup.scheduler_e2e.toFixed(0)}s, warming up`, tone: 'active' };
   if (e.startup.load_weight) return { label: 'Engine', detail: `weights loaded in ${e.startup.load_weight.toFixed(0)}s, capturing graphs`, tone: 'active' };
   return { label: 'Engine', detail: 'container up, loading weights', tone: 'active' };
