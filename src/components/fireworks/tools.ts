@@ -37,7 +37,17 @@ const NAMES: readonly ToolName[] = ['ls', 'grep', 'read', 'replace', 'append', '
 
 /** OpenAI-format declarations, sent in the request's `tools` field every turn. */
 export const TOOL_SCHEMAS = [
-  { type: 'function', function: { name: 'ls', description: 'List every file in the project with its line count.', parameters: { type: 'object', properties: {} } } },
+  {
+    type: 'function',
+    function: {
+      name: 'ls',
+      // A parameter is required on purpose: the engine's parser for this
+      // model's call format drops a call that carries no parameters at all
+      // (seen 2026-09-11: `<function=ls></function>` arrived as plain text).
+      description: 'List files with their line counts. `path` is a directory prefix such as "frontend" or "backend"; use "." for the whole project.',
+      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Directory prefix, or "." for everything.' } }, required: ['path'] },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -126,11 +136,14 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
   };
 
   switch (name as ToolName) {
-    case 'ls':
+    case 'ls': {
+      const prefix = normalise(args.path).replace(/^\.$/, '').replace(/\/$/, '');
+      const listed = files.filter((file) => !prefix || file.path === prefix || file.path.startsWith(`${prefix}/`));
       return {
-        content: files.map((file) => `${file.path} (${file.text.split('\n').length} lines)`).join('\n'),
-        summary: `ls → ${files.length} files`,
+        content: listed.length ? fileTree(listed) : `nothing under "${prefix}"`,
+        summary: `ls ${prefix || '.'} → ${listed.length} file${listed.length === 1 ? '' : 's'}`,
       };
+    }
 
     case 'grep': {
       const pattern = String(args.pattern ?? '');

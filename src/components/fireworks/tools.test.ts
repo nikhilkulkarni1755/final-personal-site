@@ -19,11 +19,13 @@ const FILES: ToolFile[] = [
 ];
 const ALLOWED = new Set(FILES.map((file) => file.path));
 
-test('ls lists every file with a line count', () => {
-  const out = runTool('ls', '{}', FILES, ALLOWED);
+test('ls lists every file with a line count, or one directory', () => {
+  const out = runTool('ls', JSON.stringify({ path: '.' }), FILES, ALLOWED);
   assert.equal(out.refused, undefined);
   assert.match(out.content, /frontend\/style\.css \(6 lines\)/);
   assert.equal(fileTree(FILES), out.content);
+  assert.equal(runTool('ls', JSON.stringify({ path: 'backend' }), FILES, ALLOWED).content, 'backend/app.py (3 lines)');
+  assert.equal(runTool('ls', '{}', FILES, ALLOWED).summary, 'ls . → 2 files');
 });
 
 test('grep returns path:line: text and a count', () => {
