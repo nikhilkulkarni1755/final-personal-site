@@ -225,6 +225,31 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
   }
 }
 
+/**
+ * The model's trained call format, read from text.
+ *
+ * The engine normally parses this into structured tool calls. When it does
+ * not -- a worker launched without the parser flag, or a parser edge case --
+ * the calls arrive as plain content in exactly this shape. Executing them
+ * from here is what keeps a demo alive; the structural guard in `runTool`
+ * applies either way, so nothing is trusted more for having come this route.
+ */
+export const parseTextToolCalls = (content: string): Array<{ name: string; arguments: string }> => {
+  const calls: Array<{ name: string; arguments: string }> = [];
+  for (const block of content.matchAll(/<function=([\w.-]+)>([\s\S]*?)<\/function>/g)) {
+    const args: Record<string, string> = {};
+    for (const param of block[2].matchAll(/<parameter=([\w.-]+)>([\s\S]*?)<\/parameter>/g)) {
+      args[param[1]] = param[2].replace(/^\n/, '').replace(/\n$/, '');
+    }
+    calls.push({ name: block[1], arguments: JSON.stringify(args) });
+  }
+  return calls;
+};
+
+/** Content with the call blocks removed, for showing the model's own words. */
+export const stripTextToolCalls = (content: string): string =>
+  content.replace(/<tool_call>[\s\S]*?(<\/tool_call>|$)/g, '').replace(/<function=[\s\S]*?(<\/function>|$)/g, '').trim();
+
 /** The project as the model first sees it: paths and sizes, nothing else. */
 export const fileTree = (files: ToolFile[]): string =>
   files.map((file) => `${file.path} (${file.text.split('\n').length} lines)`).join('\n');

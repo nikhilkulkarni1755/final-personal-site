@@ -10,7 +10,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fileTree, runTool, type ToolFile } from './tools.ts';
+import { fileTree, parseTextToolCalls, runTool, stripTextToolCalls, type ToolFile } from './tools.ts';
 
 const CSS = ':root {\n  --bg: #F4F8FA;\n  --ink: #0E1417;\n}\nbody { background: var(--bg); }\n';
 const FILES: ToolFile[] = [
@@ -86,4 +86,12 @@ test('write refuses an empty file and append adds a trailing newline', () => {
   assert.equal(runTool('write', JSON.stringify({ path: 'backend/app.py', text: '  ' }), FILES, ALLOWED).refused, true);
   const out = runTool('append', JSON.stringify({ path: 'backend/app.py', text: 'x = 2' }), FILES, ALLOWED);
   assert.equal(out.edit!.text, 'def main():\n    return 1\nx = 2\n');
+});
+
+test('a call the engine left as text is recovered, and stripped from the prose', () => {
+  const text = 'Let me look.\n<tool_call>\n<function=read>\n<parameter=path>\nfrontend/index.html\n</parameter>\n<parameter=start>\n3\n</parameter>\n</function>\n</tool_call>';
+  const calls = parseTextToolCalls(text);
+  assert.deepEqual(calls, [{ name: 'read', arguments: JSON.stringify({ path: 'frontend/index.html', start: '3' }) }]);
+  assert.equal(stripTextToolCalls(text), 'Let me look.');
+  assert.deepEqual(parseTextToolCalls('no calls here'), []);
 });

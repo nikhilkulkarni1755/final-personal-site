@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { DATA_BASE } from '../components/fireworks/types';
-import { OUT_OF_SCOPE, TOOL_SCHEMAS, fileTree, runTool, type PromptContract } from '../components/fireworks/tools';
+import { OUT_OF_SCOPE, TOOL_SCHEMAS, fileTree, parseTextToolCalls, runTool, stripTextToolCalls, type PromptContract } from '../components/fireworks/tools';
 
 /**
  * useFireworksLive - one input, one run: the agent loop, with the browser as
@@ -310,6 +310,12 @@ export const useFireworksLive = () => {
           const frame = result.frame;
           const entryTimings = { ttftMs: frame?.ttft_ms ?? null, cachedTokens: frame?.cached_tokens ?? null, promptTokens: frame?.prompt_tokens ?? null };
           if (turn === 1 && frame) setState((current) => ({ ...current, ttftMs: frame.ttft_ms ?? null, tpotMs: frame.tpot_ms ?? null }));
+
+          // A call the engine handed over as text still counts as a call.
+          if (!result.toolCalls.length) {
+            result.toolCalls = parseTextToolCalls(result.content).map((call, index) => ({ id: `text_${turn}_${index}`, ...call }));
+            if (result.toolCalls.length) result.content = stripTextToolCalls(result.content);
+          }
 
           // No tool call: the model is done, one way or another.
           if (!result.toolCalls.length) {
