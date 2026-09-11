@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
 import { useFireworksProject } from '../hooks/useFireworksProject';
 import { useFireworksLive } from '../hooks/useFireworksLive';
 import { useFireworksQuota } from '../hooks/useFireworksQuota';
-import CacheCliffChart from '../components/fireworks/CacheCliffChart';
-import LiveRunPanel from '../components/fireworks/LiveRunPanel';
 import PoolUtilizationChart from '../components/fireworks/PoolUtilizationChart';
 import RunBadge from '../components/fireworks/RunBadge';
 import TailLatencyChart from '../components/fireworks/TailLatencyChart';
@@ -56,13 +54,43 @@ const Section = ({
  * ones where it wins.
  */
 const FireworksAI = () => {
-  usePageAnalytics('Fireworks AI - Disaggregated Inference');
+  usePageAnalytics('Inference, end to end');
 
   const { active, activePair, mode, setMode, canCompare, loading, error } = useFireworksCaptures();
   const project = useFireworksProject();
   const live = useFireworksLive();
   const quota = useFireworksQuota();
   const [promptResult, setPromptResult] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
+
+  const runPrompt = useCallback(
+    async (prompt: string) => {
+      setLastPrompt(prompt);
+      setPromptResult(null);
+      const outcome = await live.submitPrompt(prompt, project);
+      void quota.refresh();
+      setPromptResult(
+        outcome.kind === 'applied'
+          ? `Applied to ${outcome.paths.join(', ')}: ${outcome.summary}`
+          : outcome.kind === 'no_change'
+            ? `No file changed: ${outcome.summary}`
+            : outcome.kind === 'out_of_scope'
+              ? 'out of scope — this model only edits the project above.'
+              : outcome.message,
+      );
+    },
+    [live, project, quota],
+  );
+
+  // A wake that found no GPU is our capacity problem, so the page watches for a
+  // free card on the visitor's behalf: the quota route carries the worker
+  // states, and refreshing it every 15s costs nothing and counts nothing.
+  const waitingForGpu = !live.busy && (live.failure === 'no_gpu' || live.failure === 'wake_timeout');
+  useEffect(() => {
+    if (!waitingForGpu) return;
+    const timer = window.setInterval(() => void quota.refresh(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [waitingForGpu, quota]);
 
   if (loading || project.loading) {
     return (
@@ -90,33 +118,35 @@ const FireworksAI = () => {
 
   const prefixTokens = active.prefix.approx_tokens.toLocaleString();
 
-  // What the free-text box can offer right now. Kept in one place because the
-  // answer depends on three independent things -- whether a gateway exists at
-  // all, whether an engine is warm, and how many prompts this visitor has left
-  // -- and scattering that logic across the UI is how the states drift apart.
+  // What the input box can offer right now. Kept in one place because the
+  // answer depends on several independent things -- whether a gateway exists
+  // at all, whether this address has inputs left, whether today's budget does,
+  // whether a GPU is free, and whether the engine is still warm -- and
+  // scattering that logic across the UI is how the states drift.
   const promptState = (() => {
     if (!live.available) {
-      return {
-        enabled: false,
-        note: 'Free-text editing needs a live engine. The example prompts above replay real recorded runs.',
-      };
+      return { enabled: false, note: 'No engine is configured for this deployment, so the box is closed.' };
     }
     if (quota.unavailable) {
-      return { enabled: false, note: 'Prompt quota is unavailable right now, so free text is closed.' };
+      return { enabled: false, note: 'The budget is unavailable right now, so the box is closed.' };
     }
     if (quota.remaining <= 0) {
-      return { enabled: false, note: `You have used all ${quota.limit} prompts. The examples above still work.` };
+      return { enabled: false, note: `You have used all ${quota.limit} inputs for this address.` };
     }
-    if (live.state === 'starting') {
-      return { enabled: false, note: live.message || 'Waking a GPU — this takes a few minutes from cold.' };
+    if (quota.dailyRemaining <= 0) {
+      return { enabled: false, note: 'Today’s GPU budget is spent. It resets at midnight UTC.' };
     }
-    if (live.state !== 'ready') {
-      return {
-        enabled: true,
-        note: `${quota.remaining} of ${quota.limit} prompts left. The engine is asleep, so the first one has to wake it.`,
-      };
+    if (live.busy) {
+      return { enabled: false, note: live.phase === 'waking' ? 'Waking a GPU from zero — a couple of minutes.' : `Turn ${live.turn} of ${quota.turnCap}.` };
     }
-    return { enabled: true, note: `${quota.remaining} of ${quota.limit} prompts left. Engine is warm.` };
+    const left = `${quota.remaining} of ${quota.limit} inputs left for this address; each one is a whole run of up to ${quota.turnCap} tool calls, and you cannot amend it once sent.`;
+    if (quota.noGpu) {
+      return { enabled: false, note: `No GPU is free for this endpoint right now — the worker is throttled. ${left}` };
+    }
+    if (quota.warmFor > 0) {
+      return { enabled: true, note: `${left} The engine is warm for about ${quota.warmFor}s more, so the next one starts at once.` };
+    }
+    return { enabled: true, note: `${left} The engine is asleep, so the first one wakes it.` };
   })();
 
   // Both hero panels share the slower run's duration, so flipping the mode
@@ -199,42 +229,23 @@ const FireworksAI = () => {
         <Section
           eyebrow="Try it"
           title="The project is also the prompt"
-          blurb="This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Pick a prompt and watch the patch land at its real recorded speed."
+          blurb="This is the codebase the model works on — about 2,100 lines of a working document-summarizing agent, held in this tab as the source of truth. The model is shown the file tree and six tools; it greps, reads, and lands the smallest edit, and the panel shows each call as it happens. The engine scales to zero between visitors, so the first input after an idle spell wakes a GPU, and that wait is shown rather than hidden."
         >
           <Workbench
-            run={active}
             files={project.files}
             fileMap={project.fileMap}
             canonicalText={project.canonicalText}
             dirtyPaths={project.dirtyPaths}
             prefixDiverged={project.prefixDiverged}
-            cacheableFraction={project.cacheableFraction}
             applyEdit={project.applyEdit}
             resetProject={project.resetProject}
+            live={live}
             promptEnabled={promptState.enabled}
             promptNote={promptState.note}
             promptResult={promptResult}
-            onSubmitPrompt={async (prompt) => {
-              setPromptResult(null);
-              const outcome = await live.submitPrompt(prompt, project, quota);
-              setPromptResult(
-                outcome.kind === 'applied'
-                  ? `Applied to ${outcome.paths.join(', ')}.`
-                  : outcome.kind === 'out_of_scope'
-                    ? 'out of scope — this engine only edits the project above.'
-                    : outcome.message,
-              );
-            }}
+            onSubmitPrompt={(prompt) => void runPrompt(prompt)}
+            resend={waitingForGpu && lastPrompt ? { ready: !quota.noGpu, onClick: () => void runPrompt(lastPrompt) } : null}
           />
-        </Section>
-
-        {/* ----------------------------------------------------- cache cliff */}
-        <Section
-          eyebrow="Prefix caching"
-          title="Pay for the project once"
-          blurb="Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values. This is the one thing that worked exactly as intended — and note how much smaller the win looks on hardware fast enough to make the prefill cheap anyway."
-        >
-          <CacheCliffChart run={active} />
         </Section>
 
         {/* ---------------------------------------------------- tail latency */}
@@ -288,10 +299,6 @@ const FireworksAI = () => {
               {active.model.active_params_b ?? '3.3'}B active still has to hold all of it resident.
             </li>
           </ul>        </motion.section>
-
-        <div className="my-16">
-          <LiveRunPanel live={live} />
-        </div>
 
         {/* --------------------------------------------------------- writeup */}
         <Section

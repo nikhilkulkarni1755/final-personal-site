@@ -16,6 +16,7 @@ ON CONFLICT (slug) DO NOTHING;
 -- records no views at all -- silently, because the error is only logged.
 INSERT INTO pages (slug, title, type, metadata) VALUES
   ('/spearfishing/fireworks-ai', 'Fireworks AI - Disaggregated Inference', 'project', '{}'::jsonb),
+  ('/inference-end-to-end', 'Inference, end to end', 'project', '{}'::jsonb),
   ('/spearfishing/voice-agent', 'Drug Marketplace - Voice Agent', 'project', '{}'::jsonb)
 ON CONFLICT (slug) DO NOTHING;
 

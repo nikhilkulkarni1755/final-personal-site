@@ -33,9 +33,7 @@ const GUTTER = 'select-none text-right pr-3 tabular-nums text-[11px] text-[#001F
  * and it is why this stays dependency-free rather than pulling in an editor.
  *
  * Hand edits and model edits both write the same working copy, so the divergence
- * header covers them identically -- and breaking the cached prefix by hand, then
- * watching the reusable fraction fall from 85% to 3%, teaches the point better
- * than reading it does.
+ * header covers them identically, and the next prompt sees both.
  *
  * The diff view is never editable: it renders two versions interleaved, so there
  * is no single text for a caret to live in.

@@ -1,126 +1,92 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Gauge, Play, RotateCcw, Square } from 'lucide-react';
+import { useState } from 'react';
+import { Activity, RotateCcw } from 'lucide-react';
 import CodeViewer from './CodeViewer';
 import FileTree from './FileTree';
+import LivePanel from './LivePanel';
 import Preview from './Preview';
-import { SERIES, formatMs } from './chartTokens';
-import type { CaptureRequest, CaptureRun, CorpusFile } from './types';
-import { useFireworksReplay } from '../../hooks/useFireworksReplay';
+import type { CorpusFile } from './types';
+import { GRAFANA_URL, type LiveState } from '../../hooks/useFireworksLive';
 
 interface WorkbenchProps {
-  run: CaptureRun;
   files: CorpusFile[];
   fileMap: Map<string, CorpusFile>;
   canonicalText: (path: string) => string;
   dirtyPaths: Set<string>;
   prefixDiverged: boolean;
-  cacheableFraction: number;
   applyEdit: (path: string, text: string) => void;
   resetProject: () => void;
-  /** Free-text prompt handler. Absent when no engine is reachable. */
-  onSubmitPrompt?: (prompt: string) => void;
+  live: LiveState;
+  onSubmitPrompt: (prompt: string) => void;
   promptEnabled?: boolean;
   promptPlaceholder?: string;
   promptNote?: string;
   /** Outcome of the last prompt, shown under the box. */
   promptResult?: string | null;
+  /** After a wake that found no GPU: offered once a card is free again. */
+  resend?: { ready: boolean; onClick: () => void } | null;
 }
 
-const SPEEDS = [1, 2, 4, 8];
-
-/** Every request in the run that actually carries an edit we can replay. */
-const playableRequests = (run: CaptureRun): CaptureRequest[] =>
-  Object.values(run.sets)
-    .flatMap((set) => set?.requests ?? [])
-    .filter((request) => request.output_text && request.target_file);
-
 /**
- * Workbench - the project, the prompt box, and what the engine does to them.
+ * Workbench - the project, the input box, and the machine working on them.
  *
  * Every edit here is local to this browser tab and is thrown away on reload.
- * That is deliberate, and it doubles as the lesson: the canonical project is the
- * prefix the engine has cached, so the moment a visitor changes a file their
- * prefix stops matching and the next request cannot hit the cache. The banner
- * says so, and Reset puts it back.
+ * The canonical project is byte-identical for every visitor; the working copy
+ * is this visitor's edits layered on top, and Reset puts it back. Below the
+ * box, the panel shows the backend as it wakes and the model's tool calls as
+ * they land -- each from something recorded, none of it animation.
  */
 const Workbench = ({
-  run,
   files,
   fileMap,
   canonicalText,
   dirtyPaths,
   prefixDiverged,
-  cacheableFraction,
   applyEdit,
   resetProject,
+  live,
   onSubmitPrompt,
   promptEnabled = false,
   promptPlaceholder = 'Ask for a change — "make the robot pink", "add a reset button"',
   promptNote,
   promptResult,
+  resend,
 }: WorkbenchProps) => {
   const [selected, setSelected] = useState('frontend/style.css');
   const [pane, setPane] = useState<'code' | 'preview'>('code');
   const [draft, setDraft] = useState('');
 
-  const onStream = useCallback((path: string, text: string) => applyEdit(path, text), [applyEdit]);
-  const replay = useFireworksReplay({ onStream });
+  const busy = live.phase === 'waking' || live.phase === 'thinking' || live.phase === 'tool';
+  // The model is writing this file: two writers on one buffer is a race the visitor would lose.
+  const streaming = live.phase === 'tool';
 
-  const requests = useMemo(() => playableRequests(run), [run]);
-
-  // Follow the file the engine is currently rewriting.
-  useEffect(() => {
-    const target = replay.request?.target_file;
-    if (target) setSelected(target);
-  }, [replay.request]);
-
-  const runRequest = (request: CaptureRequest) => {
-    const target = request.target_file!;
-    setSelected(target);
-    if (target.startsWith('frontend/')) setPane('preview');
-    replay.play(request, '');
-  };
+  // Follow the file the engine is currently rewriting. Adjusted during render
+  // rather than in an effect, so the editor never paints a stale file first.
+  const [followed, setFollowed] = useState<string | null>(null);
+  if (live.activePath && live.activePath !== followed) {
+    setFollowed(live.activePath);
+    setSelected(live.activePath);
+    if (live.activePath.startsWith('frontend/')) setPane('preview');
+  }
 
   const file = fileMap.get(selected);
   const isDirty = dirtyPaths.has(selected);
 
   // A changed file used to switch permanently to the diff view, which also made
   // it uneditable -- so a visitor's first hand edit locked them out of a second.
-  // The diff is a toggle now, on by default while a replay is landing (that is
+  // The diff is a toggle now, on by default while an edit is landing (that is
   // when seeing the change matters) and off otherwise.
   const [diffPref, setDiffPref] = useState<boolean | null>(null);
-  const showDiff = isDirty && (diffPref ?? replay.isPlaying);
+  const showDiff = isDirty && (diffPref ?? streaming);
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#001F3F]/10 bg-white dark:border-white/10 dark:bg-[#001F3F]">
       {/* prompt row */}
       <div className="border-b border-[#001F3F]/10 p-3 dark:border-white/10">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          {requests.map((request) => {
-            const active = replay.request?.id === request.id;
-            return (
-              <button
-                key={request.id}
-                type="button"
-                onClick={() => runRequest(request)}
-                disabled={replay.isPlaying}
-                className={`rounded-full border px-3 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 ${
-                  active
-                    ? 'border-[#001F3F] bg-[#001F3F] text-white dark:border-white dark:bg-white dark:text-[#001F3F]'
-                    : 'border-[#001F3F]/15 text-[#001F3F]/75 hover:bg-[#001F3F]/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]'
-                }`}
-              >
-                {request.prompt}
-              </button>
-            );
-          })}
-        </div>
-
         <form
           onSubmit={(event) => {
             event.preventDefault();
             const text = draft.trim();
-            if (text && onSubmitPrompt) {
+            if (text) {
               onSubmitPrompt(text);
               setDraft('');
             }
@@ -147,72 +113,50 @@ const Workbench = ({
           </button>
           {promptResult ? (
             <span
-              className={`w-full text-[10px] ${
+              className={`flex w-full flex-wrap items-center gap-2 text-[10px] ${
                 promptResult.startsWith('out of scope')
                   ? 'text-[#C2670A] dark:text-[#C87A16]'
                   : 'text-[#001F3F]/55 dark:text-white/50'
               }`}
             >
               {promptResult}
+              {resend &&
+                (resend.ready ? (
+                  <button
+                    type="button"
+                    onClick={resend.onClick}
+                    className="rounded-md bg-[#0F7B5A] px-2 py-0.5 font-semibold text-white dark:bg-[#3DBE8B] dark:text-[#001F3F]"
+                  >
+                    A GPU is free now — resend the same input
+                  </button>
+                ) : (
+                  <span className="italic">watching for a free GPU every 15s; nothing is spent while we wait</span>
+                ))}
             </span>
           ) : (
             promptNote && <span className="w-full text-[10px] text-[#001F3F]/45 dark:text-white/40">{promptNote}</span>
           )}
         </form>
 
-        <div className="flex flex-wrap items-center gap-3 text-[11px]">
-          {replay.isPlaying ? (
-            <button
-              type="button"
-              onClick={replay.stop}
-              className="flex items-center gap-1.5 rounded-md bg-[#001F3F] px-2.5 py-1 text-white dark:bg-white dark:text-[#001F3F]"
+        {/* the backend, through glass */}
+        <LivePanel live={live} />
+
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+          {GRAFANA_URL && (
+            <a
+              href={GRAFANA_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-[#001F3F]/55 underline-offset-2 hover:underline dark:text-white/50"
             >
-              <Square className="h-3 w-3" /> stop
-            </button>
-          ) : (
-            <span className="flex items-center gap-1.5 text-[#001F3F]/45 dark:text-white/40">
-              <Play className="h-3 w-3" /> pick a prompt to replay it
-            </span>
-          )}
-
-          <span className="flex items-center gap-1 text-[#001F3F]/45 dark:text-white/40">
-            <Gauge className="h-3 w-3" />
-            {SPEEDS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => replay.setSpeed(value)}
-                className={`rounded px-1.5 tabular-nums ${
-                  replay.speed === value
-                    ? 'bg-[#001F3F]/10 font-semibold text-[#001F3F] dark:bg-white/15 dark:text-white'
-                    : 'hover:text-[#001F3F] dark:hover:text-white'
-                }`}
-              >
-                {value}×
-              </button>
-            ))}
-          </span>
-
-          {replay.request && (
-            <span className="flex items-center gap-3 font-mono tabular-nums text-[#001F3F]/60 dark:text-white/55">
-              <span style={{ color: SERIES.prefill }}>
-                ttft {formatMs(replay.request.ttft_ms)}
-                {(replay.request.cache_hit_tokens ?? 0) > 0 && ' · cache hit'}
-              </span>
-              <span style={{ color: SERIES.decode }}>
-                {replay.tokensEmitted.toLocaleString()} / {replay.request.output_tokens.toLocaleString()} tok
-              </span>
-              {replay.recentItlMs > 0 && <span>{replay.recentItlMs.toFixed(1)}ms/tok</span>}
-            </span>
+              <Activity className="h-3 w-3" /> live metrics
+            </a>
           )}
 
           <button
             type="button"
-            onClick={() => {
-              replay.reset();
-              resetProject();
-            }}
-            disabled={!prefixDiverged && !replay.request}
+            onClick={resetProject}
+            disabled={!prefixDiverged || busy}
             className="ml-auto flex items-center gap-1.5 rounded-md border border-[#001F3F]/15 px-2.5 py-1 text-[#001F3F]/70 transition-colors hover:bg-[#001F3F]/[0.04] disabled:opacity-35 dark:border-white/15 dark:text-white/65 dark:hover:bg-white/[0.06]"
           >
             <RotateCcw className="h-3 w-3" /> reset project
@@ -220,7 +164,7 @@ const Workbench = ({
         </div>
       </div>
 
-      {/* which copy you are on, and what it costs */}
+      {/* which copy you are on */}
       <div
         className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-3 py-2 text-[11px] ${
           prefixDiverged
@@ -233,25 +177,14 @@ const Workbench = ({
             <strong className="font-semibold">Your working copy</strong>
             <span>
               — {dirtyPaths.size} file{dirtyPaths.size === 1 ? '' : 's'} changed, in this browser tab only.
-              The canonical project is untouched, for you and for everyone else.
-            </span>
-            <span className="w-full">
-              Files are sent in sorted order and the cache matches on a prefix, so a hit ends at your
-              first changed byte:{' '}
-              <strong className="font-semibold tabular-nums">
-                {Math.round(cacheableFraction * 100)}% of the prefix is still reusable
-              </strong>
-              . Edit something sorted late and you keep nearly all of it; edit{' '}
-              <code className="font-mono">backend/agent.py</code> and you lose most of it.
+              The canonical project is untouched, for you and for everyone else. The next prompt sees
+              these changes.
             </span>
           </>
         ) : (
           <>
             <strong className="font-semibold">Canonical project</strong>
-            <span>
-              — byte-identical for every visitor, which is exactly why it is worth caching. Edits
-              stay local and never change it.
-            </span>
+            <span>— byte-identical for every visitor. Edits stay local and never change it.</span>
           </>
         )}
       </div>
@@ -275,7 +208,7 @@ const Workbench = ({
                 {showDiff ? 'show file' : 'show diff'}
               </button>
             )}
-            {!replay.isPlaying && !showDiff && (
+            {!streaming && !showDiff && (
               <span className="hidden text-[10px] text-[#001F3F]/35 sm:inline dark:text-white/30">
                 editable — try changing a colour
               </span>
@@ -303,10 +236,10 @@ const Workbench = ({
                 text={file.text}
                 language={file.language}
                 compareTo={showDiff ? canonicalText(selected) : undefined}
-                followTail={replay.isPlaying}
+                followTail={streaming}
                 // Not editable mid-stream: the model is writing this file, and two
                 // writers on one buffer is a race the visitor would lose.
-                onEdit={replay.isPlaying ? undefined : (text) => applyEdit(selected, text)}
+                onEdit={streaming ? undefined : (text) => applyEdit(selected, text)}
               />
             )}
           </div>

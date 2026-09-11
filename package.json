@@ -42,7 +42,8 @@
     "hitl:typecheck": "tsc --noEmit -p finds/hitl/tsconfig.json",
     "hitl:verify": "node finds/hitl/verifyFidelity.ts",
     "hitl:ask": "node finds/hitl/ask.ts",
-    "hitl:poll": "node finds/hitl/poll.ts"
+    "hitl:poll": "node finds/hitl/poll.ts",
+    "test": "node --test src/components/fireworks/tools.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.0",
