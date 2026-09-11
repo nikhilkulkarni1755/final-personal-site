@@ -13,50 +13,48 @@ interface PreviewProps {
  * and handed to an iframe with no bundler, no server and no build step. That
  * matters for more than convenience: a build step between the model's output
  * and the pixels would add latency to the very thing this page is measuring.
+ *
+ * Nothing is simulated on this side. All three of the corpus's scripts run
+ * as written, so an edit to any of them shows up here. The backend is not
+ * running, and the corpus's own API client knows that: its health check fails
+ * and it falls back to the scripted demo job it ships with. That fallback is
+ * the corpus's, not ours.
+ *
+ * The iframe is sandboxed without same-origin, so the model's JavaScript can
+ * touch nothing but its own document. The one thing that sandbox takes away
+ * that a real page would have is storage, so an in-memory stand-in is
+ * provided; otherwise a theme toggle that remembers itself would throw.
  */
 const Preview = ({ fileMap }: PreviewProps) => {
   const srcDoc = useMemo(() => {
     const html = fileMap.get('frontend/index.html')?.text ?? '';
     const css = fileMap.get('frontend/style.css')?.text ?? '';
-    const robot = fileMap.get('frontend/robot.js')?.text ?? '';
     if (!html) return '';
 
-    // Inline the stylesheet and the illustration, then drive the robot through
-    // its phases on a loop. The corpus backend is not running here, so api.js
-    // and animate.js are replaced by this small phase cycler.
-    const phaseCycler = `
-      const stage = document.getElementById('stage');
-      const caption = document.getElementById('phase-caption');
-      const detail = document.getElementById('phase-detail');
-      const bar = document.getElementById('progress-bar');
-      const script = [
-        ['reading', 'opening document', 0.15],
-        ['thinking', 'summarizing chunk 2/3', 0.55],
-        ['writing', 'merging summaries', 0.95],
-        ['done', 'summary ready', 1]
-      ];
-      let step = 0;
-      const tick = () => {
-        const [phase, text, progress] = script[step % script.length];
-        stage.dataset.phase = phase;
-        caption.textContent = phase;
-        detail.textContent = text;
-        bar.style.width = (progress * 100) + '%';
-        step += 1;
-      };
-      tick();
-      setInterval(tick, 2200);
+    const storageShim = `
+      try { window.localStorage.length; } catch {
+        const store = new Map();
+        const memory = {
+          getItem: (k) => (store.has(k) ? store.get(k) : null),
+          setItem: (k, v) => store.set(k, String(v)),
+          removeItem: (k) => store.delete(k),
+          clear: () => store.clear(),
+          key: (i) => [...store.keys()][i] ?? null,
+          get length() { return store.size; },
+        };
+        Object.defineProperty(window, 'localStorage', { value: memory });
+        Object.defineProperty(window, 'sessionStorage', { value: memory });
+      }
     `;
 
+    // Inline the stylesheet and the scripts in the order index.html loads them.
+    // Closing script tags inside a body are split so they cannot end the wrapper.
+    const inline = (path: string) => `<script>${(fileMap.get(path)?.text ?? '').replace(/<\/script/gi, '<\\/script')}</script>`;
     return html
       .replace('<link rel="stylesheet" href="style.css" />', `<style>${css}</style>`)
-      .replace(
-        /<script src="robot\.js"><\/script>[\s\S]*?<script src="animate\.js"><\/script>/,
-        `<script>${robot}</script><script>
-           window.DocScribeRobot.mountRobot(document.querySelector('.robot-slot'));
-           ${phaseCycler}
-         </script>`,
-      );
+      .replace('<script src="robot.js"></script>', `<script>${storageShim}</script>${inline('frontend/robot.js')}`)
+      .replace('<script src="api.js"></script>', inline('frontend/api.js'))
+      .replace('<script src="animate.js"></script>', inline('frontend/animate.js'));
   }, [fileMap]);
 
   if (!srcDoc) {
