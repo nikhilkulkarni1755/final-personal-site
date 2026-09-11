@@ -54,7 +54,7 @@ const Section = ({
  * ones where it wins.
  */
 const FireworksAI = () => {
-  usePageAnalytics('Fireworks AI - Disaggregated Inference');
+  usePageAnalytics('Inference, end to end');
 
   const { active, activePair, mode, setMode, canCompare, loading, error } = useFireworksCaptures();
   const project = useFireworksProject();
@@ -88,30 +88,35 @@ const FireworksAI = () => {
 
   const prefixTokens = active.prefix.approx_tokens.toLocaleString();
 
-  // What the prompt box can offer right now. Kept in one place because the
-  // answer depends on three independent things -- whether a gateway exists at
-  // all, whether this address has prompts left, and whether today's budget
-  // does -- and scattering that logic across the UI is how the states drift.
+  // What the input box can offer right now. Kept in one place because the
+  // answer depends on several independent things -- whether a gateway exists
+  // at all, whether this address has inputs left, whether today's budget does,
+  // whether a GPU is free, and whether the engine is still warm -- and
+  // scattering that logic across the UI is how the states drift.
   const promptState = (() => {
     if (!live.available) {
       return { enabled: false, note: 'No engine is configured for this deployment, so the box is closed.' };
     }
     if (quota.unavailable) {
-      return { enabled: false, note: 'Prompt quota is unavailable right now, so the box is closed.' };
+      return { enabled: false, note: 'The budget is unavailable right now, so the box is closed.' };
     }
     if (quota.remaining <= 0) {
-      return { enabled: false, note: `You have used all ${quota.limit} prompts for this address.` };
+      return { enabled: false, note: `You have used all ${quota.limit} inputs for this address.` };
     }
     if (quota.dailyRemaining <= 0) {
       return { enabled: false, note: 'Today’s GPU budget is spent. It resets at midnight UTC.' };
     }
     if (live.busy) {
-      return { enabled: false, note: live.phase === 'waking' ? 'Waking a GPU from zero — this can take a few minutes.' : 'Writing…' };
+      return { enabled: false, note: live.phase === 'waking' ? 'Waking a GPU from zero — a couple of minutes.' : `Turn ${live.turn} of ${quota.turnCap}.` };
     }
-    return {
-      enabled: true,
-      note: `${quota.remaining} of ${quota.limit} prompts left for this address. The first one after an idle spell wakes the GPU.`,
-    };
+    const left = `${quota.remaining} of ${quota.limit} inputs left for this address; each one is a whole run of up to ${quota.turnCap} tool calls, and you cannot amend it once sent.`;
+    if (quota.noGpu) {
+      return { enabled: false, note: `No GPU is free for this endpoint right now — the worker is throttled. ${left}` };
+    }
+    if (quota.warmFor > 0) {
+      return { enabled: true, note: `${left} The engine is warm for about ${quota.warmFor}s more, so the next one starts at once.` };
+    }
+    return { enabled: true, note: `${left} The engine is asleep, so the first one wakes it.` };
   })();
 
   // Both hero panels share the slower run's duration, so flipping the mode
@@ -194,7 +199,7 @@ const FireworksAI = () => {
         <Section
           eyebrow="Try it"
           title="The project is also the prompt"
-          blurb="This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Ask for a change and watch the patch land as the engine writes it. The engine scales to zero between visitors, so the first prompt after an idle spell wakes a GPU, and that wait is shown rather than hidden."
+          blurb="This is the codebase the model works on — about 2,100 lines of a working document-summarizing agent, held in this tab as the source of truth. The model is shown the file tree and six tools; it greps, reads, and lands the smallest edit, and the panel shows each call as it happens. The engine scales to zero between visitors, so the first input after an idle spell wakes a GPU, and that wait is shown rather than hidden."
         >
           <Workbench
             files={project.files}
@@ -214,10 +219,12 @@ const FireworksAI = () => {
               void quota.refresh();
               setPromptResult(
                 outcome.kind === 'applied'
-                  ? `Applied to ${outcome.paths.join(', ')}.`
-                  : outcome.kind === 'out_of_scope'
-                    ? 'out of scope — this engine only edits the project above.'
-                    : outcome.message,
+                  ? `Applied to ${outcome.paths.join(', ')}: ${outcome.summary}`
+                  : outcome.kind === 'no_change'
+                    ? `No file changed: ${outcome.summary}`
+                    : outcome.kind === 'out_of_scope'
+                      ? 'out of scope — this model only edits the project above.'
+                      : outcome.message,
               );
             }}
           />

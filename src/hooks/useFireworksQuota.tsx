@@ -8,9 +8,11 @@ import { useCallback, useEffect, useState } from 'react';
  * This hook only ever *reads* the number; the gateway writes it, before any
  * inference happens. There is no client-side path to the table at all.
  *
- * Two limits come back: this address's remaining prompts and the global daily
+ * Two limits come back: this address's remaining inputs and the global daily
  * budget. Either at zero closes the box, and so does a failure to read them --
- * a quota that opens up when it cannot be checked is not a quota.
+ * a quota that opens up when it cannot be checked is not a quota. Alongside
+ * them, what the backend looks like right now: whether a GPU is free at all,
+ * and how long the engine stays warm from the last run.
  */
 
 const GATEWAY = (import.meta.env.VITE_FIREWORKS_GATEWAY as string | undefined) ?? '';
@@ -20,6 +22,15 @@ interface QuotaState {
   remaining: number;
   limit: number;
   dailyRemaining: number;
+  turnCap: number;
+  /** RunPod's worker states for the endpoint, or null when unreadable. */
+  workers: Record<string, number> | null;
+  /** Every worker slot is throttled: a run would wait ten minutes for nothing. */
+  noGpu: boolean;
+  /** Epoch ms until which the engine stays warm from the last run, or null. */
+  warmUntil: number | null;
+  /** The same, as seconds left at the moment of the last refresh. */
+  warmFor: number;
   loading: boolean;
   /** True when the count could not be read, so the box stays closed. */
   unavailable: boolean;
@@ -31,6 +42,11 @@ export const useFireworksQuota = () => {
     remaining: 0,
     limit: 3,
     dailyRemaining: 0,
+    turnCap: 12,
+    workers: null,
+    noGpu: false,
+    warmUntil: null,
+    warmFor: 0,
     loading: true,
     unavailable: false,
   });
@@ -40,8 +56,9 @@ export const useFireworksQuota = () => {
     try {
       const response = await fetch(`${GATEWAY}/quota`);
       if (!response.ok) throw new Error(String(response.status));
-      const quota = (await response.json()) as Pick<QuotaState, 'used' | 'remaining' | 'limit' | 'dailyRemaining'>;
-      setState({ ...quota, loading: false, unavailable: false });
+      const quota = (await response.json()) as Omit<QuotaState, 'loading' | 'unavailable' | 'warmFor'>;
+      const warmFor = quota.warmUntil ? Math.max(0, Math.round((quota.warmUntil - Date.now()) / 1000)) : 0;
+      setState({ ...quota, warmFor, loading: false, unavailable: false });
     } catch {
       setState((current) => ({ ...current, remaining: 0, dailyRemaining: 0, loading: false, unavailable: true }));
     }

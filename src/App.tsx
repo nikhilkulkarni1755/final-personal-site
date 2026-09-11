@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './hooks/useDarkMode';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -44,7 +44,8 @@ function AppContent() {
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/spearfishing/voice-agent" element={<DrugMarketplace />} />
-          <Route path="/spearfishing/fireworks-ai" element={<FireworksAI />} />
+          <Route path="/inference-end-to-end" element={<FireworksAI />} />
+          <Route path="/spearfishing/fireworks-ai" element={<Navigate to="/inference-end-to-end" replace />} />
         </Routes>
       </main>
       <Footer />

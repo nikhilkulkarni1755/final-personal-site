@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Activity, Loader2, RotateCcw } from 'lucide-react';
+import { Activity, RotateCcw } from 'lucide-react';
 import CodeViewer from './CodeViewer';
 import FileTree from './FileTree';
+import LivePanel from './LivePanel';
 import Preview from './Preview';
-import { SERIES, formatMs } from './chartTokens';
 import type { CorpusFile } from './types';
 import { GRAFANA_URL, type LiveState } from '../../hooks/useFireworksLive';
 
@@ -25,11 +25,13 @@ interface WorkbenchProps {
 }
 
 /**
- * Workbench - the project, the prompt box, and what the engine does to them.
+ * Workbench - the project, the input box, and the machine working on them.
  *
  * Every edit here is local to this browser tab and is thrown away on reload.
  * The canonical project is byte-identical for every visitor; the working copy
- * is this visitor's edits layered on top, and Reset puts it back.
+ * is this visitor's edits layered on top, and Reset puts it back. Below the
+ * box, the panel shows the backend as it wakes and the model's tool calls as
+ * they land -- each from something recorded, none of it animation.
  */
 const Workbench = ({
   files,
@@ -50,8 +52,9 @@ const Workbench = ({
   const [pane, setPane] = useState<'code' | 'preview'>('code');
   const [draft, setDraft] = useState('');
 
-  const streaming = live.phase === 'streaming';
-  const busy = live.phase === 'waking' || streaming;
+  const busy = live.phase === 'waking' || live.phase === 'thinking' || live.phase === 'tool';
+  // The model is writing this file: two writers on one buffer is a race the visitor would lose.
+  const streaming = live.phase === 'tool';
 
   // Follow the file the engine is currently rewriting. Adjusted during render
   // rather than in an effect, so the editor never paints a stale file first.
@@ -120,29 +123,10 @@ const Workbench = ({
           )}
         </form>
 
-        {/* what the engine is doing, in the numbers the dashboard records */}
-        <div className="flex flex-wrap items-center gap-3 text-[11px]">
-          {live.phase === 'waking' && (
-            <span className="flex items-center gap-1.5 text-[#001F3F]/60 dark:text-white/55">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              waking a GPU from zero · {Math.round((live.wakeMs ?? 0) / 1000)}s
-            </span>
-          )}
-          {(streaming || live.phase === 'done') && (
-            <span className="flex items-center gap-3 font-mono tabular-nums text-[#001F3F]/60 dark:text-white/55">
-              {live.wakeMs !== null && live.wakeMs > 1000 && <span>wake {formatMs(live.wakeMs)}</span>}
-              {live.ttftMs !== null && <span style={{ color: SERIES.prefill }}>ttft {formatMs(live.ttftMs)}</span>}
-              <span style={{ color: SERIES.decode }}>{live.tokens.toLocaleString()} tok</span>
-              {live.tpotMs !== null && <span>{live.tpotMs.toFixed(1)}ms/tok</span>}
-              {live.e2eMs !== null && <span>end to end {formatMs(live.e2eMs)}</span>}
-              {live.model && <span className="text-[#001F3F]/45 dark:text-white/40">{live.model.split('/').pop()}</span>}
-            </span>
-          )}
-          {live.phase === 'idle' && (
-            <span className="text-[#001F3F]/45 dark:text-white/40">
-              the engine is asleep until someone asks; the first prompt wakes it
-            </span>
-          )}
+        {/* the backend, through glass */}
+        <LivePanel live={live} />
+
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
           {GRAFANA_URL && (
             <a
               href={GRAFANA_URL}
