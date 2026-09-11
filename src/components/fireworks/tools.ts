@@ -13,7 +13,13 @@
  * about), and `replace` fails closed unless `old` matches exactly once. A
  * jailbroken model still cannot put arbitrary content anywhere but inside an
  * allowed file's text, which is rendered as text.
+ *
+ * One rule is for the demo rather than for safety: an edit that would leave
+ * a script unparseable is refused with the parser's error, so the working
+ * copy never holds JavaScript the preview cannot run.
  */
+
+import { parse } from 'acorn';
 
 export interface ToolFile {
   path: string;
@@ -60,7 +66,7 @@ export const TOOL_SCHEMAS = [
     type: 'function',
     function: {
       name: 'read',
-      description: 'Read a file, or a 1-based inclusive line range of it. Returns numbered lines, at most 200.',
+      description: 'Read a file, or a 1-based inclusive line range of it. Returns at most 200 lines as "N: text"; the number is not part of the file.',
       parameters: { type: 'object', properties: { path: { type: 'string' }, start: { type: 'integer' }, end: { type: 'integer' } }, required: ['path'] },
     },
   },
@@ -76,7 +82,7 @@ export const TOOL_SCHEMAS = [
     type: 'function',
     function: {
       name: 'append',
-      description: 'Append text to the end of a file.',
+      description: 'Append text after the end of a file, outside any class or function in it.',
       parameters: { type: 'object', properties: { path: { type: 'string' }, text: { type: 'string' } }, required: ['path', 'text'] },
     },
   },
@@ -111,6 +117,24 @@ const normalise = (raw: unknown): string =>
     .replace(/^docscribe\//, '');
 
 const refuse = (summary: string, content = summary): ToolOutcome => ({ content, summary, refused: true });
+
+/**
+ * The edit, unless it leaves a script unparseable. The corpus is buildless,
+ * so parsing is the whole build; the error quotes the line so the model can
+ * fix it without reading the file back.
+ */
+const edited = (file: ToolFile, text: string, summary: string, content: string): ToolOutcome => {
+  if (file.path.endsWith('.js')) {
+    try {
+      parse(text, { ecmaVersion: 'latest', sourceType: 'script' });
+    } catch (error) {
+      const { message, loc } = error as { message: string; loc?: { line: number } };
+      const line = loc ? `\nline ${loc.line}: ${text.split('\n')[loc.line - 1]}` : '';
+      return refuse(`${summary.split(' (')[0]}: would not parse`, `Not applied: ${file.path} would not parse after this edit. ${message}${line}\nMake an edit that leaves the file valid JavaScript.`);
+    }
+  }
+  return { content, summary, edit: { path: file.path, text } };
+};
 
 /**
  * Run one tool call. Never throws: a bad tool name, a path outside the
@@ -193,7 +217,9 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
       const target = requirePath();
       if ('refusal' in target) return target.refusal;
       const { file } = target;
-      const oldText = String(args.old ?? '');
+      const rawOld = String(args.old ?? '');
+      // `read` numbers its lines; a copied "N: " prefix is not part of the file.
+      const oldText = file.text.includes(rawOld) ? rawOld : rawOld.replace(/^\d+: /gm, '');
       const newText = String(args.new ?? '');
       if (!oldText) return refuse(`replace ${file.path}: empty old`, '`old` must not be empty.');
       const first = file.text.indexOf(oldText);
@@ -201,7 +227,7 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
       if (file.text.indexOf(oldText, first + 1) >= 0) return refuse(`replace ${file.path}: old text is not unique`, '`old` occurs more than once. Include more surrounding lines so it matches exactly once.');
       const text = file.text.slice(0, first) + newText + file.text.slice(first + oldText.length);
       const delta = newText.split('\n').length - oldText.split('\n').length;
-      return { content: `replaced in ${file.path}`, summary: `replace ${file.path} (${delta >= 0 ? '+' : ''}${delta} lines)`, edit: { path: file.path, text } };
+      return edited(file, text, `replace ${file.path} (${delta >= 0 ? '+' : ''}${delta} lines)`, `replaced in ${file.path}`);
     }
 
     case 'append': {
@@ -211,7 +237,7 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
       const extra = String(args.text ?? '');
       if (!extra) return refuse(`append ${file.path}: empty`, '`text` must not be empty.');
       const text = file.text.replace(/\n?$/, '\n') + extra.replace(/\n?$/, '\n');
-      return { content: `appended to ${file.path}`, summary: `append ${file.path} (+${extra.split('\n').length} lines)`, edit: { path: file.path, text } };
+      return edited(file, text, `append ${file.path} (+${extra.split('\n').length} lines)`, `appended to ${file.path}`);
     }
 
     case 'write': {
@@ -220,7 +246,7 @@ export function runTool(name: string, rawArgs: string, files: ToolFile[], allowe
       const { file } = target;
       const text = String(args.text ?? '');
       if (!text.trim()) return refuse(`write ${file.path}: empty`, 'Refusing to write an empty file.');
-      return { content: `wrote ${file.path}`, summary: `write ${file.path} (${text.split('\n').length} lines)`, edit: { path: file.path, text } };
+      return edited(file, text, `write ${file.path} (${text.split('\n').length} lines)`, `wrote ${file.path}`);
     }
   }
 }

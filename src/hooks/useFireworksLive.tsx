@@ -92,7 +92,7 @@ const GATEWAY = (import.meta.env.VITE_FIREWORKS_GATEWAY as string | undefined) ?
 export const GRAFANA_URL = (import.meta.env.VITE_FIREWORKS_GRAFANA as string | undefined) ?? '';
 
 /** Must match the trigger in the migration and the gateway. */
-export const TURN_CAP = 12;
+export const TURN_CAP = 20;
 
 /** What a finished run did, for the UI to report. */
 export type PromptOutcome =

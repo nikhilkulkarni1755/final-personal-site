@@ -16,6 +16,7 @@ const CSS = ':root {\n  --bg: #F4F8FA;\n  --ink: #0E1417;\n}\nbody { background:
 const FILES: ToolFile[] = [
   { path: 'frontend/style.css', text: CSS },
   { path: 'backend/app.py', text: 'def main():\n    return 1\n' },
+  { path: 'frontend/animate.js', text: 'class RobotView {\n  blink() {}\n}\n' },
 ];
 const ALLOWED = new Set(FILES.map((file) => file.path));
 
@@ -25,7 +26,7 @@ test('ls lists every file with a line count, or one directory', () => {
   assert.match(out.content, /frontend\/style\.css \(6 lines\)/);
   assert.equal(fileTree(FILES), out.content);
   assert.equal(runTool('ls', JSON.stringify({ path: 'backend' }), FILES, ALLOWED).content, 'backend/app.py (3 lines)');
-  assert.equal(runTool('ls', '{}', FILES, ALLOWED).summary, 'ls . → 2 files');
+  assert.equal(runTool('ls', '{}', FILES, ALLOWED).summary, 'ls . → 3 files');
 });
 
 test('grep returns path:line: text and a count', () => {
@@ -45,6 +46,12 @@ test('replace swaps exactly one match and returns the edit', () => {
   assert.ok(out.edit);
   assert.match(out.edit!.text, /--bg: #F54927;/);
   assert.doesNotMatch(out.edit!.text, /#F4F8FA/);
+});
+
+test('replace forgives the line numbers read puts in front', () => {
+  const out = runTool('replace', JSON.stringify({ path: 'frontend/style.css', old: '1: --bg: #F4F8FA;', new: '--bg: #F54927;' }), FILES, ALLOWED);
+  assert.equal(out.refused, undefined);
+  assert.ok(out.edit?.text.includes('--bg: #F54927;'));
 });
 
 test('replace fails closed when old is missing', () => {
@@ -86,6 +93,15 @@ test('write refuses an empty file and append adds a trailing newline', () => {
   assert.equal(runTool('write', JSON.stringify({ path: 'backend/app.py', text: '  ' }), FILES, ALLOWED).refused, true);
   const out = runTool('append', JSON.stringify({ path: 'backend/app.py', text: 'x = 2' }), FILES, ALLOWED);
   assert.equal(out.edit!.text, 'def main():\n    return 1\nx = 2\n');
+});
+
+test('a script edit that would not parse is refused, naming the line', () => {
+  const out = runTool('append', JSON.stringify({ path: 'frontend/animate.js', text: '  track() {}' }), FILES, ALLOWED);
+  assert.equal(out.refused, true);
+  assert.equal(out.edit, undefined);
+  assert.match(out.content, /line 4: {3}track\(\) \{\}/);
+  const ok = runTool('replace', JSON.stringify({ path: 'frontend/animate.js', old: '  blink() {}\n', new: '  blink() {}\n  track() {}\n' }), FILES, ALLOWED);
+  assert.equal(ok.refused, undefined);
 });
 
 test('a call the engine left as text is recovered, and stripped from the prose', () => {
