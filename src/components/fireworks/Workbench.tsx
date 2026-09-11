@@ -22,6 +22,8 @@ interface WorkbenchProps {
   promptNote?: string;
   /** Outcome of the last prompt, shown under the box. */
   promptResult?: string | null;
+  /** After a wake that found no GPU: offered once a card is free again. */
+  resend?: { ready: boolean; onClick: () => void } | null;
 }
 
 /**
@@ -47,6 +49,7 @@ const Workbench = ({
   promptPlaceholder = 'Ask for a change — "make the robot pink", "add a reset button"',
   promptNote,
   promptResult,
+  resend,
 }: WorkbenchProps) => {
   const [selected, setSelected] = useState('frontend/style.css');
   const [pane, setPane] = useState<'code' | 'preview'>('code');
@@ -110,13 +113,25 @@ const Workbench = ({
           </button>
           {promptResult ? (
             <span
-              className={`w-full text-[10px] ${
+              className={`flex w-full flex-wrap items-center gap-2 text-[10px] ${
                 promptResult.startsWith('out of scope')
                   ? 'text-[#C2670A] dark:text-[#C87A16]'
                   : 'text-[#001F3F]/55 dark:text-white/50'
               }`}
             >
               {promptResult}
+              {resend &&
+                (resend.ready ? (
+                  <button
+                    type="button"
+                    onClick={resend.onClick}
+                    className="rounded-md bg-[#0F7B5A] px-2 py-0.5 font-semibold text-white dark:bg-[#3DBE8B] dark:text-[#001F3F]"
+                  >
+                    A GPU is free now — resend the same input
+                  </button>
+                ) : (
+                  <span className="italic">watching for a free GPU every 15s; nothing is spent while we wait</span>
+                ))}
             </span>
           ) : (
             promptNote && <span className="w-full text-[10px] text-[#001F3F]/45 dark:text-white/40">{promptNote}</span>

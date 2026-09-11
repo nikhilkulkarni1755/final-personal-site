@@ -1,6 +1,6 @@
 import { Check, Loader2, Moon, X } from 'lucide-react';
 import { formatMs } from './chartTokens';
-import type { LiveState } from '../../hooks/useFireworksLive';
+import { THROTTLE_GRACE_MS, noGpu, type LiveState } from '../../hooks/useFireworksLive';
 
 /**
  * LivePanel - the backend, watched through glass.
@@ -27,7 +27,11 @@ const describeWorkers = (live: LiveState): Stage => {
   if (live.phase === 'failed') return { label: 'GPU worker', detail: live.message ? 'did not come up' : '', tone: 'failed' };
   if (!w) return { label: 'GPU worker', detail: live.phase === 'waking' ? 'asking RunPod…' : 'asleep', tone: live.phase === 'waking' ? 'active' : 'dark' };
   if (w.running) return { label: 'GPU worker', detail: 'running', tone: 'done' };
-  if (w.throttled && !w.idle && !w.ready && !w.initializing) return { label: 'GPU worker', detail: 'throttled: no card free on its host', tone: 'failed' };
+  if (noGpu(w)) {
+    // The gateway gives up after a minute of this; say so rather than surprise.
+    const left = live.throttledSince ? Math.max(0, Math.round((THROTTLE_GRACE_MS - (Date.now() - live.throttledSince)) / 1000)) : null;
+    return { label: 'GPU worker', detail: `throttled: no card free on its host${left !== null ? ` · giving up in ${left}s` : ''}`, tone: 'failed' };
+  }
   if (w.initializing) return { label: 'GPU worker', detail: 'placed, pulling the image', tone: 'active' };
   if (w.ready || w.idle) return { label: 'GPU worker', detail: 'ready, starting the container', tone: 'active' };
   return { label: 'GPU worker', detail: 'no worker yet', tone: 'active' };

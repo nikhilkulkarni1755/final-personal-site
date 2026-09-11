@@ -73,8 +73,19 @@ export interface LiveState {
   /** What the backend reported during the wake, as of the last heartbeat. */
   workers: Workers | null;
   engine: EngineSnapshot | null;
+  /** When the worker was first seen throttled during this wake; the gateway gives up a minute later. */
+  throttledSince: number | null;
+  /** Why the run failed, in the gateway's words, so the page can offer the right next step. */
+  failure: 'no_gpu' | 'wake_timeout' | 'engine_error' | 'other' | null;
   message: string;
 }
+
+/** Every worker slot is throttled: the same rule the gateway applies. */
+export const noGpu = (w: Workers | null): boolean =>
+  w !== null && w.throttled > 0 && w.idle + w.initializing + w.ready + w.running === 0;
+
+/** How long the gateway tolerates a throttled worker before ending the wake. */
+export const THROTTLE_GRACE_MS = 60_000;
 
 const GATEWAY = (import.meta.env.VITE_FIREWORKS_GATEWAY as string | undefined) ?? '';
 /** Public Grafana dashboard for the engine, when one is deployed. */
@@ -104,6 +115,8 @@ const IDLE: LiveState = {
   e2eMs: null,
   workers: null,
   engine: null,
+  throttledSince: null,
+  failure: null,
   message: '',
 };
 
@@ -119,6 +132,7 @@ interface GatewayFrame {
   e2e_ms?: number;
   prompt_tokens?: number | null;
   cached_tokens?: number | null;
+  outcome?: 'wake_timeout' | 'no_gpu' | 'engine_error';
   message?: string;
 }
 
@@ -191,10 +205,23 @@ export const useFireworksLive = () => {
             setState((current) => ({ ...current, runId: frame.run_id!, turn }));
           }
           if (frame.phase === 'waking') {
-            setState((current) => ({ ...current, phase: 'waking', wakeMs: frame.elapsed_ms ?? 0, workers: frame.workers ?? current.workers, engine: frame.engine ?? current.engine }));
+            setState((current) => {
+              const workers = frame.workers ?? current.workers;
+              return {
+                ...current,
+                phase: 'waking',
+                wakeMs: frame.elapsed_ms ?? 0,
+                workers,
+                engine: frame.engine ?? current.engine,
+                throttledSince: noGpu(workers) ? (current.throttledSince ?? Date.now()) : null,
+              };
+            });
           }
           if (frame.phase === 'streaming') setState((current) => ({ ...current, phase: 'thinking', wakeMs: turn === 1 ? (frame.wake_ms ?? 0) : current.wakeMs }));
-          if (frame.phase === 'failed') result.failed = frame.message ?? 'engine failed';
+          if (frame.phase === 'failed') {
+            result.failed = frame.message ?? 'engine failed';
+            setState((current) => ({ ...current, failure: frame.outcome ?? 'other' }));
+          }
           if (frame.phase === 'done') result.frame = frame;
           continue;
         }
@@ -226,6 +253,7 @@ export const useFireworksLive = () => {
       project: { files: Array<{ path: string; text: string }>; applyEdit: (path: string, text: string) => void },
     ): Promise<PromptOutcome> => {
       if (!GATEWAY) return { kind: 'error', message: 'no gateway configured' };
+      setState({ ...IDLE, phase: 'waking' });
 
       let contract: PromptContract;
       try {
@@ -248,7 +276,6 @@ export const useFireworksLive = () => {
       const started = Date.now();
       const touched = new Set<string>();
       let runId: string | null = null;
-      setState({ ...IDLE, phase: 'waking' });
 
       const finish = (outcome: PromptOutcome, contractOutcome: 'applied' | 'out_of_scope' | 'no_change' | 'failed') => {
         setState((current) => ({
@@ -274,7 +301,10 @@ export const useFireworksLive = () => {
         for (let turn = 1; turn <= TURN_CAP; turn += 1) {
           setState((current) => ({ ...current, turn }));
           const result = await sendTurn(messages, runId, turn);
-          if ('refused' in result) return finish({ kind: 'refused', message: result.refused }, 'failed');
+          if ('refused' in result) {
+            setState((current) => ({ ...current, failure: current.failure ?? 'other' }));
+            return finish({ kind: 'refused', message: result.refused }, 'failed');
+          }
           if (result.failed) return finish({ kind: 'error', message: result.failed }, 'failed');
           runId = result.runId;
           const frame = result.frame;

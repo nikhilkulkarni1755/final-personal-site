@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
@@ -61,6 +61,36 @@ const FireworksAI = () => {
   const live = useFireworksLive();
   const quota = useFireworksQuota();
   const [promptResult, setPromptResult] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
+
+  const runPrompt = useCallback(
+    async (prompt: string) => {
+      setLastPrompt(prompt);
+      setPromptResult(null);
+      const outcome = await live.submitPrompt(prompt, project);
+      void quota.refresh();
+      setPromptResult(
+        outcome.kind === 'applied'
+          ? `Applied to ${outcome.paths.join(', ')}: ${outcome.summary}`
+          : outcome.kind === 'no_change'
+            ? `No file changed: ${outcome.summary}`
+            : outcome.kind === 'out_of_scope'
+              ? 'out of scope — this model only edits the project above.'
+              : outcome.message,
+      );
+    },
+    [live, project, quota],
+  );
+
+  // A wake that found no GPU is our capacity problem, so the page watches for a
+  // free card on the visitor's behalf: the quota route carries the worker
+  // states, and refreshing it every 15s costs nothing and counts nothing.
+  const waitingForGpu = !live.busy && (live.failure === 'no_gpu' || live.failure === 'wake_timeout');
+  useEffect(() => {
+    if (!waitingForGpu) return;
+    const timer = window.setInterval(() => void quota.refresh(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [waitingForGpu, quota]);
 
   if (loading || project.loading) {
     return (
@@ -213,20 +243,8 @@ const FireworksAI = () => {
             promptEnabled={promptState.enabled}
             promptNote={promptState.note}
             promptResult={promptResult}
-            onSubmitPrompt={async (prompt) => {
-              setPromptResult(null);
-              const outcome = await live.submitPrompt(prompt, project);
-              void quota.refresh();
-              setPromptResult(
-                outcome.kind === 'applied'
-                  ? `Applied to ${outcome.paths.join(', ')}: ${outcome.summary}`
-                  : outcome.kind === 'no_change'
-                    ? `No file changed: ${outcome.summary}`
-                    : outcome.kind === 'out_of_scope'
-                      ? 'out of scope — this model only edits the project above.'
-                      : outcome.message,
-              );
-            }}
+            onSubmitPrompt={(prompt) => void runPrompt(prompt)}
+            resend={waitingForGpu && lastPrompt ? { ready: !quota.noGpu, onClick: () => void runPrompt(lastPrompt) } : null}
           />
         </Section>
 
