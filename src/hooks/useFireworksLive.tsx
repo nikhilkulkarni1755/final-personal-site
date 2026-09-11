@@ -149,6 +149,8 @@ interface TurnResult {
   toolCalls: ToolCall[];
   frame: GatewayFrame | null;
   failed: string | null;
+  /** The engine stopped at the output cap, so the last call may be cut off. */
+  truncated: boolean;
 }
 
 type Message =
@@ -172,7 +174,7 @@ export const useFireworksLive = () => {
     const response = await fetch(`${GATEWAY}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, tools: TOOL_SCHEMAS, tool_choice: 'auto', max_tokens: 2048, temperature: 0, run_id: runId ?? undefined, turn }),
+      body: JSON.stringify({ messages, tools: TOOL_SCHEMAS, tool_choice: 'auto', max_tokens: 8192, temperature: 0, run_id: runId ?? undefined, turn }),
     });
     if (!response.ok || !response.body) {
       const detail = (await response.json().catch(() => ({}))) as { message?: string };
@@ -181,7 +183,7 @@ export const useFireworksLive = () => {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    const result: TurnResult = { runId, content: '', toolCalls: [], frame: null, failed: null };
+    const result: TurnResult = { runId, content: '', toolCalls: [], frame: null, failed: null, truncated: false };
     let pending = '';
     for (;;) {
       const { done, value } = await reader.read();
@@ -226,6 +228,7 @@ export const useFireworksLive = () => {
           continue;
         }
         if (chunk.model) setState((current) => (current.model ? current : { ...current, model: chunk.model }));
+        if (chunk.choices?.[0]?.finish_reason === 'length') result.truncated = true;
         const delta = chunk.choices?.[0]?.delta;
         if (delta?.content) result.content += delta.content;
         for (const call of delta?.tool_calls ?? []) {
@@ -331,14 +334,28 @@ export const useFireworksLive = () => {
               : finish({ kind: 'no_change', summary }, 'no_change');
           }
 
+          // A call cut off at the output cap has unparseable arguments. The
+          // history sent back must still be well formed, or the engine refuses
+          // the next turn; the tool result says what happened instead.
+          const wellFormed = (raw: string) => {
+            try {
+              JSON.parse(raw);
+              return raw;
+            } catch {
+              return '{}';
+            }
+          };
           // Execute each call against the working copy, in the page's own thread.
           messages.push({
             role: 'assistant',
             content: result.content || null,
-            tool_calls: result.toolCalls.map((call, index) => ({ id: call.id || `call_${turn}_${index}`, type: 'function', function: { name: call.name, arguments: call.arguments } })),
+            tool_calls: result.toolCalls.map((call, index) => ({ id: call.id || `call_${turn}_${index}`, type: 'function', function: { name: call.name, arguments: wellFormed(call.arguments) } })),
           });
           result.toolCalls.forEach((call, index) => {
-            const outcome = runTool(call.name, call.arguments, files(), allowed);
+            const outcome =
+              result.truncated && wellFormed(call.arguments) !== call.arguments
+                ? { content: 'Your call was cut off at the output limit before its arguments finished. Make a smaller change: replace a shorter span, or split the edit into several replace calls.', summary: `${call.name}: cut off at the output limit`, refused: true }
+                : runTool(call.name, call.arguments, files(), allowed);
             if (outcome.edit) {
               working.set(outcome.edit.path, outcome.edit.text);
               project.applyEdit(outcome.edit.path, outcome.edit.text);
