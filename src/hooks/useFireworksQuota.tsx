@@ -1,31 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { getVisitorId } from '../lib/analytics-utils';
 
 /**
- * useFireworksQuota - how many free-text prompts this browser has left.
+ * useFireworksQuota - how many prompts this address has left.
  *
- * Be honest about what this is. `getVisitorId()` is a fingerprint computed in
- * the browser and cached in localStorage, so a new browser is a new visitor and
- * anyone who opens devtools can hand themselves a fresh identity. This is a
- * speed bump against casual overuse, not an access control.
+ * The count is keyed on the IP the gateway sees, which the browser cannot
+ * forge, and enforced by a trigger in Supabase that refuses the fourth insert.
+ * This hook only ever *reads* the number; the gateway writes it, before any
+ * inference happens. There is no client-side path to the table at all.
  *
- * The spending limit that actually binds lives in the gateway, keyed on an IP
- * the client cannot forge, with a daily GPU-minute ceiling behind it. If this
- * hook is bypassed the gateway still refuses; if the gateway is unreachable the
- * page falls back to replaying recorded runs, which cost nothing.
- *
- * Follows the `likes` pattern rather than the marketplace one: the table is
- * append-only for anon, so the count cannot be edited down from a console. And
- * unlike `useMarketplace`, a failure here denies rather than granting credit --
- * a quota that opens up when the database is unreachable is not a quota.
+ * Two limits come back: this address's remaining prompts and the global daily
+ * budget. Either at zero closes the box, and so does a failure to read them --
+ * a quota that opens up when it cannot be checked is not a quota.
  */
 
-export const PROMPT_LIMIT = 3;
+const GATEWAY = (import.meta.env.VITE_FIREWORKS_GATEWAY as string | undefined) ?? '';
 
 interface QuotaState {
   used: number;
   remaining: number;
+  limit: number;
+  dailyRemaining: number;
   loading: boolean;
   /** True when the count could not be read, so the box stays closed. */
   unavailable: boolean;
@@ -35,25 +29,21 @@ export const useFireworksQuota = () => {
   const [state, setState] = useState<QuotaState>({
     used: 0,
     remaining: 0,
+    limit: 3,
+    dailyRemaining: 0,
     loading: true,
     unavailable: false,
   });
 
   const refresh = useCallback(async () => {
+    if (!GATEWAY) return;
     try {
-      const visitorId = await getVisitorId();
-      const { count, error } = await (supabase as any)
-        .from('fireworks_prompt_usage')
-        .select('*', { count: 'exact', head: true })
-        .eq('visitor_id', visitorId);
-      if (error) throw error;
-      const used = count ?? 0;
-      setState({ used, remaining: Math.max(0, PROMPT_LIMIT - used), loading: false, unavailable: false });
+      const response = await fetch(`${GATEWAY}/quota`);
+      if (!response.ok) throw new Error(String(response.status));
+      const quota = (await response.json()) as Pick<QuotaState, 'used' | 'remaining' | 'limit' | 'dailyRemaining'>;
+      setState({ ...quota, loading: false, unavailable: false });
     } catch {
-      // Deny rather than grant. The alternative -- treating an unreachable
-      // database as "you have credit" -- is how the marketplace hook ends up
-      // handing out tokens it never checked.
-      setState({ used: PROMPT_LIMIT, remaining: 0, loading: false, unavailable: true });
+      setState((current) => ({ ...current, remaining: 0, dailyRemaining: 0, loading: false, unavailable: true }));
     }
   }, []);
 
@@ -61,26 +51,7 @@ export const useFireworksQuota = () => {
     void refresh();
   }, [refresh]);
 
-  /** Record one use. Returns false when the row could not be written. */
-  const consume = useCallback(async (prompt: string): Promise<boolean> => {
-    try {
-      const visitorId = await getVisitorId();
-      const { error } = await (supabase as any)
-        .from('fireworks_prompt_usage')
-        .insert({ visitor_id: visitorId, prompt: prompt.slice(0, 500) });
-      if (error) throw error;
-      setState((current) => ({
-        ...current,
-        used: current.used + 1,
-        remaining: Math.max(0, current.remaining - 1),
-      }));
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  return { ...state, limit: PROMPT_LIMIT, refresh, consume };
+  return { ...state, refresh };
 };
 
 export default useFireworksQuota;

@@ -66,8 +66,7 @@ const Writeup = ({ run }: { run: CaptureRun }) => {
         end, and <Strong>about 85% of the prefix still matches</Strong>. Edit{' '}
         <Code>backend/agent.py</Code>, sorted near the front, and roughly <Strong>97% is
         invalidated</Strong> — the same size change, an order of magnitude apart in what it costs to
-        serve. You can watch this happen in the workbench above: the header reports how much of the
-        prefix survives whatever you have edited.
+        serve.
       </P>
       <P>
         The useful consequence is that a coding agent should not order context alphabetically. It
@@ -176,6 +175,18 @@ const Writeup = ({ run }: { run: CaptureRun }) => {
         not the rental. That makes a warm floor cheaper to hold, which given a 13-minute cold start
         is genuinely useful — and it is not scale-to-zero, and calling it that would be the kind of
         claim this page exists to avoid.
+      </P>
+      <P>
+        So the live path above does not wake a pod. It runs on a serverless endpoint that keeps the
+        image resident on the fleet and scales the worker to zero between visitors, on one card at
+        FP8 rather than the two-card BF16 rig everything else on this page was measured on. The
+        target is <Strong>Qwen3-Coder-Next, 80B parameters with 3B active, on an H200</Strong> — a
+        hybrid-attention design and a stronger coder than the 30B measured here — and when H200
+        supply is short it falls back to the 30B on an H100, which is the scale-to-zero trap in
+        practice: a snapshot still needs a card to land on. The workbench names whichever checkpoint
+        actually answered. Either way it is a different checkpoint, card and precision, so those
+        numbers are labelled live and never measured, and they are charted separately, engine-side
+        and as-delivered, on the public dashboard linked from it.
       </P>
 
       <H>What I would want to measure next</H>

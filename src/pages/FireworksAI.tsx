@@ -5,8 +5,6 @@ import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
 import { useFireworksProject } from '../hooks/useFireworksProject';
 import { useFireworksLive } from '../hooks/useFireworksLive';
 import { useFireworksQuota } from '../hooks/useFireworksQuota';
-import CacheCliffChart from '../components/fireworks/CacheCliffChart';
-import LiveRunPanel from '../components/fireworks/LiveRunPanel';
 import PoolUtilizationChart from '../components/fireworks/PoolUtilizationChart';
 import RunBadge from '../components/fireworks/RunBadge';
 import TailLatencyChart from '../components/fireworks/TailLatencyChart';
@@ -90,33 +88,30 @@ const FireworksAI = () => {
 
   const prefixTokens = active.prefix.approx_tokens.toLocaleString();
 
-  // What the free-text box can offer right now. Kept in one place because the
+  // What the prompt box can offer right now. Kept in one place because the
   // answer depends on three independent things -- whether a gateway exists at
-  // all, whether an engine is warm, and how many prompts this visitor has left
-  // -- and scattering that logic across the UI is how the states drift apart.
+  // all, whether this address has prompts left, and whether today's budget
+  // does -- and scattering that logic across the UI is how the states drift.
   const promptState = (() => {
     if (!live.available) {
-      return {
-        enabled: false,
-        note: 'Free-text editing needs a live engine. The example prompts above replay real recorded runs.',
-      };
+      return { enabled: false, note: 'No engine is configured for this deployment, so the box is closed.' };
     }
     if (quota.unavailable) {
-      return { enabled: false, note: 'Prompt quota is unavailable right now, so free text is closed.' };
+      return { enabled: false, note: 'Prompt quota is unavailable right now, so the box is closed.' };
     }
     if (quota.remaining <= 0) {
-      return { enabled: false, note: `You have used all ${quota.limit} prompts. The examples above still work.` };
+      return { enabled: false, note: `You have used all ${quota.limit} prompts for this address.` };
     }
-    if (live.state === 'starting') {
-      return { enabled: false, note: live.message || 'Waking a GPU — this takes a few minutes from cold.' };
+    if (quota.dailyRemaining <= 0) {
+      return { enabled: false, note: 'Today’s GPU budget is spent. It resets at midnight UTC.' };
     }
-    if (live.state !== 'ready') {
-      return {
-        enabled: true,
-        note: `${quota.remaining} of ${quota.limit} prompts left. The engine is asleep, so the first one has to wake it.`,
-      };
+    if (live.busy) {
+      return { enabled: false, note: live.phase === 'waking' ? 'Waking a GPU from zero — this can take a few minutes.' : 'Writing…' };
     }
-    return { enabled: true, note: `${quota.remaining} of ${quota.limit} prompts left. Engine is warm.` };
+    return {
+      enabled: true,
+      note: `${quota.remaining} of ${quota.limit} prompts left for this address. The first one after an idle spell wakes the GPU.`,
+    };
   })();
 
   // Both hero panels share the slower run's duration, so flipping the mode
@@ -199,24 +194,24 @@ const FireworksAI = () => {
         <Section
           eyebrow="Try it"
           title="The project is also the prompt"
-          blurb="This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Pick a prompt and watch the patch land at its real recorded speed."
+          blurb="This is the codebase the engine is serving — about 2,100 lines of a working document-summarizing agent. It is fed inline as one string, exactly the way a coding agent passes context. Ask for a change and watch the patch land as the engine writes it. The engine scales to zero between visitors, so the first prompt after an idle spell wakes a GPU, and that wait is shown rather than hidden."
         >
           <Workbench
-            run={active}
             files={project.files}
             fileMap={project.fileMap}
             canonicalText={project.canonicalText}
             dirtyPaths={project.dirtyPaths}
             prefixDiverged={project.prefixDiverged}
-            cacheableFraction={project.cacheableFraction}
             applyEdit={project.applyEdit}
             resetProject={project.resetProject}
+            live={live}
             promptEnabled={promptState.enabled}
             promptNote={promptState.note}
             promptResult={promptResult}
             onSubmitPrompt={async (prompt) => {
               setPromptResult(null);
-              const outcome = await live.submitPrompt(prompt, project, quota);
+              const outcome = await live.submitPrompt(prompt, project);
+              void quota.refresh();
               setPromptResult(
                 outcome.kind === 'applied'
                   ? `Applied to ${outcome.paths.join(', ')}.`
@@ -226,15 +221,6 @@ const FireworksAI = () => {
               );
             }}
           />
-        </Section>
-
-        {/* ----------------------------------------------------- cache cliff */}
-        <Section
-          eyebrow="Prefix caching"
-          title="Pay for the project once"
-          blurb="Three different questions about the same project. The prefix is identical across all three, so after the first request the engine already holds its keys and values. This is the one thing that worked exactly as intended — and note how much smaller the win looks on hardware fast enough to make the prefill cheap anyway."
-        >
-          <CacheCliffChart run={active} />
         </Section>
 
         {/* ---------------------------------------------------- tail latency */}
@@ -288,10 +274,6 @@ const FireworksAI = () => {
               {active.model.active_params_b ?? '3.3'}B active still has to hold all of it resident.
             </li>
           </ul>        </motion.section>
-
-        <div className="my-16">
-          <LiveRunPanel live={live} />
-        </div>
 
         {/* --------------------------------------------------------- writeup */}
         <Section

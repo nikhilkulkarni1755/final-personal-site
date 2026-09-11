@@ -53,6 +53,17 @@ const normalise = (raw: string): string =>
   raw.trim().replace(/^\/+/, '').replace(/^docscribe\//, '');
 
 /**
+ * The same echo, inside the body. Seen 2026-09-11 with the 30B on the live
+ * path: the edit began with a `<file>` line copied from the context wrapper.
+ * Left in, that line makes a CSS parser discard the whole first rule -- the
+ * `:root` block holding every variable -- so a correct edit rendered as no
+ * change at all. Only the body's edges are touched; a tag in the middle of a
+ * file is the model's content and stays.
+ */
+const BODY_WRAPPER = /^\s*<file\b[^>]*>\r?\n?|\r?\n?<\/file>\s*$/gi;
+const body = (raw: string): string => raw.replace(BODY_WRAPPER, '');
+
+/**
  * Incremental parser. Feed it the accumulated response so far, repeatedly.
  *
  * Deliberately re-parses from the start each call rather than keeping a cursor:
@@ -85,13 +96,13 @@ export const parseStream = (accumulated: string, allowedPaths: Set<string>): Str
 
     if (!close) {
       // Still streaming this body.
-      edits.push({ path, text: afterOpen.replace(/^\r?\n/, ''), closed: false });
+      edits.push({ path, text: body(afterOpen.replace(/^\r?\n/, '')), closed: false });
       return { edits, outOfScope: false, reason: '', activePath: path };
     }
 
     edits.push({
       path,
-      text: afterOpen.slice(0, close.index).replace(/^\r?\n/, '').replace(/\r?\n$/, ''),
+      text: body(afterOpen.slice(0, close.index).replace(/^\r?\n/, '').replace(/\r?\n$/, '')),
       closed: true,
     });
     consumed += rest.slice(0, open.index + open[0].length + close.index + close[0].length);
