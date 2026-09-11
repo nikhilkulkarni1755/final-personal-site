@@ -5,8 +5,10 @@ import { useFireworksCaptures } from '../hooks/useFireworksCaptures';
 import { useFireworksProject } from '../hooks/useFireworksProject';
 import { useFireworksLive } from '../hooks/useFireworksLive';
 import { useFireworksQuota } from '../hooks/useFireworksQuota';
+import { useFireworksRuns } from '../hooks/useFireworksRuns';
 import PoolUtilizationChart from '../components/fireworks/PoolUtilizationChart';
 import RunBadge from '../components/fireworks/RunBadge';
+import RunsTable from '../components/fireworks/RunsTable';
 import TailLatencyChart from '../components/fireworks/TailLatencyChart';
 import Writeup from '../components/fireworks/Writeup';
 import Workbench from '../components/fireworks/Workbench';
@@ -60,6 +62,7 @@ const FireworksAI = () => {
   const project = useFireworksProject();
   const live = useFireworksLive();
   const quota = useFireworksQuota();
+  const runs = useFireworksRuns();
   const [promptResult, setPromptResult] = useState<string | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
 
@@ -69,6 +72,7 @@ const FireworksAI = () => {
       setPromptResult(null);
       const outcome = await live.submitPrompt(prompt, project);
       void quota.refresh();
+      void runs.refresh();
       setPromptResult(
         outcome.kind === 'applied'
           ? `Applied to ${outcome.paths.join(', ')}: ${outcome.summary}`
@@ -79,7 +83,7 @@ const FireworksAI = () => {
               : outcome.message,
       );
     },
-    [live, project, quota],
+    [live, project, quota, runs],
   );
 
   // A wake that found no GPU is our capacity problem, so the page watches for a
@@ -246,6 +250,15 @@ const FireworksAI = () => {
             onSubmitPrompt={(prompt) => void runPrompt(prompt)}
             resend={waitingForGpu && lastPrompt ? { ready: !quota.noGpu, onClick: () => void runPrompt(lastPrompt) } : null}
           />
+        </Section>
+
+        {/* ----------------------------------------------------------- runs */}
+        <Section
+          eyebrow="Every run"
+          title="The dataset this page is building"
+          blurb="One row per input anyone has sent, appended by the gateway as it measures each run and never edited. Time to first token, the engine's boot when it had to wake, what a warm turn costs, time per output token, the share of prompt tokens the cache already held, and how the run ended. Hover a prompt to read all of it; the CSV is the same rows."
+        >
+          <RunsTable rows={runs.rows} />
         </Section>
 
         {/* ---------------------------------------------------- tail latency */}
