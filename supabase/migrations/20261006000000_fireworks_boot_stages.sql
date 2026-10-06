@@ -17,13 +17,13 @@ SELECT
     r.wake_ms,
     r.ttft_ms,                       -- turn one, send -> first token; carries the boot when cold
     r.engine_boot_s,
-    r.boot_stages,
     r.e2e_ms,                        -- whole run, first send -> final word
     t.mean_tpot_ms,
     t.mean_turn_ttft_ms,             -- turns two onward: what a warm turn costs to first token
     t.prompt_tokens,
     t.cached_tokens,
-    t.output_tokens
+    t.output_tokens,
+    r.boot_stages                    -- appended: a replaced view may only add columns at the end
 FROM fireworks_prompt_usage r
 LEFT JOIN LATERAL (
     SELECT
