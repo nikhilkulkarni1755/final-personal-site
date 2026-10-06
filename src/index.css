@@ -16,6 +16,13 @@
   --color-navy-950: #001F3F;
 
   --transition-duration-250: 250ms;
+
+  /* Green ring on the prompt box: first at 2s, then every 7s. */
+  --animate-prompt-glow: prompt-glow 7s 2s infinite;
+  @keyframes prompt-glow {
+    0%, 28%, 100% { box-shadow: 0 0 0 0 transparent; }
+    10% { box-shadow: 0 0 0 4px rgb(15 123 90 / 0.35); border-color: #0F7B5A; }
+  }
 }
 
 @variant dark (&:is(.dark *));

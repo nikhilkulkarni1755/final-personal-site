@@ -99,7 +99,7 @@ const Workbench = ({
             onChange={(event) => setDraft(event.target.value)}
             placeholder={promptPlaceholder}
             disabled={!promptEnabled}
-            className="min-w-64 flex-1 rounded-lg border border-[#001F3F]/15 bg-white px-3 py-1.5 text-[12px]
+            className="min-w-64 flex-1 animate-prompt-glow rounded-lg border border-[#001F3F]/15 bg-white px-3 py-1.5 text-[12px]
                        text-[#001F3F] placeholder:text-[#001F3F]/35 disabled:opacity-50
                        dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
           />
