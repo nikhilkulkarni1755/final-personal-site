@@ -4,7 +4,7 @@ import { usePageAnalytics } from '../hooks/usePageAnalytics';
 import { useFireworksProject } from '../hooks/useFireworksProject';
 import { useFireworksLive } from '../hooks/useFireworksLive';
 import { useFireworksQuota } from '../hooks/useFireworksQuota';
-import { useFireworksRuns } from '../hooks/useFireworksRuns';
+import { useFireworksRuns, type BootStages } from '../hooks/useFireworksRuns';
 import RunsTable from '../components/fireworks/RunsTable';
 import Writeup from '../components/fireworks/Writeup';
 import Workbench from '../components/fireworks/Workbench';
@@ -38,13 +38,12 @@ const Section = ({
   </motion.section>
 );
 
-const COLD_START = [
-  ['Container start', '~12s'],
-  ['SGLang init', '~43s'],
-  ['Weights from host cache', '~11s'],
-  ['CUDA graph capture', '~36s'],
-  ['Warmup', '~11s'],
-  ['Total', '≈116s'],
+const COLD_START: Array<[string, keyof BootStages]> = [
+  ['Container start', 'container_s'],
+  ['SGLang init', 'init_s'],
+  ['Weights from host cache', 'weights_s'],
+  ['CUDA graph capture', 'graphs_s'],
+  ['Warmup', 'warmup_s'],
 ];
 
 /**
@@ -147,6 +146,10 @@ const FireworksAI = () => {
     return { enabled: true, note: `${left} The engine is asleep, so the first one wakes it.` };
   })();
 
+  // Only runs whose engine-ready time was measured, not estimated.
+  const cold = runs.rows.flatMap((row) => (row.boot_stages?.healthy_estimated === false ? [row.boot_stages] : []));
+  const mean = (key: keyof BootStages) => cold.reduce((sum, stages) => sum + Number(stages[key]), 0) / cold.length;
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#001F3F]" style={{ zoom: 1.1 }}>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -200,16 +203,19 @@ const FireworksAI = () => {
         <Section
           eyebrow="Cold start"
           title="Waking a GPU from zero"
-          blurb="Measured on an H100 serving Qwen3-Coder 30B. Once the engine is warm, a turn starts in 123 to 382ms."
+          blurb={`Averaged over the ${cold.length} cold start${cold.length === 1 ? '' : 's'} the gateway has measured, serving Qwen3-Coder 30B. Once the engine is warm, a turn starts in 123 to 382ms.`}
         >
           <table className="w-full text-sm text-[#001F3F]/75 dark:text-white/70">
             <tbody>
-              {COLD_START.map(([stage, seconds]) => (
-                <tr key={stage} className="border-b border-[#001F3F]/10 last:border-0 dark:border-white/10">
-                  <td className="py-2">{stage}</td>
-                  <td className="py-2 text-right font-mono">{seconds}</td>
-                </tr>
-              ))}
+              {cold.length > 0 &&
+                [...COLD_START, ['Total', null] as const].map(([stage, key]) => (
+                  <tr key={stage} className="border-b border-[#001F3F]/10 last:border-0 dark:border-white/10">
+                    <td className="py-2">{stage}</td>
+                    <td className="py-2 text-right font-mono">
+                      {(key ? mean(key) : COLD_START.reduce((sum, [, k]) => sum + mean(k), 0)).toFixed(0)}s
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </Section>

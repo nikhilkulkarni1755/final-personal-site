@@ -18,6 +18,8 @@ export interface BootStages {
   weights_s: number;
   graphs_s: number;
   warmup_s: number;
+  /** False when the engine's own healthy stamp was read; absent on rows from before it was. */
+  healthy_estimated?: boolean;
 }
 
 export interface RunRow {
