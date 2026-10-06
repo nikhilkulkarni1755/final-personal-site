@@ -1,6 +1,6 @@
 import { Download } from 'lucide-react';
 import { formatMs } from './chartTokens';
-import type { RunRow } from '../../hooks/useFireworksRuns';
+import type { BootStages, RunRow } from '../../hooks/useFireworksRuns';
 
 /**
  * RunsTable - every run anyone has made, as a dataset.
@@ -18,6 +18,7 @@ const COLUMNS = [
   ['turns', 'model turns in the run: tool calls plus the final answer'],
   ['TTFT', 'time to first token on turn one, from send; a cold run carries the boot here'],
   ['engine boot', "SGLang's own startup timer when the run had to wake it; blank when warm"],
+  ['boot stages', 'container start, SGLang init, weights, CUDA graph capture, warm-up, in seconds; blank when warm'],
   ['turn latency', 'mean time to first token on turns two onward: what a warm turn costs'],
   ['TPOT', 'time per output token, averaged over the run (also called inter-token latency)'],
   ['cached', 'share of prompt tokens the engine already held, summed over turns'],
@@ -27,6 +28,8 @@ const COLUMNS = [
 
 const pct = (part: number | null, whole: number | null) => (part !== null && whole ? `${Math.round((part / whole) * 100)}%` : '');
 
+const bootLabel = (b: BootStages) => [b.container_s, b.init_s, b.weights_s, b.graphs_s, b.warmup_s].map((v) => v.toFixed(0)).join(' / ');
+
 const resultOf = (row: RunRow) => {
   if (row.outcome !== 'ok') return row.outcome.replace('_', ' ');
   if (row.contract_outcome === 'applied') return `applied: ${(row.paths ?? []).map((p) => p.split('/').pop()).join(', ')}`;
@@ -34,8 +37,8 @@ const resultOf = (row: RunRow) => {
 };
 
 const toCsv = (rows: RunRow[]) => {
-  const fields: Array<keyof RunRow> = ['created_at', 'prompt', 'model', 'outcome', 'contract_outcome', 'turns', 'wake_ms', 'ttft_ms', 'engine_boot_s', 'mean_turn_ttft_ms', 'mean_tpot_ms', 'prompt_tokens', 'cached_tokens', 'output_tokens', 'e2e_ms'];
-  const cell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const fields: Array<keyof RunRow> = ['created_at', 'prompt', 'model', 'outcome', 'contract_outcome', 'turns', 'wake_ms', 'ttft_ms', 'engine_boot_s', 'boot_stages', 'mean_turn_ttft_ms', 'mean_tpot_ms', 'prompt_tokens', 'cached_tokens', 'output_tokens', 'e2e_ms'];
+  const cell = (value: unknown) => `"${(typeof value === 'object' && value ? JSON.stringify(value) : String(value ?? '')).replace(/"/g, '""')}"`;
   return [fields.join(','), ...rows.map((row) => fields.map((field) => cell(row[field])).join(','))].join('\n');
 };
 
@@ -89,6 +92,7 @@ const RunsTable = ({ rows }: { rows: RunRow[] }) => {
                     {cold && <span className="ml-1 text-[9px] uppercase text-[#C2670A] dark:text-[#C87A16]">cold</span>}
                   </td>
                   <td className="px-2 py-1.5">{row.engine_boot_s !== null ? `${row.engine_boot_s.toFixed(0)}s` : ''}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5">{row.boot_stages ? bootLabel(row.boot_stages) : ''}</td>
                   <td className="px-2 py-1.5">{row.mean_turn_ttft_ms !== null ? formatMs(row.mean_turn_ttft_ms) : ''}</td>
                   <td className="px-2 py-1.5">{row.mean_tpot_ms !== null ? `${row.mean_tpot_ms.toFixed(1)}ms` : ''}</td>
                   <td className="px-2 py-1.5">{pct(row.cached_tokens, row.prompt_tokens)}</td>

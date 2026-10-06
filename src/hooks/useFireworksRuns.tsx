@@ -12,6 +12,14 @@ import { supabase } from '../lib/supabase';
  * visitor just produced appears at the top of the table they are looking at.
  */
 
+export interface BootStages {
+  container_s: number;
+  init_s: number;
+  weights_s: number;
+  graphs_s: number;
+  warmup_s: number;
+}
+
 export interface RunRow {
   id: string;
   created_at: string;
@@ -24,6 +32,7 @@ export interface RunRow {
   wake_ms: number | null;
   ttft_ms: number | null;
   engine_boot_s: number | null;
+  boot_stages: BootStages | null;
   e2e_ms: number | null;
   mean_tpot_ms: number | null;
   mean_turn_ttft_ms: number | null;
